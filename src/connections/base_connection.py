@@ -153,9 +153,9 @@ class ConnectionFactory:
         Crea una instancia de conexión del tipo especificado.
         
         Args:
-            connection_type: Tipo de conexión ('rtsp', 'onvif', 'amcrest', 'tplink')
+            connection_type: Tipo de conexión ('rtsp', 'onvif', 'amcrest', 'tplink', 'steren')
             config_manager: Instancia del gestor de configuración
-            camera_brand: Marca de la cámara ('dahua', 'tplink')
+            camera_brand: Marca de la cámara ('dahua', 'tplink', 'steren')
             
         Returns:
             Instancia de la conexión solicitada
@@ -168,6 +168,7 @@ class ConnectionFactory:
         from .amcrest_connection import AmcrestConnection
         from .onvif_connection import ONVIFConnection
         from .tplink_connection import TPLinkConnection
+        from .steren_connection import SterenConnection
         
         # Mapeo de conexiones por marca
         connection_map = {
@@ -180,6 +181,11 @@ class ConnectionFactory:
                 "rtsp": TPLinkConnection,
                 "tplink": TPLinkConnection,  # Alias por compatibilidad
                 "onvif": ONVIFConnection,   # TP-Link también soporta ONVIF
+            },
+            "steren": {
+                "rtsp": SterenConnection,
+                "onvif": SterenConnection,  # Steren usa ONVIF + RTSP integrado
+                "steren": SterenConnection,  # Alias por compatibilidad
             }
         }
         
@@ -209,7 +215,8 @@ class ConnectionFactory:
         """
         supported = {
             "dahua": ["rtsp", "amcrest", "onvif"],
-            "tplink": ["rtsp", "tplink", "onvif"]
+            "tplink": ["rtsp", "tplink", "onvif"],
+            "steren": ["rtsp", "onvif", "steren"]
         }
         
         if camera_brand:

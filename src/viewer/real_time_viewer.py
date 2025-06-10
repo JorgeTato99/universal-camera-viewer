@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from src.viewer.camera_widget import CameraWidget
 from src.viewer.control_panel import ControlPanel
 
-
+# cspell:disable
 class RealTimeViewer:
     """
     Visor principal en tiempo real para múltiples cámaras Dahua.

@@ -1,10 +1,10 @@
-# Estado Actual del Proyecto - Dahua Visor
+# Estado Actual del Proyecto - Visor Universal de Cámaras
 
 ## 📋 Resumen General
 
-**Visor Universal de Cámaras - Módulo Dahua** para conexión y consumo de flujos de video de cámaras Dahua Hero-K51H, TP-Link Tapo y similares.
+**Visor Universal de Cámaras Multi-Marca** para conexión y consumo de flujos de video de cámaras Dahua Hero-K51H, TP-Link Tapo, Steren CCTV-235 y similares.
 
-**ESTADO: 🎉 COMPLETADO FUNCIONALMENTE AL 100%** - Visor operativo con hardware real multi-marca y ONVIF optimizado
+**ESTADO: 🎉 COMPLETADO FUNCIONALMENTE AL 100%** - Visor operativo con hardware real de 3 marcas y ONVIF optimizado
 
 ---
 
@@ -42,20 +42,21 @@
 ### **4. Conexión ONVIF (100% Completa y Multi-Marca)**
 
 - ✅ **ONVIFConnection** - Implementación completa con onvif-zeep
-- ✅ **Soporte multi-marca** - Dahua Hero-K51H + TP-Link Tapo C520WS
+- ✅ **Soporte multi-marca** - Dahua Hero-K51H + TP-Link Tapo C520WS + Steren CCTV-235
 - ✅ **Detección automática de marca** - URLs RTSP específicas por fabricante
 - ✅ **URLs optimizadas por marca:**
   - **Dahua**: `/cam/realmonitor?channel=1&subtype=0` (puerto 80)
   - **TP-Link**: `/stream1`, `/stream2` (puerto 2020)
+  - **Steren**: `/live/channel0`, `/live/channel1` (puerto 8000)
 - ✅ **Descubrimiento automático** - Servicios y perfiles de media
 - ✅ **Snapshots HTTP directos** - Sin autenticación adicional requerida
 - ✅ **Streaming optimizado** - Stream persistente con buffers mínimos
 - ✅ **Información del dispositivo** - Fabricante, modelo, firmware, serial
 - ✅ **Integración con Factory** - Soporte en ConnectionFactory
-- ✅ **Performance optimizada** - 13.86 FPS Dahua, funcional TP-Link
+- ✅ **Performance optimizada** - 13.86 FPS Dahua, funcional TP-Link, 20+ FPS Steren
 - ✅ **Sin workflow DMSS** - Conexión inmediata sin dependencias
 - ✅ **Protocolo por defecto** - Primera opción en GUI
-- ✅ **Probado con hardware real** - Dos marcas diferentes funcionando
+- ✅ **Probado con hardware real** - Tres marcas diferentes funcionando
 - ✅ **Logs mejorados** - Configuración OpenCV sin warnings excesivos
 
 ### **5. Visor en Tiempo Real (100% Completa y Multi-Marca)**
@@ -63,14 +64,14 @@
 - ✅ **RealTimeViewer** - Aplicación principal con interfaz gráfica moderna
 - ✅ **CameraWidget** - Widget individual con soporte ONVIF, RTSP y Amcrest
 - ✅ **ControlPanel** - Panel de control completo con 3 pestañas y ONVIF
-- ✅ **Soporte multi-marca** - Configuración específica por fabricante
+- ✅ **Soporte multi-marca** - Configuración específica por fabricante (Dahua, TP-Link, Steren)
 - ✅ **Múltiples layouts** - 1x1, 2x2, 3x3, 4x3 y más configuraciones
 - ✅ **Configuración persistente** - Guardado y carga de configuraciones JSON
 - ✅ **Captura de snapshots** - Individual por cámara con todos los protocolos
 - ✅ **Monitor FPS** - Contador en tiempo real optimizado
 - ✅ **Threading robusto** - Stream sin bloquear la interfaz
 - ✅ **Manejo de errores** - Reconexión y limpieza automática
-- ✅ **Probado con hardware real** - Funcionando con Dahua + TP-Link via ONVIF y RTSP
+- ✅ **Probado con hardware real** - Funcionando con Dahua + TP-Link + Steren via ONVIF y RTSP
 - ✅ **ONVIF como predeterminado** - Protocolo principal del visor
 
 ### **6. Configuración y Dependencias**
@@ -196,7 +197,9 @@ dahua-visor/
 │   │   ├── base_connection.py   # ✅ Clase abstracta base
 │   │   ├── rtsp_connection.py   # ✅ Implementación RTSP
 │   │   ├── onvif_connection.py  # ✅ Implementación ONVIF multi-marca
-│   │   └── amcrest_connection.py # ✅ Implementación HTTP/CGI
+│   │   ├── amcrest_connection.py # ✅ Implementación HTTP/CGI
+│   │   ├── tplink_connection.py # ✅ Implementación TP-Link especializada
+│   │   └── steren_connection.py # ✅ Implementación Steren CCTV-235
 │   ├── viewer/                  # ✅ Visor en tiempo real
 │   │   ├── __init__.py          # ✅ Módulo principal
 │   │   ├── real_time_viewer.py  # ✅ Aplicación principal
@@ -204,7 +207,9 @@ dahua-visor/
 │   │   └── control_panel.py     # ✅ Panel de control global
 │   └── utils/
 │       ├── __init__.py
-│       └── config.py           # ✅ Gestor de configuración
+│       ├── config.py           # ✅ Gestor de configuración
+│       ├── brand_manager.py    # ✅ Gestor de marcas
+│       └── camera_brands.json  # ✅ Configuración de marcas (Dahua, TP-Link, Steren)
 ├── examples/                   # ✅ REORGANIZADO: Sistema de ejemplos y testing
 │   ├── protocols/              # ✅ Ejemplos por protocolo
 │   │   ├── onvif_example.py    # ✅ ONVIF consolidado (6→1 archivos)
@@ -386,6 +391,12 @@ TP-Link: Usuario → Ejecutar visor → Stream directo funcionando
 - **RTSP**: ✅ (directo) - URLs `/stream1`, `/stream2`
 - **ONVIF**: ✅ (detección automática) - Puerto 2020, configuración específica
 
+#### **Steren CCTV-235**
+
+- **RTSP**: ✅ (directo) - URLs `/live/channel0`, `/live/channel1` (puerto 5543)
+- **ONVIF**: ✅ (optimizado) - Puerto 8000, tokens PROFILE_395207/395208
+- **Dual-stream**: ✅ (4MP main + 360p sub) - Rendimiento 20+ FPS
+
 **🎯 Progreso Total del Proyecto:** 100%
 
-**🎉 ESTADO:** PROYECTO COMPLETADO - Visor Universal Multi-Marca con ONVIF como protocolo principal
+**🎉 ESTADO:** PROYECTO COMPLETADO - Visor Universal Multi-Marca (3 marcas) con ONVIF como protocolo principal

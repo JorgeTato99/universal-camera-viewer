@@ -175,6 +175,55 @@
           }
         }
       ]
+    },
+    "steren": {
+      "name": "Steren",
+      "default_ports": {
+        "rtsp": 5543,
+        "http": 8000,
+        "onvif": 8000,
+        "sdk": null
+      },
+      "rtsp_urls": [
+        "/live/channel0",
+        "/live/channel1"
+      ],
+      "protocols": ["rtsp", "onvif", "steren"],
+      "models": [
+        {
+          "id": "cctv-235",
+          "name": "CCTV-235",
+          "display_name": "Steren CCTV-235",
+          "supported_protocols": ["rtsp", "onvif", "steren"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 0,
+            "subtype": 0
+          },
+          "onvif_profiles": {
+            "main": {
+              "token": "PROFILE_395207",
+              "resolution": "2560x1440",
+              "codec": "HEVC",
+              "channel": "channel0"
+            },
+            "sub": {
+              "token": "PROFILE_395208", 
+              "resolution": "640x360",
+              "codec": "H264",
+              "channel": "channel1"
+            }
+          },
+          "device_info": {
+            "manufacturer": "Happytimesoft",
+            "model": "IPCamera",
+            "firmware": "1.0"
+          }
+        }
+      ]
     }
   },
   "default_config": {

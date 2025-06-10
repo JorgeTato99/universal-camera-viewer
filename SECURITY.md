@@ -14,7 +14,7 @@ Este documento describe cómo reportar vulnerabilidades de seguridad y el proces
 
 Este aviso de seguridad aplica a:
 
-- El repositorio: `https://github.com/JorgeTato99/`  
+- El repositorio: [Universal Camera Viewer](https://github.com/JorgeTato99/universal-camera-viewer) - `https://github.com/JorgeTato99/universal-camera-viewer`
 - Paquetes binarios y librerías distribuidas oficialmente
 
 No cubre componentes de terceros integrados. Para vulnerabilidades en dependencias externas, por favor repórtelas directamente a sus mantenedores.
