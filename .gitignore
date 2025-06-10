@@ -1,0 +1,273 @@
+# ==========================================
+# GITIGNORE - Visor Universal de Cámaras
+# ==========================================
+# cspell:disable
+
+# ==========================================
+# ARCHIVOS DE CONFIGURACIÓN SENSIBLES
+# ==========================================
+# Archivo de configuración con credenciales
+.env
+
+# Respaldos de configuración
+.env.backup
+.env.local
+.env.*.local
+
+# ==========================================
+# ENTORNOS VIRTUALES DE PYTHON
+# ==========================================
+# Entorno virtual del proyecto
+.venv/
+venv/
+env/
+ENV/
+
+# Pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# Conda
+.conda/
+
+# ==========================================
+# ARCHIVOS GENERADOS POR PYTHON
+# ==========================================
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribución / empaquetado
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==========================================
+# LOGS Y ARCHIVOS TEMPORALES
+# ==========================================
+# Logs del proyecto
+examples/logs/*.log
+examples/logs/**/*.log
+*.log
+
+# Archivos temporales
+temp/
+tmp/
+.tmp/
+
+# ==========================================
+# SNAPSHOTS Y CAPTURAS
+# ==========================================
+# Imágenes capturadas por las cámaras
+examples/logs/snapshots/*.jpg
+examples/logs/snapshots/*.jpeg
+examples/logs/snapshots/*.png
+examples/logs/snapshots/*.bmp
+snapshots/
+captures/
+*.jpg
+*.jpeg
+*.png
+*.bmp
+
+# Videos grabados
+recordings/
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.mkv
+
+# ==========================================
+# CONFIGURACIÓN DE EDITORES
+# ==========================================
+# Visual Studio Code - configuración de usuario
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.code-workspace
+
+# Mantener configuración de proyecto de VSCode
+# .vscode/settings.json se mantiene porque contiene configuración específica del proyecto
+
+# JetBrains IDEs
+.idea/
+*.swp
+*.swo
+*~
+
+# Vim
+.*.sw?
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Cursor
+.cursor/
+.cursorrules/
+.cursorrules*
+
+# ==========================================
+# ARCHIVOS DEL SISTEMA OPERATIVO
+# ==========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ==========================================
+# DOCUMENTACIÓN GENERADA
+# ==========================================
+# Sphinx documentation
+docs/_build/
+docs/build/
+
+# MkDocs
+site/
+
+# ==========================================
+# TESTING Y COVERAGE
+# ==========================================
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ==========================================
+# JUPYTER NOTEBOOKS
+# ==========================================
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# ==========================================
+# CACHES Y ÍNDICES
+# ==========================================
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Pytype static type analyzer
+.pytype/
+
+# ==========================================
+# DEPENDENCIAS Y LIBRERÍAS EXTERNAS
+# ==========================================
+# SDK de Dahua (si se descarga)
+sdk/dahua_sdk/
+sdk/downloads/
+sdk/*.dll
+sdk/*.so
+sdk/*.dylib
+
+# Archivos WSDL descargados dinámicamente
+sdk/wsdl/*.wsdl
+sdk/wsdl/cache/
+
+# ==========================================
+# ARCHIVOS ESPECÍFICOS DEL PROYECTO
+# ==========================================
+# Configuraciones de cámaras guardadas
+camera_configs/
+saved_layouts/
+
+# Archivos de calibración
+calibration_data/
+
+# Archivos de debug específicos
+debug_*.txt
+debug_*.json
+
+# ==========================================
+# ARCHIVOS DE RESPALDO
+# ==========================================
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# ==========================================
+# LOGS DE DESARROLLO
+# ==========================================
+# Logs específicos del desarrollo
+dev_*.log
+test_*.log
+
+# ==========================================
+# ARCHIVOS A MANTENER (COMENTADOS)
+# ==========================================
+# Los siguientes archivos SÍ deben incluirse en el repositorio:
+# .env.example - Template de configuración
+# requirements.txt - Dependencias del proyecto
+# .cursor/rules/*.mdc - Reglas de desarrollo
+# examples/logs/.gitkeep - Para mantener la estructura de carpetas
+# .vscode/settings.json - Configuración específica del proyecto 
