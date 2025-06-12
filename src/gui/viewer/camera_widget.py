@@ -22,7 +22,7 @@ from src.connections.rtsp_connection import RTSPConnection
 from src.connections.amcrest_connection import AmcrestConnection
 from src.connections.onvif_connection import ONVIFConnection
 
-
+# cspell:disable
 class CameraWidget:
     """
     Widget para mostrar el stream de una cámara individual.
@@ -197,11 +197,13 @@ class CameraWidget:
                 self.logger.info("Conexión establecida exitosamente")
             else:
                 self._update_status("Error de conexión", "red")
+                self._clear_video_canvas("error")
                 messagebox.showerror("Error", "No se pudo conectar a la cámara")
                 
         except Exception as e:
             self.logger.error(f"Error al conectar: {str(e)}")
             self._update_status("Error", "red")
+            self._clear_video_canvas("error")
             messagebox.showerror("Error", f"Error al conectar:\n{str(e)}")
     
     def _disconnect(self):
@@ -227,8 +229,8 @@ class CameraWidget:
             self.snapshot_btn.config(state=tk.DISABLED)
             self.record_btn.config(state=tk.DISABLED)
             
-            # Limpiar canvas
-            self._clear_video_canvas()
+            # Limpiar canvas con mensaje de desconexión manual (con pequeño delay para evitar race conditions)
+            self.video_canvas.after(100, lambda: self._clear_video_canvas("disconnected"))
             
             self.logger.info("Desconexión completada")
             
@@ -273,6 +275,10 @@ class CameraWidget:
         Args:
             frame: Frame de OpenCV (BGR)
         """
+        # No mostrar frames si no estamos streaming (evita sobrescribir mensajes de desconexión)
+        if not self.is_streaming:
+            return
+            
         try:
             # Convertir BGR a RGB
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -341,18 +347,84 @@ class CameraWidget:
         """
         self.status_label.config(text=f"Estado: {status}", foreground=color)
     
-    def _clear_video_canvas(self):
+    def _clear_video_canvas(self, state: str = "initial"):
         """
-        Limpia el canvas de video y muestra mensaje por defecto.
+        Limpia el canvas de video y muestra mensaje según el estado.
+        
+        Args:
+            state: Estado del canvas ("initial", "disconnected", "error")
         """
+        # Limpiar canvas completamente
         self.video_canvas.delete("all")
+        
+        # Limpiar referencia de imagen para evitar que se mantenga
+        if hasattr(self.video_canvas, 'image'):
+            delattr(self.video_canvas, 'image')
+        
+        # Definir mensajes según el estado
+        messages = {
+            "initial": {
+                "text": "Stream no iniciado\nPresiona 'Conectar' para comenzar",
+                "color": "white",
+                "icon": "🎥"
+            },
+            "disconnected": {
+                "text": "Cámara desconectada manualmente\n\nPresiona 'Conectar' para reconectar",
+                "color": "#FFD700",  # Dorado
+                "icon": "🔌"
+            },
+            "error": {
+                "text": "Error de conexión\nVerifica la configuración y vuelve a intentar",
+                "color": "#FF6B6B",  # Rojo suave
+                "icon": "⚠️"
+            }
+        }
+        
+        # Obtener mensaje para el estado actual
+        message_info = messages.get(state, messages["initial"])
+        
+        # Calcular posición centrada
+        canvas_width = self.video_canvas.winfo_width()
+        canvas_height = self.video_canvas.winfo_height()
+        
+        # Si el canvas aún no tiene dimensiones, usar valores por defecto
+        if canvas_width <= 1:
+            canvas_width = 640
+        if canvas_height <= 1:
+            canvas_height = 480
+            
+        center_x = canvas_width // 2
+        center_y = canvas_height // 2
+        
+        # Mostrar icono
         self.video_canvas.create_text(
-            320, 240, 
-            text="Stream no iniciado\nPresiona 'Conectar' para comenzar", 
-            fill="white", 
+            center_x, center_y - 40,
+            text=message_info["icon"],
+            fill=message_info["color"],
+            font=("Arial", 24),
+            justify=tk.CENTER
+        )
+        
+        # Mostrar mensaje principal
+        self.video_canvas.create_text(
+            center_x, center_y + 10,
+            text=message_info["text"],
+            fill=message_info["color"],
             font=("Arial", 12),
             justify=tk.CENTER
         )
+        
+        # Agregar timestamp para desconexión manual
+        if state == "disconnected":
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+            self.video_canvas.create_text(
+                center_x, center_y + 60,
+                text=f"Desconectado a las {timestamp}",
+                fill="#B0B0B0",  # Gris claro
+                font=("Arial", 10),
+                justify=tk.CENTER
+            )
     
     def _take_snapshot(self):
         """
