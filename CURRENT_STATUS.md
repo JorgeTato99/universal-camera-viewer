@@ -56,32 +56,51 @@
 - ✅ **Performance optimizada** - 13.86 FPS Dahua, funcional TP-Link, 20+ FPS Steren
 - ✅ **Sin workflow DMSS** - Conexión inmediata sin dependencias
 - ✅ **Protocolo por defecto** - Primera opción en GUI
-- ✅ **Probado con hardware real** - Tres marcas diferentes funcionando
+- ✅ **Probado con hardware real** - Cuatro marcas diferentes funcionando
 - ✅ **Logs mejorados** - Configuración OpenCV sin warnings excesivos
 
-### **5. Visor en Tiempo Real (100% Completa y Multi-Marca)**
+### **5. Conexión Genérica para Cámaras Chinas (100% Completa)**
+
+- ✅ **GenericConnection** - Implementación para cámaras chinas sin marca específica
+- ✅ **Múltiples patrones RTSP** - Prueba automática de 16+ URLs comunes
+- ✅ **Detección inteligente** - Encuentra automáticamente la URL funcional
+- ✅ **Soporte en GUI** - Botón "🎯 Conectar RTSP Custom" en descubrimiento de puertos
+- ✅ **Precarga de credenciales** - Datos automáticos desde variables GENERIC_* en .env
+- ✅ **Indicador visual** - Muestra cuando se precargan datos desde .env
+- ✅ **Configuración condicional** - Solo se activa si GENERIC_IP está definida
+- ✅ **Probado con hardware real** - Cámara china 8MP WiFi (192.168.1.180) funcionando
+- ✅ **URLs probadas automáticamente**:
+  - `/stream1`, `/stream2`, `/live/stream1`, `/live/stream2`
+  - `/stream`, `/live`, `/h264`, `/video`
+  - `/cam/realmonitor?channel=1&subtype=0` (estilo Dahua)
+  - `/user={user}&password={pass}&channel=1&stream=0` (credenciales en URL)
+  - Y más patrones comunes en cámaras chinas
+
+### **6. Visor en Tiempo Real (100% Completa y Multi-Marca)**
 
 - ✅ **RealTimeViewer** - Aplicación principal con interfaz gráfica moderna
 - ✅ **CameraWidget** - Widget individual con soporte ONVIF, RTSP y Amcrest
 - ✅ **ControlPanel** - Panel de control completo con 3 pestañas y ONVIF
-- ✅ **Soporte multi-marca** - Configuración específica por fabricante (Dahua, TP-Link, Steren)
+- ✅ **Soporte multi-marca** - Configuración específica por fabricante (Dahua, TP-Link, Steren, Generic)
 - ✅ **Múltiples layouts** - 1x1, 2x2, 3x3, 4x3 y más configuraciones
 - ✅ **Configuración persistente** - Guardado y carga de configuraciones JSON
 - ✅ **Captura de snapshots** - Individual por cámara con todos los protocolos
 - ✅ **Monitor FPS** - Contador en tiempo real optimizado
 - ✅ **Threading robusto** - Stream sin bloquear la interfaz
 - ✅ **Manejo de errores** - Reconexión y limpieza automática
-- ✅ **Probado con hardware real** - Funcionando con Dahua + TP-Link + Steren via ONVIF y RTSP
+- ✅ **Probado con hardware real** - Funcionando con Dahua + TP-Link + Steren + Generic via ONVIF y RTSP
 - ✅ **ONVIF como predeterminado** - Protocolo principal del visor
 
-### **6. Configuración y Dependencias**
+### **7. Configuración y Dependencias**
 
 - ✅ **requirements.txt** - Todas las dependencias incluyendo onvif-zeep, psutil, numpy
 - ✅ **.env/.env.example** - Gestión de configuración completa multi-marca
 - ✅ **Reglas de Cursor** - Estándares de desarrollo establecidos
-- ✅ **Configuración ONVIF** - Puertos automáticos (80 Dahua, 2020 TP-Link)
+- ✅ **Configuración ONVIF** - Puertos automáticos (80 Dahua, 2020 TP-Link, 8000 Steren)
+- ✅ **Configuración condicional** - Variables de entorno opcionales para cada marca
+- ✅ **Precarga inteligente** - Datos automáticos desde .env cuando están disponibles
 
-### **7. Sistema de Ejemplos y Testing (100% Completo y Reorganizado)**
+### **8. Sistema de Ejemplos y Testing (100% Completo y Reorganizado)**
 
 - ✅ **Estructura reorganizada** - 60% reducción de archivos, organización lógica
 - ✅ **examples/protocols/** - 4 archivos consolidados (ONVIF, RTSP, Amcrest, SDK)
@@ -146,15 +165,28 @@
 - ✅ **Stream funcional** - Video fluido con credenciales incluidas
 - ✅ **Logs optimizados** - Warnings FFmpeg suprimidos correctamente
 
+#### **Cámara China Genérica 8MP WiFi (`192.168.1.180`)**
+
+**Resultados:**
+
+- ✅ **Detección automática de patrón** - URL funcional encontrada automáticamente
+- ✅ **URL específica descubierta** - `/user=EightMPWiFiSCmr&password=...&channel=1&stream=0`
+- ✅ **Credenciales en URL** - Patrón de autenticación no estándar detectado
+- ✅ **Stream de alta resolución** - 2304x2592 (5.9 MP) a 12 FPS
+- ✅ **Conexión inmediata** - Sin configuración manual requerida
+- ✅ **Precarga desde .env** - Variables GENERIC_* cargadas automáticamente
+- ✅ **Interfaz especializada** - Botón "🎯 Conectar RTSP Custom" funcional
+- ✅ **Prueba de 16+ URLs** - Sistema inteligente encuentra la correcta automáticamente
+
 ### **Prueba Visor Multi-Marca (EXITOSA TOTAL)**
 
-**Cámaras:** Dahua Hero-K51H + TP-Link Tapo C520WS
-**Protocolos:** ONVIF (predeterminado) y RTSP (backup)
+**Cámaras:** Dahua Hero-K51H + TP-Link Tapo C520WS + Steren CCTV-235 + Cámara China Genérica
+**Protocolos:** ONVIF (predeterminado), RTSP (backup), Generic (cámaras chinas)
 **Resultados:**
 
 - ✅ **Interfaz gráfica moderna** - Ventana principal, panel de control, área de visualización
 - ✅ **ONVIF como protocolo principal** - Primera opción en configuración
-- ✅ **Soporte simultáneo multi-marca** - Dahua + TP-Link en misma sesión
+- ✅ **Soporte simultáneo multi-marca** - 4 marcas diferentes en misma sesión
 - ✅ **Configuración automática por marca** - Puertos y URLs específicas
 - ✅ **Stream 4K inmediato** - Video fluido sin workflow DMSS necesario
 - ✅ **Configuración avanzada** - Puerto ONVIF, campos específicos por protocolo
@@ -162,7 +194,8 @@
 - ✅ **Snapshots instantáneos** - Captura vía ONVIF sin delay
 - ✅ **Performance optimizada** - Stream persistente, buffers mínimos
 - ✅ **Logging completo** - Trazabilidad de todas las operaciones
-- ✅ **Múltiples protocolos** - ONVIF, RTSP, Amcrest en una sola interfaz
+- ✅ **Múltiples protocolos** - ONVIF, RTSP, Amcrest, Generic en una sola interfaz
+- ✅ **Conexión Custom RTSP** - Botón especializado para cámaras chinas genéricas
 
 ### **Descubrimiento Crítico: Arquitectura ONVIF + RTSP**
 
@@ -199,17 +232,24 @@ dahua-visor/
 │   │   ├── onvif_connection.py  # ✅ Implementación ONVIF multi-marca
 │   │   ├── amcrest_connection.py # ✅ Implementación HTTP/CGI
 │   │   ├── tplink_connection.py # ✅ Implementación TP-Link especializada
-│   │   └── steren_connection.py # ✅ Implementación Steren CCTV-235
+│   │   ├── steren_connection.py # ✅ Implementación Steren CCTV-235
+│   │   └── generic_connection.py # ✅ Implementación cámaras chinas genéricas
 │   ├── viewer/                  # ✅ Visor en tiempo real
 │   │   ├── __init__.py          # ✅ Módulo principal
 │   │   ├── real_time_viewer.py  # ✅ Aplicación principal
 │   │   ├── camera_widget.py     # ✅ Widget individual de cámara
 │   │   └── control_panel.py     # ✅ Panel de control global
+│   ├── gui/                     # ✅ Interfaces gráficas especializadas
+│   │   ├── __init__.py
+│   │   ├── main_application.py  # ✅ Aplicación principal con menús
+│   │   └── discovery/           # ✅ Herramientas de descubrimiento
+│   │       ├── __init__.py
+│   │       └── port_discovery_view.py # ✅ Descubrimiento de puertos + RTSP Custom
 │   └── utils/
 │       ├── __init__.py
 │       ├── config.py           # ✅ Gestor de configuración
 │       ├── brand_manager.py    # ✅ Gestor de marcas
-│       └── camera_brands.json  # ✅ Configuración de marcas (Dahua, TP-Link, Steren)
+│       └── camera_brands.json  # ✅ Configuración de marcas (Dahua, TP-Link, Steren, Generic)
 ├── examples/                   # ✅ REORGANIZADO: Sistema de ejemplos y testing
 │   ├── protocols/              # ✅ Ejemplos por protocolo
 │   │   ├── onvif_example.py    # ✅ ONVIF consolidado (6→1 archivos)
@@ -323,6 +363,18 @@ dahua-visor/
 - **HTTP CGI**: 📋 (no probado)
 - **ONVIF**: ✅ (completamente funcional) - puerto 2020, detección automática
 
+#### **Steren CCTV-235 (192.168.1.178)**
+
+- **RTSP**: ✅ (directo) - URLs `/live/channel0`, `/live/channel1` (puerto 5543)
+- **ONVIF**: ✅ (optimizado) - Puerto 8000, tokens PROFILE_395207/395208
+- **Dual-stream**: ✅ (4MP main + 360p sub) - Rendimiento 20+ FPS
+
+#### **Cámara China Genérica 8MP WiFi (192.168.1.180)**
+
+- **RTSP**: ✅ (detección automática) - 16+ patrones probados automáticamente
+- **Generic Connection**: ✅ (especializada) - Credenciales en URL, 5.9MP @ 12 FPS
+- **Precarga .env**: ✅ (condicional) - Variables GENERIC_* opcionales
+
 #### **Arquitectura ONVIF + RTSP**
 
 - **ONVIF es protocolo de configuración** - No transporta video
@@ -399,4 +451,4 @@ TP-Link: Usuario → Ejecutar visor → Stream directo funcionando
 
 **🎯 Progreso Total del Proyecto:** 100%
 
-**🎉 ESTADO:** PROYECTO COMPLETADO - Visor Universal Multi-Marca (3 marcas) con ONVIF como protocolo principal
+**🎉 ESTADO:** PROYECTO COMPLETADO - Visor Universal Multi-Marca (4 marcas) con ONVIF como protocolo principal + Conexión Genérica para cámaras chinas

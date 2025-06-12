@@ -169,6 +169,7 @@ class ConnectionFactory:
         from .onvif_connection import ONVIFConnection
         from .tplink_connection import TPLinkConnection
         from .steren_connection import SterenConnection
+        from .generic_connection import GenericConnection
         
         # Mapeo de conexiones por marca
         connection_map = {
@@ -186,6 +187,11 @@ class ConnectionFactory:
                 "rtsp": SterenConnection,
                 "onvif": SterenConnection,  # Steren usa ONVIF + RTSP integrado
                 "steren": SterenConnection,  # Alias por compatibilidad
+            },
+            "generic": {
+                "rtsp": GenericConnection,
+                "generic": GenericConnection,   # Alias principal
+                "custom": GenericConnection,    # Alias para interfaz custom
             }
         }
         
@@ -216,7 +222,8 @@ class ConnectionFactory:
         supported = {
             "dahua": ["rtsp", "amcrest", "onvif"],
             "tplink": ["rtsp", "tplink", "onvif"],
-            "steren": ["rtsp", "onvif", "steren"]
+            "steren": ["rtsp", "onvif", "steren"],
+            "generic": ["rtsp", "generic", "custom"]
         }
         
         if camera_brand:

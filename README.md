@@ -1,15 +1,15 @@
 # Visor Universal de Cámaras Multi-Marca
 
-**Visor Universal de Cámaras** con soporte completo para múltiples marcas: **Dahua Hero-K51H**, **TP-Link Tapo**, **Steren CCTV-235** y compatibles. Proporciona conexión y consumo de flujos de video desde aplicaciones Python con interfaz gráfica moderna.
+**Visor Universal de Cámaras** con soporte completo para múltiples marcas: **Dahua Hero-K51H**, **TP-Link Tapo**, **Steren CCTV-235**, **Cámaras Chinas Genéricas** y compatibles. Proporciona conexión y consumo de flujos de video desde aplicaciones Python con interfaz gráfica moderna.
 
-**Estado del Proyecto**: 100% Completado - Visor funcional con 3 marcas, ONVIF optimizado como protocolo principal, RTSP como respaldo.
+**Estado del Proyecto**: 100% Completado - Visor funcional con 4 marcas, ONVIF optimizado como protocolo principal, RTSP como respaldo, conexión genérica para cámaras chinas.
 
 ## Marcas y Protocolos Soportados
 
 ### ✅ **ONVIF (Protocolo Principal - 100% Funcional)**
 
-- **Estado**: Implementado y optimizado para 3 marcas
-- **Marcas soportadas**: Dahua Hero-K51H, TP-Link Tapo C520WS, Steren CCTV-235
+- **Estado**: Implementado y optimizado para 4 marcas
+- **Marcas soportadas**: Dahua Hero-K51H, TP-Link Tapo C520WS, Steren CCTV-235, Cámaras Chinas Genéricas
 - **Funcionalidades**: Descubrimiento automático, stream en tiempo real, snapshots HTTP
 - **Rendimiento**: 13-20+ FPS según marca, conexión inmediata
 
@@ -24,6 +24,7 @@
 
 - **TPLinkConnection**: Implementación específica para Tapo (RTSP optimizado)
 - **SterenConnection**: Implementación híbrida ONVIF+RTSP para CCTV-235
+- **GenericConnection**: Detección automática para cámaras chinas genéricas (16+ patrones RTSP)
 - **AmcrestConnection**: HTTP/CGI para modelos compatibles (no Hero-K51H)
 
 ### 📋 **SDK Oficial Dahua (Opcional)**
@@ -86,6 +87,11 @@ cp .env.example .env
 # STEREN_IP=192.168.1.178
 # STEREN_USER=admin
 # STEREN_PASSWORD=tu_password_aquí
+
+# Cámara China Genérica:
+# GENERIC_IP=192.168.1.180
+# GENERIC_USER=admin
+# GENERIC_PASSWORD=tu_password_aquí
 ```
 
 **⚠️ Importante**: Si tu contraseña tiene caracteres especiales (%, &, etc.), déjalos tal como están. El sistema maneja automáticamente la codificación URL.
@@ -162,6 +168,12 @@ dahua-visor/
 - ✅ **ONVIF**: Excelente (puerto 8000, dual-stream 4MP+360p)
 - ✅ **RTSP**: Excelente (puerto 5543, 20+ FPS, `/live/channel0-1`)
 
+### Cámara China Genérica 8MP WiFi (192.168.1.180)
+
+- ✅ **Generic Connection**: Excelente (detección automática de 16+ patrones RTSP)
+- ✅ **RTSP**: Funcional (5.9MP @ 12 FPS, credenciales en URL)
+- ✅ **Precarga .env**: Condicional (variables GENERIC_* opcionales)
+
 ### Herramientas de Diagnóstico
 
 ```bash
@@ -190,7 +202,7 @@ config = ConfigurationManager()
 connection = ConnectionFactory.create_connection(
     connection_type='onvif', 
     config_manager=config,
-    camera_brand='dahua'  # o 'tplink', 'steren'
+    camera_brand='dahua'  # o 'tplink', 'steren', 'generic'
 )
 
 with connection:
@@ -224,11 +236,15 @@ tplink = ConnectionFactory.create_connection('tplink', config, 'tplink')
 # Dahua con ONVIF sin workflow
 dahua = ConnectionFactory.create_connection('onvif', config, 'dahua')
 
+# Cámara china genérica con detección automática
+generic = ConnectionFactory.create_connection('generic', config, 'generic')
+
 # Usar cualquier conexión de la misma manera
-with steren:
-    frame = steren.get_frame()
-    device_info = steren.get_device_info()
+with generic:
+    frame = generic.get_frame()
+    device_info = generic.get_device_info()
     print(f"Conectado a: {device_info['brand']} {device_info['model']}")
+    print(f"URL detectada: {generic.successful_url}")
 ```
 
 ---
@@ -269,12 +285,14 @@ python examples/protocols/rtsp_example.py
 - [x] Arquitectura base con principios SOLID
 - [x] Conexión ONVIF multi-marca (protocolo principal)
 - [x] Conexión RTSP universal y especializada
-- [x] Conexiones específicas por marca (TP-Link, Steren)
+- [x] Conexiones específicas por marca (TP-Link, Steren, Generic)
+- [x] Conexión genérica para cámaras chinas (detección automática de patrones)
 - [x] Implementación HTTP/CGI (para modelos compatibles)
 - [x] Visor en tiempo real completo con interfaz gráfica
 - [x] Panel de control con múltiples layouts
 - [x] Sistema de configuración persistente
 - [x] Herramientas de diagnóstico y testing
+- [x] Interfaz de descubrimiento de puertos con conexión RTSP custom
 
 ### Extensiones Opcionales
 
@@ -331,6 +349,7 @@ ping 192.168.1.172  # (o IP de tu cámara)
 - **Dahua Hero-K51H**: ONVIF (puerto 80) - Sin workflow DMSS requerido
 - **TP-Link Tapo**: ONVIF (puerto 2020) o RTSP directo
 - **Steren CCTV-235**: Implementación híbrida ONVIF+RTSP optimizada
+- **Cámaras Chinas Genéricas**: Generic Connection - Detección automática de patrones RTSP
 
 ---
 

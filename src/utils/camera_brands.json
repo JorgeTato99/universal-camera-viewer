@@ -224,6 +224,64 @@
           }
         }
       ]
+    },
+    "generic": {
+      "name": "Genérica/China",
+      "default_ports": {
+        "rtsp": 554,
+        "http": 80,
+        "onvif": 80,
+        "sdk": null
+      },
+      "rtsp_urls": [
+        "/stream1",
+        "/stream2",
+        "/live/stream1",
+        "/live/stream2",
+        "/stream",
+        "/live",
+        "/live/main",
+        "/live/sub",
+        "/h264",
+        "/h264_stream",
+        "/video",
+        "/cam/realmonitor?channel=1&subtype=0",
+        "/cam/realmonitor?channel=1&subtype=1",
+        "/"
+      ],
+      "protocols": ["rtsp", "generic", "custom"],
+      "models": [
+        {
+          "id": "generic-rtsp",
+          "name": "Cámara Genérica RTSP",
+          "display_name": "Cámara China Genérica",
+          "supported_protocols": ["rtsp", "generic", "custom"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          },
+          "description": "Para cámaras chinas sin marca que solo exponen puerto 554 (RTSP). Prueba múltiples patrones de URL automáticamente."
+        },
+        {
+          "id": "generic-noauth",
+          "name": "Cámara Genérica Sin Auth",
+          "display_name": "Cámara China Sin Autenticación",
+          "supported_protocols": ["rtsp", "generic"],
+          "default_credentials": {
+            "username": "",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          },
+          "description": "Para cámaras que no requieren autenticación en RTSP."
+        }
+      ]
     }
   },
   "default_config": {

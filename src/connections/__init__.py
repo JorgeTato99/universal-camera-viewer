@@ -10,5 +10,6 @@ from .amcrest_connection import AmcrestConnection
 from .onvif_connection import ONVIFConnection
 from .tplink_connection import TPLinkConnection
 from .steren_connection import SterenConnection
+from .generic_connection import GenericConnection
 
-__all__ = ["BaseConnection", "ConnectionFactory", "RTSPConnection", "AmcrestConnection", "ONVIFConnection", "TPLinkConnection", "SterenConnection"] 
+__all__ = ["BaseConnection", "ConnectionFactory", "RTSPConnection", "AmcrestConnection", "ONVIFConnection", "TPLinkConnection", "SterenConnection", "GenericConnection"] 
