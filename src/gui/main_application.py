@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from .viewer.real_time_viewer_view import RealTimeViewerView
 from .discovery.port_discovery_view import PortDiscoveryView
 
-
+# cspell:disable
 class MainApplication:
     """
     Aplicación principal con sistema de menús y vistas modulares.
@@ -191,15 +191,11 @@ class MainApplication:
         """
         if self.current_view:
             try:
-                # Si la vista tiene método cleanup, llamarlo
-                if hasattr(self.current_view, 'cleanup'):
-                    self.current_view.cleanup()
-                
-                # Destruir la vista
-                self.current_view.destroy()
+                # Solo ocultar la vista, no destruirla (para reutilización)
+                self.current_view.pack_forget()
                 
             except Exception as e:
-                self.logger.error(f"Error limpiando vista actual: {e}")
+                self.logger.error(f"Error ocultando vista actual: {e}")
             
             finally:
                 self.current_view = None
@@ -219,14 +215,31 @@ class MainApplication:
         try:
             # Crear o reutilizar vista del viewer
             if 'viewer' not in self.views:
+                # Crear nueva vista
                 viewer_container = ttk.Frame(self.main_container)
-                self.views['viewer'] = RealTimeViewerView(viewer_container)
+                viewer_view = RealTimeViewerView(viewer_container)
+                
+                # Almacenar tanto el contenedor como la vista
+                self.views['viewer'] = {
+                    'container': viewer_container,
+                    'view': viewer_view
+                }
+                
                 viewer_container.pack(fill=tk.BOTH, expand=True)
                 self.current_view = viewer_container
             else:
                 # Reutilizar vista existente
-                self.current_view = self.views['viewer']
-                self.current_view.pack(fill=tk.BOTH, expand=True)
+                viewer_data = self.views['viewer']
+                viewer_container = viewer_data['container']
+                viewer_view = viewer_data['view']
+                
+                # Reactivar el contenedor
+                viewer_container.pack(fill=tk.BOTH, expand=True)
+                self.current_view = viewer_container
+                
+                # Refrescar la vista si tiene el método
+                if hasattr(viewer_view, 'refresh'):
+                    viewer_view.refresh()
             
             self.logger.info("Vista Viewer cargada exitosamente")
             
@@ -247,10 +260,33 @@ class MainApplication:
         self.current_section_label.config(text="🔍 Descubrimiento de Puertos")
         
         try:
-            # Crear vista de port discovery
-            discovery_container = ttk.Frame(self.main_container)
-            self.current_view = PortDiscoveryView(discovery_container)
-            discovery_container.pack(fill=tk.BOTH, expand=True)
+            # Crear o reutilizar vista de port discovery
+            if 'port_discovery' not in self.views:
+                # Crear nueva vista
+                discovery_container = ttk.Frame(self.main_container)
+                discovery_view = PortDiscoveryView(discovery_container)
+                
+                # Almacenar tanto el contenedor como la vista
+                self.views['port_discovery'] = {
+                    'container': discovery_container,
+                    'view': discovery_view
+                }
+                
+                discovery_container.pack(fill=tk.BOTH, expand=True)
+                self.current_view = discovery_container
+            else:
+                # Reutilizar vista existente
+                discovery_data = self.views['port_discovery']
+                discovery_container = discovery_data['container']
+                discovery_view = discovery_data['view']
+                
+                # Reactivar el contenedor
+                discovery_container.pack(fill=tk.BOTH, expand=True)
+                self.current_view = discovery_container
+                
+                # Refrescar la vista si tiene el método
+                if hasattr(discovery_view, 'refresh'):
+                    discovery_view.refresh()
             
             self.logger.info("Vista Port Discovery cargada exitosamente")
             
@@ -317,10 +353,18 @@ Arquitectura SOLID • Clean Code
             self._clear_current_view()
             
             # Limpiar vistas almacenadas
-            for view_name, view in self.views.items():
+            for view_name, view_data in self.views.items():
                 try:
-                    if hasattr(view, 'cleanup'):
-                        view.cleanup()
+                    if isinstance(view_data, dict):
+                        # Nueva estructura con container y view
+                        if 'view' in view_data and hasattr(view_data['view'], 'cleanup'):
+                            view_data['view'].cleanup()
+                        if 'container' in view_data:
+                            view_data['container'].destroy()
+                    else:
+                        # Estructura antigua (por compatibilidad)
+                        if hasattr(view_data, 'cleanup'):
+                            view_data.cleanup()
                 except Exception as e:
                     self.logger.error(f"Error limpiando vista {view_name}: {e}")
             

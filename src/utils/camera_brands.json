@@ -188,13 +188,13 @@
         "/live/channel0",
         "/live/channel1"
       ],
-      "protocols": ["rtsp", "onvif", "steren"],
+      "protocols": ["rtsp", "onvif"],
       "models": [
         {
           "id": "cctv-235",
           "name": "CCTV-235",
           "display_name": "Steren CCTV-235",
-          "supported_protocols": ["rtsp", "onvif", "steren"],
+          "supported_protocols": ["rtsp", "onvif"],
           "default_credentials": {
             "username": "admin",
             "password": ""
@@ -249,13 +249,13 @@
         "/cam/realmonitor?channel=1&subtype=1",
         "/"
       ],
-      "protocols": ["rtsp", "generic", "custom"],
+      "protocols": ["rtsp", "onvif"],
       "models": [
         {
           "id": "generic-rtsp",
           "name": "Cámara Genérica RTSP",
           "display_name": "Cámara China Genérica",
-          "supported_protocols": ["rtsp", "generic", "custom"],
+          "supported_protocols": ["rtsp", "onvif"],
           "default_credentials": {
             "username": "admin",
             "password": ""
@@ -270,7 +270,7 @@
           "id": "generic-noauth",
           "name": "Cámara Genérica Sin Auth",
           "display_name": "Cámara China Sin Autenticación",
-          "supported_protocols": ["rtsp", "generic"],
+          "supported_protocols": ["rtsp"],
           "default_credentials": {
             "username": "",
             "password": ""

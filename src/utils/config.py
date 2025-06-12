@@ -7,7 +7,7 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 
-
+# cspell:disable
 class ConfigurationManager:
     """
     Gestor centralizado de configuración del sistema.
@@ -229,7 +229,7 @@ class ConfigurationManager:
                 "name": "Steren CCTV-235",
                 "ip": self.steren_ip,
                 "user": self.steren_user,
-                "protocols": ["rtsp", "onvif", "steren"]
+                "protocols": ["rtsp", "onvif"]
             })
             logger.debug(f"✅ Steren configurada: {self.steren_ip}")
         else:

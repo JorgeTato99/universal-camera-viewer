@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 import logging
 
-
+# cspell:disable
 class BaseConnection(ABC):
     """
     Clase abstracta base para todas las conexiones de cámara IP.
@@ -184,14 +184,12 @@ class ConnectionFactory:
                 "onvif": ONVIFConnection,   # TP-Link también soporta ONVIF
             },
             "steren": {
-                "rtsp": SterenConnection,
-                "onvif": SterenConnection,  # Steren usa ONVIF + RTSP integrado
-                "steren": SterenConnection,  # Alias por compatibilidad
+                "rtsp": SterenConnection,   # SterenConnection maneja RTSP específico para Steren
+                "onvif": SterenConnection,  # SterenConnection maneja ONVIF + RTSP integrado para Steren
             },
             "generic": {
-                "rtsp": GenericConnection,
-                "generic": GenericConnection,   # Alias principal
-                "custom": GenericConnection,    # Alias para interfaz custom
+                "rtsp": GenericConnection,      # GenericConnection especializada en RTSP para cámaras chinas
+                "onvif": ONVIFConnection,       # ONVIF estándar para cámaras genéricas que lo soporten
             }
         }
         
@@ -222,8 +220,8 @@ class ConnectionFactory:
         supported = {
             "dahua": ["rtsp", "amcrest", "onvif"],
             "tplink": ["rtsp", "tplink", "onvif"],
-            "steren": ["rtsp", "onvif", "steren"],
-            "generic": ["rtsp", "generic", "custom"]
+            "steren": ["rtsp", "onvif"],
+            "generic": ["rtsp", "onvif"]
         }
         
         if camera_brand:

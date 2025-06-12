@@ -716,7 +716,7 @@ class ControlPanel:
                         'ip': cam_info['ip'],
                         'brand': 'steren',
                         'model': cam_info['model'],
-                        'type': 'steren',  # Protocolo específico Steren
+                        'type': 'onvif',  # Protocolo principal para Steren (ONVIF + RTSP integrado)
                         'username': cam_info['user'],
                         'password': config.steren_password if hasattr(config, 'steren_password') else '',
                         'rtsp_port': config.steren_rtsp_port if hasattr(config, 'steren_rtsp_port') else 5543,
@@ -731,7 +731,7 @@ class ControlPanel:
                         'ip': cam_info['ip'],
                         'brand': 'generic',
                         'model': cam_info['model'],
-                        'type': 'generic',  # Protocolo genérico
+                        'type': 'rtsp',  # Protocolo principal para cámaras genéricas
                         'username': cam_info['user'],
                         'password': config.generic_password if hasattr(config, 'generic_password') else '',
                         'rtsp_port': 554,
