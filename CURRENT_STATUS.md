@@ -2,9 +2,10 @@
 
 > **Documentación técnica detallada** del estado actual, arquitectura, implementaciones y resultados de pruebas del Visor Universal de Cámaras Multi-Marca.
 
-![Última Actualización](https://img.shields.io/badge/Última%20Actualización-Diciembre%202024-blue)
+![Última Actualización](https://img.shields.io/badge/Última%20Actualización-Junio%202025-blue)
 ![Estado Técnico](https://img.shields.io/badge/Estado%20Técnico-100%25%20Operacional-brightgreen)
 ![Arquitectura](https://img.shields.io/badge/Arquitectura-SOLID%20Compliant-orange)
+![Autor](https://img.shields.io/badge/Autor-JorgeTato99-orange)
 
 ---
 
@@ -424,7 +425,7 @@ BRAND_SPECIFIC_URLS = {
 ## 📁 Estructura Actual del Proyecto
 
 ```bash
-dahua-visor/
+universal-camera-viewer/
 ├── .cursor/rules/               # Reglas de desarrollo
 │   ├── execution-control.mdc    # Control de ejecución de scripts
 │   └── coding-standards.mdc     # Estándares SOLID y Clean Code
@@ -710,6 +711,22 @@ TP-Link: Usuario → Ejecutar visor → Stream directo funcionando
 - 📋 **UX Enhancements**: Perfiles de escaneo, historial comparativo, descubrimiento automático
 
 **El proyecto está 100% listo para producción y sirve como foundation sólida para cualquier extensión futura.**
+
+---
+
+## 📄 **Información del Proyecto**
+
+**Repositorio**: [https://github.com/JorgeTato99/universal-camera-viewer](https://github.com/JorgeTato99/universal-camera-viewer)
+
+**Autor**: [JorgeTato99](https://github.com/JorgeTato99)
+
+**Licencia**: MIT License
+
+**Fecha de Creación**: Junio 2025
+
+**Soporte**:
+- 🐛 Issues: [GitHub Issues](https://github.com/JorgeTato99/universal-camera-viewer/issues)
+- 💬 Discusiones: [GitHub Discussions](https://github.com/JorgeTato99/universal-camera-viewer/discussions)
 
 ---
 

@@ -5,6 +5,7 @@
 ![Estado del Proyecto](https://img.shields.io/badge/Estado-100%25%20Completado-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.8%2B%20(Probado%203.13.1)-blue)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-green)
+![Autor](https://img.shields.io/badge/Autor-JorgeTato99-orange)
 
 ## 🎯 **¿Qué es este proyecto?**
 
@@ -30,8 +31,8 @@
 
 ```bash
 # Clonar y configurar
-git clone https://github.com/tu-org/universal-visor.git
-cd universal-visor
+git clone https://github.com/JorgeTato99/universal-camera-viewer.git
+cd universal-camera-viewer
 
 # Entorno virtual
 python -m venv .venv
@@ -113,6 +114,7 @@ Layouts Disponibles:
 #### **🔍 Port Discovery con UX Optimizada**
 
 **Características Principales:**
+
 - **Validación en Tiempo Real**: IP, configuración y estado visual
 - **Shortcuts de Teclado**: F5 (escanear), Esc (detener), Ctrl+L (limpiar)
 - **Filtros Avanzados**: Búsqueda, mostrar/ocultar estados, estadísticas dinámicas
@@ -120,6 +122,7 @@ Layouts Disponibles:
 - **Historial Inteligente**: IPs utilizadas, autocompletado, patrones comunes
 
 **Interfaz Mejorada:**
+
 - **Barra de Estado**: Validación continua con indicadores visuales (✅/❌)
 - **Estadísticas en Tiempo Real**: Contadores de puertos abiertos/cerrados
 - **Vista Dual**: Tabla de resultados + consola técnica con colores
@@ -127,6 +130,7 @@ Layouts Disponibles:
 - **Animaciones Sutiles**: Feedback visual para mejor experiencia
 
 **Funcionalidades Técnicas:**
+
 - **Autocompletado de IP**: Patrones comunes (192.168.1.x, 10.0.0.x)
 - **Presets de Configuración**: Rápido, balanceado, exhaustivo
 - **Métricas de Rendimiento**: Velocidad, tiempo estimado, progreso detallado
@@ -362,7 +366,7 @@ python examples/diagnostics/camera_detector.py
 | **Credenciales incorrectas** | Verificar caracteres especiales en .env |
 | **Layout no se actualiza** | Usar layouts predefinidos en lugar de custom |
 | **Port Discovery lento** | Ajustar timeout y usar modo "basic" para escaneos rápidos |
-| **Scroll duplicado** | Problema resuelto en v2.0 - actualizar a última versión |
+| **Scroll duplicado** | Problema resuelto en v0.2.0 - actualizar a última versión |
 
 ### **Logs y Debugging**
 
@@ -450,14 +454,18 @@ python examples/gui/discovery_demo.py
 
 **Licencia**: MIT - Ver archivo `LICENSE` para detalles completos.
 
+**Repositorio**: [https://github.com/JorgeTato99/universal-camera-viewer](https://github.com/JorgeTato99/universal-camera-viewer)
+
 **Soporte**:
 
 - 📖 Documentación técnica: `CURRENT_STATUS.md`
-- 🐛 Issues: GitHub Issues
-- 💬 Discusiones: GitHub Discussions
+- 🐛 Issues: [GitHub Issues](https://github.com/JorgeTato99/universal-camera-viewer/issues)
+- 💬 Discusiones: [GitHub Discussions](https://github.com/JorgeTato99/universal-camera-viewer/discussions)
 - 🎯 UX Feedback: Reportar problemas de usabilidad
 
-**Autor**: Desarrollado con principios de ingeniería de software moderna, arquitectura SOLID y enfoque en experiencia de usuario.
+**Autor**: [JorgeTato99](https://github.com/JorgeTato99) - Desarrollado con principios de ingeniería de software moderna, arquitectura SOLID y enfoque en experiencia de usuario.
+
+**Fecha de Creación**: Junio 2025
 
 ---
 
