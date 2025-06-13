@@ -20,6 +20,7 @@
 - 📱 **Múltiples Layouts**: 1x1, 2x2, 3x3, 4x3 con columnspan inteligente
 - 📸 **Snapshots HD**: Captura instantánea en alta calidad
 - 🎮 **Controles PTZ**: Soporte ONVIF para pan/tilt/zoom
+- 🔍 **Descubrimiento Avanzado**: Port Discovery con UX optimizada y herramientas de red
 
 ---
 
@@ -107,11 +108,36 @@ Layouts Disponibles:
 - **Redimensionado Automático**: Layout se adapta al número de cámaras
 - **Configuración Persistente**: Se guarda automáticamente
 
+### **Herramientas de Descubrimiento Avanzadas**
+
+#### **🔍 Port Discovery con UX Optimizada**
+
+**Características Principales:**
+- **Validación en Tiempo Real**: IP, configuración y estado visual
+- **Shortcuts de Teclado**: F5 (escanear), Esc (detener), Ctrl+L (limpiar)
+- **Filtros Avanzados**: Búsqueda, mostrar/ocultar estados, estadísticas dinámicas
+- **Exportación Múltiple**: CSV, JSON, TXT, HTML con reportes detallados
+- **Historial Inteligente**: IPs utilizadas, autocompletado, patrones comunes
+
+**Interfaz Mejorada:**
+- **Barra de Estado**: Validación continua con indicadores visuales (✅/❌)
+- **Estadísticas en Tiempo Real**: Contadores de puertos abiertos/cerrados
+- **Vista Dual**: Tabla de resultados + consola técnica con colores
+- **Tooltips Informativos**: Ayuda contextual en todos los controles
+- **Animaciones Sutiles**: Feedback visual para mejor experiencia
+
+**Funcionalidades Técnicas:**
+- **Autocompletado de IP**: Patrones comunes (192.168.1.x, 10.0.0.x)
+- **Presets de Configuración**: Rápido, balanceado, exhaustivo
+- **Métricas de Rendimiento**: Velocidad, tiempo estimado, progreso detallado
+- **Configuración Avanzada**: Diálogo modal con opciones técnicas
+
 ### **Panel de Control Avanzado**
 
-- **Pestaña Configuración**: Protocolos, credenciales, puertos
-- **Pestaña Cámaras**: Gestión individual, snapshots, reconexión
-- **Pestaña Layouts**: Cambio dinámico, configuraciones predefinidas
+- **Pestaña Configuración**: Protocolos, credenciales, puertos específicos
+- **Pestaña Cámaras**: Gestión individual, snapshots HD, reconexión manual
+- **Pestaña Layouts**: Control de layouts con previsualización
+- **Pestaña Descubrimiento**: Port Discovery con herramientas de red
 
 ---
 
@@ -123,6 +149,7 @@ Layouts Disponibles:
 - **Template Method**: `BaseConnection` como clase abstracta
 - **Singleton**: `ConfigurationManager` para configuración global
 - **Observer**: Sistema de eventos para UI
+- **Component Pattern**: Módulos UI especializados y reutilizables
 
 ### **Estructura Modular**
 
@@ -140,7 +167,15 @@ src/
 │   ├── camera_widget.py      # Widget individual
 │   └── control_panel.py      # Panel de control
 ├── gui/                  # Interfaces especializadas
+│   ├── main_application.py   # Aplicación principal
 │   └── discovery/            # Herramientas de descubrimiento
+│       ├── port_discovery_view.py      # Vista principal
+│       └── components/                 # Componentes modulares
+│           ├── scan_config_panel.py        # Panel configuración
+│           ├── scan_progress_panel.py      # Panel progreso
+│           ├── scan_results_panel.py       # Panel resultados
+│           ├── ip_selector_widget.py       # Selector IP avanzado
+│           └── credentials_widget.py       # Widget credenciales
 └── utils/                # Utilidades
     ├── config.py             # Gestor de configuración
     ├── brand_manager.py      # Gestor de marcas
@@ -196,6 +231,25 @@ viewer.add_camera("Steren Patio", "steren", "steren")
 
 # Iniciar visualización
 viewer.show()
+```
+
+### **Descubrimiento de Red**
+
+```python
+from src.gui.discovery import PortDiscoveryView
+
+# Crear herramienta de descubrimiento
+discovery = PortDiscoveryView(parent_container)
+
+# Configurar escaneo
+discovery.set_target_ip("192.168.1.0/24")
+discovery.set_scan_mode("advanced")  # Con autenticación
+
+# Iniciar escaneo con callbacks
+discovery.start_scan(
+    on_port_found=lambda port, service: print(f"Puerto {port}: {service}"),
+    on_complete=lambda results: print(f"Escaneo completo: {len(results)} puertos")
+)
 ```
 
 ---
@@ -261,13 +315,16 @@ examples/
 │   └── amcrest_example.py       # Prueba HTTP/CGI
 ├── gui/                      # Interfaces gráficas
 │   ├── viewer_example.py        # Visor completo
-│   └── components_demo.py       # Demo de componentes
+│   ├── components_demo.py       # Demo de componentes
+│   └── discovery_demo.py        # Demo herramientas descubrimiento
 ├── testing/                  # Testing técnico
 │   ├── performance_test.py      # Análisis de rendimiento
-│   └── protocol_comparison.py   # Comparación de protocolos
+│   ├── protocol_comparison.py   # Comparación de protocolos
+│   └── ux_testing.py           # Testing de experiencia de usuario
 └── diagnostics/              # Herramientas de diagnóstico
     ├── camera_detector.py       # Detector de cámaras
-    └── network_analyzer.py      # Análisis de red
+    ├── network_analyzer.py      # Análisis de red
+    └── port_scanner.py          # Scanner de puertos avanzado
 ```
 
 ### **Ejecutar Pruebas**
@@ -279,8 +336,14 @@ python examples/protocols/onvif_example.py
 # Visor completo con todas las características
 python examples/gui/viewer_example.py
 
+# Demo de herramientas de descubrimiento
+python examples/gui/discovery_demo.py
+
 # Análisis de rendimiento
 python examples/testing/performance_test.py
+
+# Testing de UX y usabilidad
+python examples/testing/ux_testing.py
 
 # Detector automático de cámaras
 python examples/diagnostics/camera_detector.py
@@ -298,6 +361,8 @@ python examples/diagnostics/camera_detector.py
 | **RTSP timeout** | Para Dahua: ejecutar workflow DMSS previo |
 | **Credenciales incorrectas** | Verificar caracteres especiales en .env |
 | **Layout no se actualiza** | Usar layouts predefinidos en lugar de custom |
+| **Port Discovery lento** | Ajustar timeout y usar modo "basic" para escaneos rápidos |
+| **Scroll duplicado** | Problema resuelto en v2.0 - actualizar a última versión |
 
 ### **Logs y Debugging**
 
@@ -305,8 +370,10 @@ python examples/diagnostics/camera_detector.py
 # Logs detallados disponibles en:
 examples/logs/
 ├── viewer_example.log        # Log del visor principal
+├── discovery_demo.log        # Log de herramientas descubrimiento
 ├── performance_test.log      # Log de rendimiento
-└── protocol_comparison.log   # Log de comparación
+├── protocol_comparison.log   # Log de comparación
+└── ux_testing.log           # Log de testing UX
 
 # Habilitar debug en código:
 import logging
@@ -318,6 +385,9 @@ logging.basicConfig(level=logging.DEBUG)
 ```bash
 # Verificar conectividad básica
 ping 192.168.1.172
+
+# Usar Port Discovery integrado para análisis completo
+python examples/gui/discovery_demo.py
 
 # Probar con VLC (URLs de referencia):
 # Dahua ONVIF: Auto-detectado puerto 80
@@ -337,6 +407,10 @@ ping 192.168.1.172
 - ✅ Interfaz gráfica moderna
 - ✅ Sistema de layouts inteligente
 - ✅ Configuración persistente
+- ✅ **Herramientas de descubrimiento avanzadas con UX optimizada**
+- ✅ **Port Discovery con validación en tiempo real**
+- ✅ **Exportación múltiple y reportes HTML**
+- ✅ **Shortcuts de teclado y tooltips informativos**
 
 ### **Extensiones Futuras (Opcionales)**
 
@@ -345,6 +419,9 @@ ping 192.168.1.172
 - 📋 Detección de movimiento
 - 📋 Interfaz web complementaria
 - 📋 Soporte para más marcas
+- 📋 **Perfiles de escaneo personalizables**
+- 📋 **Historial de escaneos con comparación**
+- 📋 **Descubrimiento automático de red**
 
 ---
 
@@ -356,13 +433,15 @@ ping 192.168.1.172
 2. **Crear rama**: `git checkout -b feature/nueva-funcionalidad`
 3. **Seguir estándares**: SOLID, Clean Code, comentarios en español
 4. **Testing**: Probar con hardware real cuando sea posible
-5. **Pull Request** con descripción detallada
+5. **UX Testing**: Verificar usabilidad y experiencia de usuario
+6. **Pull Request** con descripción detallada
 
 ### **Estándares de Desarrollo**
 
 - **Código**: Inglés (nombres de variables, funciones, clases)
 - **Comentarios**: Español (documentación y explicaciones)
 - **Principios**: SOLID, DRY, KISS
+- **UX**: Validación en tiempo real, tooltips, shortcuts de teclado
 - **Testing**: Cobertura >90% para nuevas funcionalidades
 
 ---
@@ -376,9 +455,10 @@ ping 192.168.1.172
 - 📖 Documentación técnica: `CURRENT_STATUS.md`
 - 🐛 Issues: GitHub Issues
 - 💬 Discusiones: GitHub Discussions
+- 🎯 UX Feedback: Reportar problemas de usabilidad
 
-**Autor**: Desarrollado con principios de ingeniería de software moderna y arquitectura SOLID.
+**Autor**: Desarrollado con principios de ingeniería de software moderna, arquitectura SOLID y enfoque en experiencia de usuario.
 
 ---
 
-> **¿Listo para comenzar?** Ejecuta `python examples/gui/viewer_example.py` y conecta tu primera cámara en menos de 5 minutos.
+> **¿Listo para comenzar?** Ejecuta `python examples/gui/viewer_example.py` y conecta tu primera cámara en menos de 5 minutos. O prueba las herramientas de descubrimiento con `python examples/gui/discovery_demo.py`.
