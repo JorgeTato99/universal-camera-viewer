@@ -22,7 +22,7 @@ from src.connections.rtsp_connection import RTSPConnection
 from src.connections.amcrest_connection import AmcrestConnection
 from src.connections.onvif_connection import ONVIFConnection
 
-
+# cspell:disable
 class CameraWidget:
     """
     Widget para mostrar el stream de una cámara individual.
@@ -55,6 +55,7 @@ class CameraWidget:
         
         # Estado inicial
         self._update_status("Desconectado", "red")
+        self._clear_video_canvas("initial")
     
     def _create_ui(self):
         """
@@ -83,6 +84,9 @@ class CameraWidget:
         
         self.fps_label = ttk.Label(info_left, text="FPS: 0")
         self.fps_label.pack(anchor=tk.W)
+        
+        self.url_label = ttk.Label(info_left, text="URL: No conectado", font=("Courier", 8))
+        self.url_label.pack(anchor=tk.W)
         
         # Controles
         controls_frame = ttk.Frame(self.info_frame)
@@ -124,14 +128,7 @@ class CameraWidget:
         )
         self.video_canvas.pack(fill=tk.BOTH, expand=True)
         
-        # Texto inicial en el canvas
-        self.video_canvas.create_text(
-            320, 240, 
-            text="Stream no iniciado\nPresiona 'Conectar' para comenzar", 
-            fill="white", 
-            font=("Arial", 12),
-            justify=tk.CENTER
-        )
+        # El texto inicial se establecerá en _update_status() con el nuevo sistema
     
     def _toggle_connection(self):
         """
@@ -186,6 +183,7 @@ class CameraWidget:
             if self.connection.connect():
                 self.is_streaming = True
                 self._update_status("Conectado", "green")
+                self._update_connection_url()  # Actualizar URL de conexión
                 self.connect_btn.config(text="Desconectar")
                 self.snapshot_btn.config(state=tk.NORMAL)
                 self.record_btn.config(state=tk.NORMAL)
@@ -197,12 +195,14 @@ class CameraWidget:
                 self.logger.info("Conexión establecida exitosamente")
             else:
                 self._update_status("Error de conexión", "red")
+                self._update_connection_url()  # Actualizar URL (mostrará "No conectado")
                 self._clear_video_canvas("error")
                 messagebox.showerror("Error", "No se pudo conectar a la cámara")
                 
         except Exception as e:
             self.logger.error(f"Error al conectar: {str(e)}")
             self._update_status("Error", "red")
+            self._update_connection_url()  # Actualizar URL (mostrará "No conectado")
             self._clear_video_canvas("error")
             messagebox.showerror("Error", f"Error al conectar:\n{str(e)}")
     
@@ -225,6 +225,7 @@ class CameraWidget:
             
             # Actualizar UI
             self._update_status("Desconectado", "red")
+            self._update_connection_url()  # Actualizar URL (mostrará "No conectado")
             self.connect_btn.config(text="Conectar")
             self.snapshot_btn.config(state=tk.DISABLED)
             self.record_btn.config(state=tk.DISABLED)
@@ -347,6 +348,118 @@ class CameraWidget:
         """
         self.status_label.config(text=f"Estado: {status}", foreground=color)
     
+    def _censor_credentials(self, username: str, password: str) -> tuple:
+        """
+        Censura las credenciales mostrando solo las primeras 4 letras.
+        
+        Args:
+            username: Usuario original
+            password: Contraseña original
+            
+        Returns:
+            Tupla con (usuario_censurado, contraseña_censurada)
+        """
+        if not username:
+            censored_user = ""
+        elif len(username) <= 4:
+            censored_user = username
+        else:
+            censored_user = username[:4] + "***"
+        
+        if not password:
+            censored_pass = ""
+        elif len(password) <= 4:
+            censored_pass = password
+        else:
+            censored_pass = password[:4] + "***"
+        
+        return censored_user, censored_pass
+    
+    def _get_connection_url(self) -> str:
+        """
+        Obtiene la URL de conexión actual con credenciales censuradas.
+        
+        Returns:
+            URL de conexión censurada o mensaje de estado
+        """
+        if not self.connection or not self.is_streaming:
+            return "No conectado"
+        
+        try:
+            # Obtener credenciales censuradas
+            username = self.camera_config.get('username', 'admin')
+            password = self.camera_config.get('password', '')
+            censored_user, censored_pass = self._censor_credentials(username, password)
+            
+            # Generar URL según el tipo de conexión
+            connection_type = self.camera_config.get('type', 'onvif')
+            ip = self.camera_config.get('ip', 'N/A')
+            brand = self.camera_config.get('brand', 'dahua').lower()
+            
+            if connection_type.lower() == 'rtsp':
+                # URL RTSP - diferentes puertos según la marca
+                if brand == 'tplink':
+                    rtsp_port = self.camera_config.get('rtsp_port', 554)
+                    stream_path = "/stream1"
+                elif brand == 'steren':
+                    rtsp_port = self.camera_config.get('rtsp_port', 5543)
+                    stream_path = "/live/main"
+                else:  # Dahua y genérico
+                    rtsp_port = self.camera_config.get('rtsp_port', 554)
+                    stream_path = "/cam/realmonitor?channel=1&subtype=0"
+                
+                if censored_user and censored_pass:
+                    url = f"rtsp://{censored_user}:{censored_pass}@{ip}:{rtsp_port}{stream_path}"
+                else:
+                    url = f"rtsp://{ip}:{rtsp_port}{stream_path}"
+                    
+            elif connection_type.lower() == 'onvif':
+                # URL ONVIF - diferentes puertos según la marca
+                if brand == 'tplink':
+                    onvif_port = self.camera_config.get('onvif_port', 2020)
+                elif brand == 'steren':
+                    onvif_port = self.camera_config.get('onvif_port', 8080)
+                else:  # Dahua y genérico
+                    onvif_port = self.camera_config.get('onvif_port', 80)
+                
+                url = f"http://{ip}:{onvif_port}/onvif/device_service"
+                if censored_user:
+                    url += f" (user: {censored_user})"
+                    
+            elif connection_type.lower() == 'amcrest':
+                # URL HTTP/Amcrest
+                http_port = self.camera_config.get('http_port', 80)
+                if censored_user and censored_pass:
+                    url = f"http://{censored_user}:{censored_pass}@{ip}:{http_port}/cgi-bin/magicBox.cgi"
+                else:
+                    url = f"http://{ip}:{http_port}/cgi-bin/magicBox.cgi"
+                    
+            elif connection_type.lower() == 'tplink':
+                # URL específica TP-Link
+                tplink_port = self.camera_config.get('tplink_port', 9999)
+                url = f"TCP://{ip}:{tplink_port} (TP-Link Protocol)"
+                if censored_user:
+                    url += f" (user: {censored_user})"
+                    
+            else:
+                # Genérico
+                url = f"Protocolo: {connection_type.upper()} | IP: {ip}"
+                if censored_user:
+                    url += f" (user: {censored_user})"
+                
+            return url
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo URL de conexión: {e}")
+            return "Error obteniendo URL"
+    
+    def _update_connection_url(self):
+        """
+        Actualiza la URL mostrada en la UI.
+        """
+        url = self._get_connection_url()
+        self.url_label.config(text=f"URL: {url}")
+    
     def _clear_video_canvas(self, state: str = "initial"):
         """
         Limpia el canvas de video y muestra mensaje según el estado.
@@ -364,9 +477,9 @@ class CameraWidget:
         # Definir mensajes según el estado
         messages = {
             "initial": {
-                "text": "Stream no iniciado\nPresiona 'Conectar' para comenzar",
-                "color": "white",
-                "icon": "🎥"
+                "text": f"Visor Universal de Cámaras\n\n{self.camera_config.get('name', 'Cámara')}\nIP: {self.camera_config.get('ip', 'N/A')} | Protocolo: {self.camera_config.get('type', 'N/A').upper()}\n\nPresiona 'Conectar' para iniciar el streaming",
+                "color": "#87CEEB",  # Azul cielo suave
+                "icon": "📹"
             },
             "disconnected": {
                 "text": "Cámara desconectada manualmente\n\nPresiona 'Conectar' para reconectar",
@@ -398,7 +511,7 @@ class CameraWidget:
         
         # Mostrar icono
         self.video_canvas.create_text(
-            center_x, center_y - 40,
+            center_x, center_y - 80,
             text=message_info["icon"],
             fill=message_info["color"],
             font=("Arial", 24),
@@ -414,7 +527,7 @@ class CameraWidget:
             justify=tk.CENTER
         )
         
-        # Agregar timestamp para desconexión manual
+        # Agregar información adicional según el estado
         if state == "disconnected":
             import datetime
             timestamp = datetime.datetime.now().strftime("%H:%M:%S")
@@ -423,6 +536,28 @@ class CameraWidget:
                 text=f"Desconectado a las {timestamp}",
                 fill="#B0B0B0",  # Gris claro
                 font=("Arial", 10),
+                justify=tk.CENTER
+            )
+        elif state == "initial":
+            # Agregar información de marca/modelo si está disponible
+            brand = self.camera_config.get('brand', '').upper()
+            model = self.camera_config.get('model', '')
+            if brand and model:
+                brand_info = f"{brand} {model}"
+                self.video_canvas.create_text(
+                    center_x, center_y + 70,
+                    text=brand_info,
+                    fill="#B0C4DE",  # Azul acero claro
+                    font=("Arial", 10, "italic"),
+                    justify=tk.CENTER
+                )
+            
+            # Agregar indicador de estado listo
+            self.video_canvas.create_text(
+                center_x, center_y + 90,
+                text="● Listo para conectar",
+                fill="#90EE90",  # Verde claro
+                font=("Arial", 9),
                 justify=tk.CENTER
             )
     

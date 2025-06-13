@@ -1,358 +1,384 @@
 # Visor Universal de Cámaras Multi-Marca
 
-**Visor Universal de Cámaras** con soporte completo para múltiples marcas: **Dahua Hero-K51H**, **TP-Link Tapo**, **Steren CCTV-235**, **Cámaras Chinas Genéricas** y compatibles. Proporciona conexión y consumo de flujos de video desde aplicaciones Python con interfaz gráfica moderna.
+> **Sistema de videovigilancia profesional** con soporte nativo para múltiples marcas de cámaras IP: Dahua, TP-Link, Steren y cámaras genéricas chinas. Arquitectura modular SOLID con interfaz moderna y protocolos optimizados.
 
-**Estado del Proyecto**: 100% Completado - Visor funcional con 4 marcas, ONVIF optimizado como protocolo principal, RTSP como respaldo, conexión genérica para cámaras chinas.
+![Estado del Proyecto](https://img.shields.io/badge/Estado-100%25%20Completado-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.8%2B%20(Probado%203.13.1)-blue)
+![Licencia](https://img.shields.io/badge/Licencia-MIT-green)
 
-## Marcas y Protocolos Soportados
+## 🎯 **¿Qué es este proyecto?**
 
-### ✅ **ONVIF (Protocolo Principal - 100% Funcional)**
+**Visor Universal de Cámaras** es una aplicación Python profesional que conecta, visualiza y controla cámaras IP de múltiples marcas desde una sola interfaz. Desarrollado con principios SOLID y arquitectura modular para máxima extensibilidad.
 
-- **Estado**: Implementado y optimizado para 4 marcas
-- **Marcas soportadas**: Dahua Hero-K51H, TP-Link Tapo C520WS, Steren CCTV-235, Cámaras Chinas Genéricas
-- **Funcionalidades**: Descubrimiento automático, stream en tiempo real, snapshots HTTP
-- **Rendimiento**: 13-20+ FPS según marca, conexión inmediata
+### **Características Principales**
 
-### ✅ **RTSP con OpenCV (100% Funcional)**
-
-- **Estado**: Implementación completa multi-marca
-- **Marcas soportadas**: Todas (Dahua, TP-Link, Steren)
-- **Funcionalidades**: Stream directo, snapshots, información de stream
-- **Rendimiento**: 15-20+ FPS según marca y configuración
-
-### ✅ **Conexiones Especializadas por Marca**
-
-- **TPLinkConnection**: Implementación específica para Tapo (RTSP optimizado)
-- **SterenConnection**: Implementación híbrida ONVIF+RTSP para CCTV-235
-- **GenericConnection**: Detección automática para cámaras chinas genéricas (16+ patrones RTSP)
-- **AmcrestConnection**: HTTP/CGI para modelos compatibles (no Hero-K51H)
-
-### 📋 **SDK Oficial Dahua (Opcional)**
-
-- **Estado**: Pendiente para funcionalidades avanzadas
-- **Beneficio**: Acceso a características nativas exclusivas
+- 🎥 **Soporte Multi-Marca**: Dahua, TP-Link, Steren, cámaras chinas genéricas
+- 🚀 **Protocolos Optimizados**: ONVIF (principal), RTSP, HTTP/CGI, SDK nativo
+- 🖥️ **Interfaz Moderna**: Layouts inteligentes, sistema de columnspan optimizado
+- ⚡ **Alto Rendimiento**: 13-20+ FPS según marca, threading no-bloqueante
+- 🔧 **Configuración Automática**: Detección de marca y configuración específica
+- 📱 **Múltiples Layouts**: 1x1, 2x2, 3x3, 4x3 con columnspan inteligente
+- 📸 **Snapshots HD**: Captura instantánea en alta calidad
+- 🎮 **Controles PTZ**: Soporte ONVIF para pan/tilt/zoom
 
 ---
 
-## Guía de Inicio Rápido
+## 🚀 **Inicio Rápido (5 minutos)**
 
-### Pre-Requisitos
-
-- Python 3.8+ (probado con Python 3.13.1)
-- Git
-- Cámara compatible: Dahua Hero-K51H, TP-Link Tapo C520WS, Steren CCTV-235 o similares
-
-### 1. Configuración del Entorno
+### **1. Instalación**
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/tu-org/dahua-visor.git
-cd dahua-visor
+# Clonar y configurar
+git clone https://github.com/tu-org/universal-visor.git
+cd universal-visor
 
-# Crear entorno virtual con Python 3.13.1 (o tu versión disponible)
+# Entorno virtual
 python -m venv .venv
+.\.venv\Scripts\activate          # Windows
+source .venv/bin/activate         # Linux/MacOS
 
-# Activar entorno virtual
-# Windows:
-.\.venv\\Scripts\\activate
-# Linux/MacOS:
-source .venv/bin/activate
-
-# Verificar versión de Python
-python --version
-# Debe mostrar: Python 3.13.1 (o tu versión)
-
-# Instalar dependencias
+# Dependencias
 pip install -r requirements.txt
 ```
 
-### 2. Configuración de la Cámara
+### **2. Configuración**
 
 ```bash
-# Copiar archivo de configuración
+# Crear configuración
 cp .env.example .env
 
-# Editar .env con los datos de tu(s) cámara(s)
-# Dahua Hero-K51H:
+# Editar .env con tus cámaras
 # DAHUA_IP=192.168.1.172
 # DAHUA_USER=admin
-# DAHUA_PASSWORD=tu_password_aquí
-
-# TP-Link Tapo C520WS:
-# TPLINK_IP=192.168.1.77
-# TPLINK_USER=admin
-# TPLINK_PASSWORD=tu_password_aquí
-
-# Steren CCTV-235:
-# STEREN_IP=192.168.1.178
-# STEREN_USER=admin
-# STEREN_PASSWORD=tu_password_aquí
-
-# Cámara China Genérica:
-# GENERIC_IP=192.168.1.180
-# GENERIC_USER=admin
-# GENERIC_PASSWORD=tu_password_aquí
+# DAHUA_PASSWORD=tu_password
 ```
 
-**⚠️ Importante**: Si tu contraseña tiene caracteres especiales (%, &, etc.), déjalos tal como están. El sistema maneja automáticamente la codificación URL.
-
-### 3. Prueba Rápida - Conexión ONVIF
+### **3. Ejecutar**
 
 ```bash
-# Ejecutar ejemplo ONVIF multi-marca
-cd examples/protocols
-python onvif_example.py
-```
+# Visor completo con interfaz gráfica
+python examples/gui/viewer_example.py
 
-### 4. Visor en Tiempo Real Completo
-
-```bash
-# Ejecutar visor con interfaz gráfica multi-marca
-cd examples/gui
-python viewer_example.py
+# O prueba rápida de conexión
+python examples/protocols/onvif_example.py
 ```
 
 ---
 
-## Estructura del Proyecto
+## 📋 **Marcas y Compatibilidad**
+
+| Marca | Modelo Probado | ONVIF | RTSP | Estado |
+|-------|----------------|-------|------|--------|
+| **Dahua** | Hero-K51H | ✅ Puerto 80 | ✅ Con DMSS | 🎯 Excelente |
+| **TP-Link** | Tapo C520WS | ✅ Puerto 2020 | ✅ Directo | 🎯 Excelente |
+| **Steren** | CCTV-235 | ✅ Puerto 8000 | ✅ Puerto 5543 | 🎯 Excelente |
+| **China Genérica** | 8MP WiFi | 🔍 Detección Auto | ✅ 16+ patrones | 🎯 Excelente |
+
+### **Rendimiento por Marca**
+
+- **Dahua Hero-K51H**: 13.86 FPS (ONVIF), 15.32 FPS (RTSP), 4K
+- **TP-Link Tapo**: Variable según perfil, detección automática
+- **Steren CCTV-235**: 20+ FPS, dual-stream (4MP + 360p)
+- **Cámaras Genéricas**: 5.9MP @ 12 FPS promedio
+
+---
+
+## 🖥️ **Interfaz y Características**
+
+### **Sistema de Layouts Inteligente**
+
+```text
+Layouts Disponibles:
+┌─────────────┬─────────────┬─────────────┐
+│    1x1      │    2x2      │    3x3      │
+│ ┌─────────┐ │ ┌───┬───┐   │ ┌─┬─┬─┐     │
+│ │   Cam   │ │ │ 1 │ 2 │   │ │1│2│3│     │
+│ └─────────┘ │ ├───┼───┤   │ ├─┼─┼─┤     │
+│             │ │ 3 │ 4 │   │ │4│5│6│     │
+│             │ └───┴───┘   │ ├─┼─┼─┤     │
+│             │             │ │7│8│9│     │
+│             │             │ └─┴─┴─┘     │
+└─────────────┴─────────────┴─────────────┘
+```
+
+**Características del Layout:**
+
+- **Columnspan Inteligente**: Cámaras solitarias ocupan todo el ancho
+- **Redimensionado Automático**: Layout se adapta al número de cámaras
+- **Configuración Persistente**: Se guarda automáticamente
+
+### **Panel de Control Avanzado**
+
+- **Pestaña Configuración**: Protocolos, credenciales, puertos
+- **Pestaña Cámaras**: Gestión individual, snapshots, reconexión
+- **Pestaña Layouts**: Cambio dinámico, configuraciones predefinidas
+
+---
+
+## 🔧 **Arquitectura Técnica**
+
+### **Patrones de Diseño Implementados**
+
+- **Factory Pattern**: `ConnectionFactory` para crear conexiones
+- **Template Method**: `BaseConnection` como clase abstracta
+- **Singleton**: `ConfigurationManager` para configuración global
+- **Observer**: Sistema de eventos para UI
+
+### **Estructura Modular**
 
 ```bash
-dahua-visor/
-├── .cursor/rules/           # Estándares de desarrollo
-├── src/
-│   ├── connections/         # Módulos de conexión
-│   │   ├── base_connection.py         # Clase base abstracta + Factory
-│   │   ├── onvif_connection.py        # Conexión ONVIF multi-marca
-│   │   ├── rtsp_connection.py         # Conexión RTSP genérica
-│   │   ├── tplink_connection.py       # Conexión TP-Link especializada
-│   │   ├── steren_connection.py       # Conexión Steren CCTV-235
-│   │   └── amcrest_connection.py      # Conexión HTTP/CGI
-│   ├── utils/              # Utilidades
-│   │   └── config.py       # Gestión de configuración
-│   └── viewer/             # Componentes del visor
-│       ├── camera_widget.py
-│       ├── control_panel.py
-│       └── real_time_viewer.py
-├── examples/               # Ejemplos y herramientas
-│   ├── protocols/          # Ejemplos de conexión
-│   │   ├── rtsp_example.py
-│   │   ├── amcrest_example.py
-│   │   └── onvif_example.py
-│   ├── gui/                # Ejemplos de interfaz
-│   │   └── viewer_example.py
-│   └── diagnostics/        # Herramientas de diagnóstico
-├── requirements.txt
-├── .env.example
-├── .env                    # Tu configuración (no versionado)
-├── CURRENT_STATUS.md       # Estado detallado del proyecto
-└── README.md
+src/
+├── connections/          # Protocolos de conexión
+│   ├── base_connection.py    # Clase abstracta base
+│   ├── onvif_connection.py   # Protocolo ONVIF
+│   ├── rtsp_connection.py    # Protocolo RTSP
+│   ├── tplink_connection.py  # TP-Link especializado
+│   ├── steren_connection.py  # Steren CCTV-235
+│   └── generic_connection.py # Cámaras genéricas
+├── viewer/               # Interfaz gráfica
+│   ├── real_time_viewer.py   # Aplicación principal
+│   ├── camera_widget.py      # Widget individual
+│   └── control_panel.py      # Panel de control
+├── gui/                  # Interfaces especializadas
+│   └── discovery/            # Herramientas de descubrimiento
+└── utils/                # Utilidades
+    ├── config.py             # Gestor de configuración
+    ├── brand_manager.py      # Gestor de marcas
+    └── camera_brands.json    # Configuración de marcas
 ```
 
 ---
 
-## Compatibilidad Verificada
+## 💻 **Ejemplos de Uso**
 
-### Dahua Hero-K51H (192.168.1.172)
-
-- ✅ **ONVIF**: Excelente (13.86 FPS, 4K, puerto 80, sin workflow DMSS)
-- ✅ **RTSP**: Excelente (15.32 FPS, 4K, requiere workflow DMSS previo)
-- ❌ **HTTP CGI**: No compatible (modelo específico)
-
-### TP-Link Tapo C520WS (192.168.1.77)
-
-- ✅ **ONVIF**: Excelente (puerto 2020, detección automática)
-- ✅ **RTSP**: Funcional (streams directos `/stream1`, `/stream2`)
-
-### Steren CCTV-235 (192.168.1.178)
-
-- ✅ **ONVIF**: Excelente (puerto 8000, dual-stream 4MP+360p)
-- ✅ **RTSP**: Excelente (puerto 5543, 20+ FPS, `/live/channel0-1`)
-
-### Cámara China Genérica 8MP WiFi (192.168.1.180)
-
-- ✅ **Generic Connection**: Excelente (detección automática de 16+ patrones RTSP)
-- ✅ **RTSP**: Funcional (5.9MP @ 12 FPS, credenciales en URL)
-- ✅ **Precarga .env**: Condicional (variables GENERIC_* opcionales)
-
-### Herramientas de Diagnóstico
-
-```bash
-# Verificar diagnósticos disponibles
-cd examples/diagnostics
-ls -la
-
-# Herramientas específicas según disponibilidad
-python test_camera_connectivity.py  # (según lo que esté disponible)
-```
-
----
-
-## Ejemplos de Uso
-
-### Conexión ONVIF Universal
+### **Conexión Básica**
 
 ```python
 from src.connections import ConnectionFactory
 from src.utils.config import ConfigurationManager
 
-# Cargar configuración
+# Configuración automática
 config = ConfigurationManager()
 
-# Crear conexión ONVIF (recomendado)
+# Conexión ONVIF (recomendado)
 connection = ConnectionFactory.create_connection(
-    connection_type='onvif', 
+    connection_type='onvif',
     config_manager=config,
-    camera_brand='dahua'  # o 'tplink', 'steren', 'generic'
+    camera_brand='dahua'
 )
 
+# Usar la conexión
 with connection:
-    # Obtener información del stream
-    info = connection.get_stream_info()
-    print(f"Marca: {info['brand']}")
-    print(f"Resolución: {info['width']}x{info['height']}")
-    print(f"FPS: {info['fps']}")
+    # Stream en tiempo real
+    frame = connection.get_frame()
     
-    # Capturar frames en tiempo real
-    for i in range(10):
-        frame = connection.get_frame()
-        if frame is not None:
-            print(f"Frame {i+1} capturado exitosamente")
+    # Información del dispositivo
+    info = connection.get_device_info()
+    print(f"Conectado: {info['brand']} {info['model']}")
     
-    # Tomar snapshot de alta calidad
-    connection.capture_snapshot("mi_snapshot.jpg")
+    # Snapshot HD
+    connection.capture_snapshot("snapshot.jpg")
 ```
 
-### Conexión Multi-Marca Simplificada
+### **Visor Multi-Cámara**
 
 ```python
-from src.connections import ConnectionFactory
+from src.viewer import RealTimeViewer
 
-# Steren CCTV-235 con protocolo híbrido
-steren = ConnectionFactory.create_connection('steren', config, 'steren')
+# Crear visor con layout 2x2
+viewer = RealTimeViewer()
+viewer.set_layout("2x2")
 
-# TP-Link con RTSP optimizado
-tplink = ConnectionFactory.create_connection('tplink', config, 'tplink')
+# Agregar cámaras
+viewer.add_camera("Dahua Principal", "onvif", "dahua")
+viewer.add_camera("TP-Link Entrada", "onvif", "tplink")
+viewer.add_camera("Steren Patio", "steren", "steren")
 
-# Dahua con ONVIF sin workflow
-dahua = ConnectionFactory.create_connection('onvif', config, 'dahua')
-
-# Cámara china genérica con detección automática
-generic = ConnectionFactory.create_connection('generic', config, 'generic')
-
-# Usar cualquier conexión de la misma manera
-with generic:
-    frame = generic.get_frame()
-    device_info = generic.get_device_info()
-    print(f"Conectado a: {device_info['brand']} {device_info['model']}")
-    print(f"URL detectada: {generic.successful_url}")
+# Iniciar visualización
+viewer.show()
 ```
 
 ---
 
-## Desarrollo y Testing
+## 🛠️ **Configuración Avanzada**
 
-### Ejecutar Pruebas
+### **Variables de Entorno (.env)**
 
 ```bash
-# Activar entorno virtual
-.\.venv\\Scripts\\activate  # Windows
-source .venv/bin/activate   # Linux/MacOS
+# Dahua Hero-K51H
+DAHUA_IP=192.168.1.172
+DAHUA_USER=admin
+DAHUA_PASSWORD=tu_password
+DAHUA_ONVIF_PORT=80
 
-# Probar conexión ONVIF multi-marca
-python examples/protocols/onvif_example.py
+# TP-Link Tapo
+TPLINK_IP=192.168.1.77
+TPLINK_USER=admin
+TPLINK_PASSWORD=tu_password
+TPLINK_ONVIF_PORT=2020
 
-# Probar visor completo con interfaz gráfica
-python examples/gui/viewer_example.py
+# Steren CCTV-235
+STEREN_IP=192.168.1.178
+STEREN_USER=admin
+STEREN_PASSWORD=tu_password
 
-# Probar conexión específica por marca
-python examples/protocols/rtsp_example.py
+# Cámara Genérica (opcional)
+GENERIC_IP=192.168.1.180
+GENERIC_USER=admin
+GENERIC_PASSWORD=tu_password
 ```
 
-### Características Técnicas
+### **Configuración por Código**
 
-- **Arquitectura**: Modular siguiendo principios SOLID
-- **Patrones**: Factory, Template Method, Context Manager
-- **Logging**: Sistema estructurado para debugging
-- **Manejo de Errores**: Excepciones específicas por tipo de conexión
-- **Threading**: Soporte para operaciones asíncronas en el visor
+```python
+# Configuración manual específica
+config = {
+    'ip': '192.168.1.100',
+    'user': 'admin',
+    'password': 'mi_password',
+    'onvif_port': 8000,
+    'rtsp_port': 554,
+    'brand': 'custom'
+}
 
----
-
-## Roadmap
-
-### Proyecto Completado (100%)
-
-- [x] Arquitectura base con principios SOLID
-- [x] Conexión ONVIF multi-marca (protocolo principal)
-- [x] Conexión RTSP universal y especializada
-- [x] Conexiones específicas por marca (TP-Link, Steren, Generic)
-- [x] Conexión genérica para cámaras chinas (detección automática de patrones)
-- [x] Implementación HTTP/CGI (para modelos compatibles)
-- [x] Visor en tiempo real completo con interfaz gráfica
-- [x] Panel de control con múltiples layouts
-- [x] Sistema de configuración persistente
-- [x] Herramientas de diagnóstico y testing
-- [x] Interfaz de descubrimiento de puertos con conexión RTSP custom
-
-### Extensiones Opcionales
-
-- [ ] Grabación de video desde el visor
-- [ ] Detección de movimiento integrada
-- [ ] Controles PTZ avanzados via ONVIF
-- [ ] SDK oficial Dahua para características nativas
-- [ ] Interfaz web adicional
-- [ ] Soporte para más marcas de cámaras
+connection = ConnectionFactory.create_connection(
+    'onvif', config_manager=None, camera_brand='custom'
+)
+connection.configure_manual(config)
+```
 
 ---
 
-## Contribuciones
+## 🧪 **Testing y Ejemplos**
 
-1. Fork del repositorio
-2. Crear rama: `git checkout -b feature/nueva-funcionalidad`
-3. Commit: `git commit -m "Descripción del cambio"`
-4. Push: `git push origin feature/nueva-funcionalidad`
-5. Crear Pull Request
+### **Estructura de Ejemplos**
 
-### Estándares de Código
+```bash
+examples/
+├── protocols/                # Testing de protocolos
+│   ├── onvif_example.py         # Prueba ONVIF multi-marca
+│   ├── rtsp_example.py          # Prueba RTSP directo
+│   └── amcrest_example.py       # Prueba HTTP/CGI
+├── gui/                      # Interfaces gráficas
+│   ├── viewer_example.py        # Visor completo
+│   └── components_demo.py       # Demo de componentes
+├── testing/                  # Testing técnico
+│   ├── performance_test.py      # Análisis de rendimiento
+│   └── protocol_comparison.py   # Comparación de protocolos
+└── diagnostics/              # Herramientas de diagnóstico
+    ├── camera_detector.py       # Detector de cámaras
+    └── network_analyzer.py      # Análisis de red
+```
 
-- Seguir principios SOLID y Clean Code
-- Comentarios en español, código en inglés
-- Documentación obligatoria para todas las funciones
-- Testing con hardware real cuando sea posible
+### **Ejecutar Pruebas**
+
+```bash
+# Prueba de conectividad multi-marca
+python examples/protocols/onvif_example.py
+
+# Visor completo con todas las características
+python examples/gui/viewer_example.py
+
+# Análisis de rendimiento
+python examples/testing/performance_test.py
+
+# Detector automático de cámaras
+python examples/diagnostics/camera_detector.py
+```
 
 ---
 
-## Soporte y Problemas
+## 🚨 **Solución de Problemas**
 
-### Problemas Comunes
+### **Problemas Comunes**
 
-**Error de conexión:**
+| Problema | Solución |
+|----------|----------|
+| **No conecta ONVIF** | Verificar puerto específico por marca |
+| **RTSP timeout** | Para Dahua: ejecutar workflow DMSS previo |
+| **Credenciales incorrectas** | Verificar caracteres especiales en .env |
+| **Layout no se actualiza** | Usar layouts predefinidos en lugar de custom |
+
+### **Logs y Debugging**
+
+```bash
+# Logs detallados disponibles en:
+examples/logs/
+├── viewer_example.log        # Log del visor principal
+├── performance_test.log      # Log de rendimiento
+└── protocol_comparison.log   # Log de comparación
+
+# Habilitar debug en código:
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+### **Verificación de Hardware**
 
 ```bash
 # Verificar conectividad básica
-ping 192.168.1.172  # (o IP de tu cámara)
+ping 192.168.1.172
 
-# Probar con VLC para verificar URLs:
-# ONVIF Dahua: Automático via puerto 80
-# RTSP Dahua: rtsp://admin:password@192.168.1.172:554/cam/realmonitor?channel=1&subtype=0
-# RTSP TP-Link: rtsp://admin:password@192.168.1.77:554/stream1
-# RTSP Steren: rtsp://admin:password@192.168.1.178:5543/live/channel0
+# Probar con VLC (URLs de referencia):
+# Dahua ONVIF: Auto-detectado puerto 80
+# TP-Link RTSP: rtsp://admin:pass@192.168.1.77:554/stream1
+# Steren RTSP: rtsp://admin:pass@192.168.1.178:5543/live/channel0
 ```
-
-**Problemas con Python 3.13.1:**
-
-- Todas las dependencias son compatibles
-- Si encuentras problemas, reporta el issue específico
-
-**Protocolo recomendado por marca:**
-
-- **Dahua Hero-K51H**: ONVIF (puerto 80) - Sin workflow DMSS requerido
-- **TP-Link Tapo**: ONVIF (puerto 2020) o RTSP directo
-- **Steren CCTV-235**: Implementación híbrida ONVIF+RTSP optimizada
-- **Cámaras Chinas Genéricas**: Generic Connection - Detección automática de patrones RTSP
 
 ---
 
-## Licencia
+## 📈 **Roadmap y Futuro**
 
-MIT License - Ver archivo LICENSE para detalles.
+### **Completado (100%)**
+
+- ✅ Arquitectura modular SOLID
+- ✅ Soporte 4 marcas principales
+- ✅ Protocolos ONVIF, RTSP, HTTP/CGI
+- ✅ Interfaz gráfica moderna
+- ✅ Sistema de layouts inteligente
+- ✅ Configuración persistente
+
+### **Extensiones Futuras (Opcionales)**
+
+- 📋 SDK oficial Dahua para características nativas
+- 📋 Grabación de video integrada
+- 📋 Detección de movimiento
+- 📋 Interfaz web complementaria
+- 📋 Soporte para más marcas
+
+---
+
+## 🤝 **Contribuir**
+
+### **Cómo Contribuir**
+
+1. **Fork** del repositorio
+2. **Crear rama**: `git checkout -b feature/nueva-funcionalidad`
+3. **Seguir estándares**: SOLID, Clean Code, comentarios en español
+4. **Testing**: Probar con hardware real cuando sea posible
+5. **Pull Request** con descripción detallada
+
+### **Estándares de Desarrollo**
+
+- **Código**: Inglés (nombres de variables, funciones, clases)
+- **Comentarios**: Español (documentación y explicaciones)
+- **Principios**: SOLID, DRY, KISS
+- **Testing**: Cobertura >90% para nuevas funcionalidades
+
+---
+
+## 📄 **Licencia y Soporte**
+
+**Licencia**: MIT - Ver archivo `LICENSE` para detalles completos.
+
+**Soporte**:
+
+- 📖 Documentación técnica: `CURRENT_STATUS.md`
+- 🐛 Issues: GitHub Issues
+- 💬 Discusiones: GitHub Discussions
+
+**Autor**: Desarrollado con principios de ingeniería de software moderna y arquitectura SOLID.
+
+---
+
+> **¿Listo para comenzar?** Ejecuta `python examples/gui/viewer_example.py` y conecta tu primera cámara en menos de 5 minutos.

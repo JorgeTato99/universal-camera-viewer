@@ -27,7 +27,7 @@ class ControlPanel:
         self.parent = parent
         self.on_cameras_change = on_cameras_change
         self.cameras_config: List[Dict[str, Any]] = []
-        self.current_layout = "grid_2x2"
+        self.current_layout = 2  # Número de columnas por defecto
         
         # Configurar logging
         self.logger = logging.getLogger("ControlPanel")
@@ -141,31 +141,53 @@ class ControlPanel:
         self.layout_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.layout_frame, text="Layout")
         
-        # Opciones de layout
-        layout_options_frame = ttk.LabelFrame(self.layout_frame, text="Diseño de Pantalla")
+        # Opciones de layout - Selector de columnas
+        layout_options_frame = ttk.LabelFrame(self.layout_frame, text="Configuración de Columnas")
         layout_options_frame.pack(fill=tk.X, padx=5, pady=5)
         
-        self.layout_var = tk.StringVar(value=self.current_layout)
+        # Descripción
+        description_label = ttk.Label(
+            layout_options_frame,
+            text="Selecciona cuántas cámaras mostrar por fila.\nLas cámaras adicionales se colocarán en filas siguientes.",
+            font=("Arial", 9),
+            justify=tk.CENTER
+        )
+        description_label.pack(pady=5)
         
-        layouts = [
-            ("1x1 - Una cámara", "single"),
-            ("2x1 - Dos cámaras horizontales", "horizontal_2"),
-            ("1x2 - Dos cámaras verticales", "vertical_2"),
-            ("2x2 - Cuatro cámaras", "grid_2x2"),
-            ("3x2 - Seis cámaras", "grid_3x2"),
-            ("3x3 - Nueve cámaras", "grid_3x3"),
-            ("4x3 - Doce cámaras", "grid_4x3"),
-            ("Personalizado", "custom")
+        # Frame para los radio buttons
+        columns_frame = ttk.Frame(layout_options_frame)
+        columns_frame.pack(pady=10)
+        
+        self.layout_var = tk.IntVar(value=self.current_layout)
+        
+        # Opciones de columnas (1-4)
+        column_options = [
+            (1, "1 columna\n(100% ancho)"),
+            (2, "2 columnas\n(50% cada una)"),
+            (3, "3 columnas\n(33% cada una)"),
+            (4, "4 columnas\n(25% cada una)")
         ]
         
-        for i, (text, value) in enumerate(layouts):
+        for i, (cols, description) in enumerate(column_options):
             ttk.Radiobutton(
-                layout_options_frame,
-                text=text,
+                columns_frame,
+                text=description,
                 variable=self.layout_var,
-                value=value,
+                value=cols,
                 command=self._on_layout_change
-            ).grid(row=i//2, column=i%2, sticky=tk.W, padx=5, pady=2)
+            ).grid(row=0, column=i, padx=10, pady=5)
+        
+        # Ejemplo visual
+        example_frame = ttk.LabelFrame(layout_options_frame, text="Ejemplo con 4 cámaras")
+        example_frame.pack(fill=tk.X, padx=5, pady=10)
+        
+        self.example_label = ttk.Label(
+            example_frame,
+            text=self._get_layout_example(self.current_layout),
+            font=("Courier", 8),
+            justify=tk.LEFT
+        )
+        self.example_label.pack(pady=5)
         
         # Opciones de visualización
         display_options_frame = ttk.LabelFrame(self.layout_frame, text="Opciones de Visualización")
@@ -574,15 +596,71 @@ class ControlPanel:
                 'Desconectado'
             ))
     
+    def _get_layout_example(self, columns: int) -> str:
+        """
+        Genera un ejemplo visual del layout con 4 cámaras.
+        
+        Args:
+            columns: Número de columnas
+            
+        Returns:
+            String con representación visual del layout
+        """
+        cameras = ["Cam1", "Cam2", "Cam3", "Cam4"]
+        example_lines = []
+        
+        if columns == 1:
+            example_lines = [
+                "┌─────────────────┐",
+                "│      Cam1       │",
+                "├─────────────────┤",
+                "│      Cam2       │", 
+                "├─────────────────┤",
+                "│      Cam3       │",
+                "├─────────────────┤",
+                "│      Cam4       │",
+                "└─────────────────┘"
+            ]
+        elif columns == 2:
+            example_lines = [
+                "┌────────┬────────┐",
+                "│  Cam1  │  Cam2  │",
+                "├────────┼────────┤",
+                "│  Cam3  │  Cam4  │",
+                "└────────┴────────┘"
+            ]
+        elif columns == 3:
+            example_lines = [
+                "┌─────┬─────┬─────┐",
+                "│Cam1 │Cam2 │Cam3 │",
+                "├─────┼─────┼─────┤",
+                "│Cam4 │     │     │",
+                "└─────┴─────┴─────┘"
+            ]
+        elif columns == 4:
+            example_lines = [
+                "┌───┬───┬───┬───┐",
+                "│C1 │C2 │C3 │C4 │",
+                "└───┴───┴───┴───┘"
+            ]
+        
+        return "\n".join(example_lines)
+    
     def _on_layout_change(self):
         """
         Maneja el cambio de layout.
         """
         self.current_layout = self.layout_var.get()
-        self.logger.info(f"Layout cambiado a: {self.current_layout}")
+        self.logger.info(f"Layout cambiado a: {self.current_layout} columnas")
+        
+        # Actualizar ejemplo visual
+        if hasattr(self, 'example_label'):
+            self.example_label.config(text=self._get_layout_example(self.current_layout))
         
         # Notificar cambio de layout si hay callback
-        # TODO: Implementar callback para cambio de layout
+        if self.on_cameras_change:
+            # Usar el mismo callback pero indicando que es cambio de layout
+            self.on_cameras_change(self.cameras_config)
     
     def _save_config(self):
         """
@@ -638,8 +716,22 @@ class ControlPanel:
                 self.cameras_config = config.get('cameras', [])
                 self._update_cameras_list()
                 
-                # Cargar layout
-                self.current_layout = config.get('layout', 'grid_2x2')
+                # Cargar layout (convertir formato antiguo a nuevo)
+                layout_config = config.get('layout', 2)
+                if isinstance(layout_config, str):
+                    # Convertir formato antiguo a número de columnas
+                    layout_map = {
+                        'single': 1,
+                        'horizontal_2': 2,
+                        'vertical_2': 1,
+                        'grid_2x2': 2,
+                        'grid_3x2': 3,
+                        'grid_3x3': 3,
+                        'grid_4x3': 4
+                    }
+                    self.current_layout = layout_map.get(layout_config, 2)
+                else:
+                    self.current_layout = layout_config
                 self.layout_var.set(self.current_layout)
                 
                 # Cargar opciones
@@ -800,7 +892,7 @@ class ControlPanel:
             self.connection_timeout_var.set(10)
             self.connection_retries_var.set(3)
             self.recording_dir_var.set("./recordings")
-            self.layout_var.set("grid_2x2")
+            self.layout_var.set(2)
             
             messagebox.showinfo("Éxito", "Configuración restaurada")
             self.logger.info("Configuración restaurada a valores predeterminados")
@@ -814,11 +906,11 @@ class ControlPanel:
         """
         return self.cameras_config
     
-    def get_current_layout(self) -> str:
+    def get_current_layout(self) -> int:
         """
-        Obtiene el layout actual.
+        Obtiene el layout actual (número de columnas).
         
         Returns:
-            Nombre del layout actual
+            Número de columnas del layout actual
         """
         return self.current_layout 

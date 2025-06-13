@@ -13,7 +13,7 @@ from pathlib import Path
 # Agregar el directorio raíz del proyecto al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from .viewer.real_time_viewer_view import RealTimeViewerView
+from src.viewer.real_time_viewer import RealTimeViewer
 from .discovery.port_discovery_view import PortDiscoveryView
 
 # cspell:disable
@@ -215,9 +215,9 @@ class MainApplication:
         try:
             # Crear o reutilizar vista del viewer
             if 'viewer' not in self.views:
-                # Crear nueva vista
+                # Crear nueva vista usando RealTimeViewer en modo embebido
                 viewer_container = ttk.Frame(self.main_container)
-                viewer_view = RealTimeViewerView(viewer_container)
+                viewer_view = RealTimeViewer(parent_container=viewer_container)
                 
                 # Almacenar tanto el contenedor como la vista
                 self.views['viewer'] = {
