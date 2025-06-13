@@ -134,15 +134,14 @@ class RealTimeViewer:
     def _initialize_default_cameras(self):
         """
         Inicializa la configuración por defecto de cámaras después de que todo esté listo.
+        
+        Nota: El ControlPanel ya notifica automáticamente cuando carga la configuración
+        por defecto, por lo que no necesitamos hacer nada aquí.
         """
-        try:
-            # Obtener la configuración de cámaras del control panel
-            default_cameras = self.control_panel.get_cameras_config()
-            if default_cameras:
-                self.logger.info("Aplicando configuración inicial de cámaras")
-                self._on_cameras_config_change(default_cameras)
-        except Exception as e:
-            self.logger.warning(f"No se pudo aplicar configuración inicial: {str(e)}")
+        # El ControlPanel ya ha cargado y notificado la configuración por defecto
+        # a través del callback on_cameras_change, por lo que no necesitamos
+        # hacer nada adicional aquí.
+        self.logger.info("Sistema de cámaras inicializado - esperando configuración del panel de control")
     
     def _create_control_panel(self):
         """
@@ -258,7 +257,13 @@ Funciones disponibles:
         
         # Bind a diferentes elementos para asegurar compatibilidad
         self.viewer_canvas.bind("<MouseWheel>", _on_mousewheel)
-        self.root.bind("<MouseWheel>", _on_mousewheel)
+        
+        # Solo hacer bind al root si estamos en modo standalone
+        if not self.is_embedded and self.root:
+            self.root.bind("<MouseWheel>", _on_mousewheel)
+        elif self.is_embedded and self.main_container:
+            # En modo embebido, hacer bind al contenedor principal
+            self.main_container.bind("<MouseWheel>", _on_mousewheel)
     
     def _on_cameras_config_change(self, cameras_config: List[Dict[str, Any]]):
         """
@@ -275,11 +280,6 @@ Funciones disponibles:
         # Verificar que el área de visualización esté lista
         if not hasattr(self, 'viewer_scrollable_frame'):
             self.logger.warning("Área de visualización no está lista, ignorando cambio de configuración")
-            return
-        
-        # Verificar que el control panel esté listo
-        if not hasattr(self, 'control_panel'):
-            self.logger.warning("Panel de control no está listo, ignorando cambio de configuración")
             return
         
         # Recrear widgets de cámaras

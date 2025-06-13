@@ -197,8 +197,8 @@ class ConfigurationManager:
         
         cameras = []
         
-        # Verificar Dahua
-        if self.camera_password and self.camera_ip:
+        # Verificar Dahua - Solo requiere IP y usuario
+        if self.camera_ip and self.camera_user:
             cameras.append({
                 "brand": "dahua",
                 "model": "Hero-K51H",
@@ -209,8 +209,8 @@ class ConfigurationManager:
             })
             logger.debug(f"✅ Dahua configurada: {self.camera_ip}")
         
-        # Verificar TP-Link
-        if self.tplink_password and self.tplink_ip:
+        # Verificar TP-Link - Solo requiere IP y usuario
+        if self.tplink_ip and self.tplink_user:
             cameras.append({
                 "brand": "tplink",
                 "model": "Tapo C520WS",

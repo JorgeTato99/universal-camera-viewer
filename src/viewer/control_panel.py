@@ -770,6 +770,8 @@ class ControlPanel:
             self.cameras_config = []
             
             for cam_info in available_cameras:
+                camera_config = None
+                
                 if cam_info['brand'] == 'dahua':
                     camera_config = {
                         'name': f'Dahua {cam_info["model"]} ({cam_info["ip"]})',
@@ -800,8 +802,40 @@ class ControlPanel:
                         'channel': 1,
                         'subtype': 0
                     }
+                elif cam_info['brand'] == 'steren':
+                    camera_config = {
+                        'name': f'Steren {cam_info["model"]} ({cam_info["ip"]})',
+                        'ip': cam_info['ip'],
+                        'brand': 'steren',
+                        'model': cam_info['model'],
+                        'type': 'rtsp',
+                        'username': cam_info['user'],
+                        'password': config.steren_password if hasattr(config, 'steren_password') else '',
+                        'rtsp_port': config.steren_rtsp_port if hasattr(config, 'steren_rtsp_port') else 554,
+                        'http_port': 80,
+                        'onvif_port': config.steren_onvif_port if hasattr(config, 'steren_onvif_port') else 8000,
+                        'channel': 1,
+                        'subtype': 0
+                    }
+                elif cam_info['brand'] == 'generic':
+                    camera_config = {
+                        'name': f'Generic {cam_info["model"]} ({cam_info["ip"]})',
+                        'ip': cam_info['ip'],
+                        'brand': 'generic',
+                        'model': cam_info['model'],
+                        'type': 'rtsp',
+                        'username': cam_info['user'],
+                        'password': config.generic_password if hasattr(config, 'generic_password') else '',
+                        'rtsp_port': 554,
+                        'http_port': 80,
+                        'onvif_port': 8000,
+                        'channel': 1,
+                        'subtype': 0
+                    }
                 
-                self.cameras_config.append(camera_config)
+                # Solo agregar si se creó una configuración válida
+                if camera_config:
+                    self.cameras_config.append(camera_config)
             
             # Si no hay cámaras configuradas, usar configuración básica
             if not self.cameras_config:
