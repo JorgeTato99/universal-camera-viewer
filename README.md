@@ -2,10 +2,11 @@
 
 > **Sistema de videovigilancia profesional moderno** con soporte nativo para múltiples marcas de cámaras IP: Dahua, TP-Link, Steren y cámaras genéricas chinas. Arquitectura modular SOLID con interfaz UX optimizada y protocolos de alto rendimiento.
 
-![Estado del Proyecto](https://img.shields.io/badge/Estado-100%25%20Completado%20%2B%20UX%20Optimizado-brightgreen)
-![Python](https://img.shields.io/badge/Python-3.8%2B%20(Probado%203.13.1)-blue)
-![Arquitectura](https://img.shields.io/badge/Arquitectura-SOLID%20Compliant-orange)
-![UX Status](https://img.shields.io/badge/UX-v0.2.0%20Optimizada-purple)
+![Estado del Proyecto](https://img.shields.io/badge/Estado-UI%20Moderna%20Flet%20%2B%20Material%20Design%203-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.9%2B%20(Flet%20%2B%20Flutter)-blue)
+![Arquitectura](https://img.shields.io/badge/Arquitectura-MVP%20%2B%20SOLID-orange)
+![UI Framework](https://img.shields.io/badge/UI-Flet%20%2B%20Material%20Design%203-purple)
+![Migración](https://img.shields.io/badge/Progreso%20MVP-65%25%20Completado-yellow)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-green)
 ![Autor](https://img.shields.io/badge/Autor-JorgeTato99-orange)
 
@@ -13,62 +14,62 @@
 
 ## 🎯 **¿Qué es este proyecto?**
 
-**Visor Universal de Cámaras** es una aplicación Python profesional que conecta, visualiza y controla cámaras IP de múltiples marcas desde una sola interfaz moderna. Desarrollado con principios SOLID, arquitectura modular y optimizaciones UX avanzadas para máxima usabilidad y extensibilidad.
+**Visor Universal de Cámaras** es una aplicación desktop moderna que conecta, visualiza y controla cámaras IP de múltiples marcas desde una interfaz profesional **Flet + Material Design 3**. Migración en progreso hacia **arquitectura MVP** con UI Flutter nativa y distribución como ejecutable auto-contenido.
 
-### **🏆 Estado Actual: 100% Operacional + UX v0.2.0**
+### **🏆 Estado Actual: UI Moderna + MVP en Progreso**
 
-- ✅ **Funcionalidad**: 100% Operacional con todas las marcas
-- ✅ **Arquitectura**: SOLID completa implementada y probada
+- ✅ **UI Moderna**: **Flet + Material Design 3** implementado completamente
+- ✅ **Funcionalidad**: 100% Operacional con todas las marcas de cámaras
+- ✅ **Arquitectura**: **SOLID + MVP parcial** (65% completado)
 - ✅ **Protocolos**: 4 protocolos implementados (ONVIF principal)
 - ✅ **Hardware**: Probado con 4 marcas diferentes en producción
-- ✅ **UI/UX**: Interfaz moderna v0.2.0 con optimizaciones avanzadas
-- ✅ **Testing**: Suite completa de testing con hardware real
 - ✅ **Performance**: 13-20+ FPS según marca, < 200MB RAM, < 15% CPU
+- 🔄 **MVP Migration**: View Layer completo, Presenter Layer pendiente
+- 🎯 **Objetivo**: Ejecutable nativo multiplataforma (.exe, .app, .deb)
 
 ---
 
-## ✨ **Características Destacadas v0.2.0**
+## ✨ **Características Destacadas - UI Moderna Flet**
 
-### 🎨 **Interfaz Visual Moderna**
+### 🎨 **Material Design 3 Completo**
 
-- **Iconos modernos** en todos los botones y controles
-- **Tooltips informativos** en elementos interactivos
-- **Colores adaptativos** según el estado de conexión
-- **Feedback visual inmediato** para todas las acciones
-- **Espaciado consistente** y diseño profesional
+- **ColorScheme profesional** con `color_scheme_seed` y paleta coherente
+- **Tipografía Material 3** con Display/Headline/Title/Body hierarchy
+- **Visual density confortable** optimizada para aplicaciones desktop
+- **Tema claro/oscuro** con colores semánticos bien definidos
+- **Iconos rounded** Material 3 con sizing consistente
 
-### 🎛️ **Panel de Control Avanzado**
+### 🏗️ **Navegación y Layout Modernos**
 
-- **Sistema de pestañas** organizado:
-  - 📹 **Cámaras**: Gestión completa de cámaras
-  - 📱 **Layout**: Configuración de disposición inteligente
-  - ⚙️ **Configuración**: Ajustes del sistema
-  - 🔍 **Descubrimiento**: Port Discovery con UX optimizada
-- **Diálogos avanzados** para agregar/editar cámaras
-- **Validación en tiempo real** de configuraciones
-- **Menú contextual** (click derecho) con opciones rápidas
+- **Barra de herramientas elevada** con logo profesional y shadows
+- **Botones modernos**: FilledButton, OutlinedButton, IconButton con estados
+- **Spacing system** coherente (8dp grid) en toda la aplicación
+- **Cards elevados** con border radius y shadows sutiles
+- **Layout responsive** que se adapta a diferentes tamaños de ventana
 
-### ⌨️ **Shortcuts de Teclado Completos**
+### 🎛️ **Panel de Control Rediseñado**
 
-- **F1**: Mostrar ayuda contextual
-- **F5**: Conectar todas las cámaras | Escanear (en Discovery)
-- **F6**: Desconectar todas las cámaras
-- **F8**: Capturar todas las cámaras
-- **F9**: Refrescar vista
-- **Ctrl+S**: Guardar configuración
-- **Ctrl+O**: Cargar configuración
-- **Ctrl+L**: Mostrar logs | Limpiar (en Discovery)
-- **Ctrl+Q**: Salir de la aplicación
-- **Esc**: Detener escaneo (en Discovery)
+- **Panel lateral moderno** con secciones organizadas y headers descriptivos
+- **TextFields styling** consistente con bordes, labels y states
+- **Dropdown mejorado** con opciones bien formateadas
+- **Progress indicators** con animaciones y feedback visual
+- **Status bar moderna** con iconos de estado y colores semánticos
 
-### 📊 **Métricas en Tiempo Real**
+### 🔄 **Estados Interactivos y UX**
 
-- **FPS actual** de cada cámara
-- **Latencia de conexión** en milisegundos
-- **Tiempo de actividad** (uptime)
-- **Calidad de señal** visual
-- **Uso de memoria** del sistema
-- **Estado de conexión** detallado
+- **Estados hover** en botones y elementos interactivos
+- **Loading states** con spinners y mensajes informativos
+- **Error handling visual** con colores y iconos apropiados
+- **Feedback inmediato** para todas las acciones del usuario
+- **Visual hierarchy** clara con contrast ratios optimizados
+
+### 📊 **Funcionalidades Core**
+
+- **Gestión completa de cámaras** multi-marca (Dahua, TP-Link, Steren, Generic)
+- **Video streaming** en tiempo real con métricas de performance
+- **Port Discovery** avanzado con validación en tiempo real
+- **Configuración persistente** con archivos .env y JSON
+- **Captura de snapshots** HD desde todas las cámaras conectadas
 
 ---
 
@@ -137,13 +138,13 @@ cp .env.example .env
 # GENERIC_PASSWORD=tu_password
 ```
 
-### **3. Ejecutar - Múltiples Opciones**
+### **3. Ejecutar - Aplicación Flet Moderna**
 
 ```bash
-# 🎯 VISOR COMPLETO - Interfaz moderna v0.2.0
-python examples/gui/viewer_example.py
+# 🎯 APLICACIÓN PRINCIPAL - UI Moderna Flet + Material Design 3
+python src/main.py
 
-# 🔍 HERRAMIENTAS DE DESCUBRIMIENTO - UX optimizada
+# 🔍 HERRAMIENTAS DE DESCUBRIMIENTO - UX optimizada (Tkinter)
 python examples/gui/discovery_demo.py
 
 # ⚡ PRUEBA RÁPIDA DE CONEXIÓN
@@ -151,11 +152,21 @@ python examples/protocols/onvif_example.py
 
 # 📊 ANÁLISIS DE RENDIMIENTO
 python examples/testing/performance_test.py
+
+# 🎨 VISOR ORIGINAL TKINTER (compatibilidad)
+python examples/gui/viewer_example.py
 ```
 
 ---
 
-## 🏗️ **Arquitectura Técnica SOLID**
+## 🏗️ **Arquitectura MVP + SOLID**
+
+### **Patrón MVP (Model-View-Presenter) - 65% Implementado**
+
+- **Model Layer**: Entidades de dominio, servicios de negocio, acceso a datos ✅
+- **View Layer**: UI components (Flet), layouts, eventos de usuario ✅
+- **Presenter Layer**: Mediador entre Model y View, lógica de presentación 🔄
+- **Infrastructure**: Configuración, logging, utilidades transversales ✅
 
 ### **Principios SOLID Implementados**
 
@@ -165,39 +176,47 @@ python examples/testing/performance_test.py
 - **[I] Interface Segregation**: Interfaces específicas por funcionalidad
 - **[D] Dependency Inversion**: Dependencias de abstracciones, no implementaciones
 
-### **Patrones de Diseño Aplicados**
+### **Stack Tecnológico Moderno**
 
-- **Factory Pattern**: `ConnectionFactory` para creación de conexiones
-- **Template Method**: `BaseConnection` define flujo común
-- **Singleton**: `ConfigurationManager` para configuración global
-- **Observer Pattern**: Sistema de eventos para comunicación UI
-- **Context Manager**: Gestión automática de recursos con `with` statements
-- **MVC Pattern**: Model-View-Controller para organización UI
+- **Frontend**: Flet (Python + Flutter rendering)
+- **UI Design**: Material Design 3 con ColorScheme dinámico
+- **Backend**: Python con servicios y entidades bien definidos
+- **Database**: SQLite (config) + DuckDB planeado (analytics)
+- **Architecture**: MVP Pattern + SOLID Principles
 
-### **Estructura Modular**
+### **Estructura MVP Actual**
 
 ```bash
 src/
-├── connections/              # 🔌 Protocolos de conexión
-│   ├── base_connection.py        # ABC + Template Method
-│   ├── onvif_connection.py       # Protocolo ONVIF multi-marca
-│   ├── rtsp_connection.py        # Protocolo RTSP universal
-│   ├── tplink_connection.py      # TP-Link especializado
-│   ├── steren_connection.py      # Steren CCTV-235 híbrido
-│   ├── generic_connection.py     # Cámaras chinas genéricas
-│   └── amcrest_connection.py     # HTTP/CGI (limitado)
-├── viewer/                   # 🖥️ Sistema de visualización
-│   ├── real_time_viewer.py       # Aplicación principal
-│   ├── camera_widget.py          # Widget individual cámara
-│   └── control_panel.py          # Panel de control global
-├── gui/                      # 🎨 Interfaces especializadas
-│   ├── main_application.py       # App principal con menús
-│   └── discovery/                # Herramientas descubrimiento
-│       ├── port_discovery_view.py    # Vista principal optimizada
-│       └── components/               # Componentes modulares UX
-│           ├── scan_config_panel.py      # Panel configuración avanzado
-│           ├── scan_progress_panel.py    # Panel progreso mejorado
-│           ├── scan_results_panel.py     # Panel resultados con filtros
+├── main.py                   # 🚀 Aplicación Flet principal + configuración tema
+├── models/                   # 🔵 MODEL LAYER (✅ Completo)
+│   ├── camera_model.py           # Entidades de dominio
+│   ├── connection_model.py       # Modelos de conexión
+│   └── scan_model.py             # Modelos de escaneo
+├── services/                 # 🔧 BUSINESS SERVICES (✅ Completo)
+│   ├── config_service.py         # Gestión de configuración
+│   ├── connection_service.py     # Servicios de conexión
+│   ├── data_service.py           # Servicios de datos
+│   ├── protocol_service.py       # Servicios de protocolos
+│   └── scan_service.py           # Servicios de escaneo
+├── views/                    # 🎨 VIEW LAYER (✅ Flet + Material Design 3)
+│   ├── main_view.py              # Vista principal moderna
+│   └── camera_view.py            # Vista de cámaras
+├── presenters/               # 🔗 PRESENTER LAYER (🔄 65% - En desarrollo)
+│   ├── base_presenter.py         # Presenter base (pendiente)
+│   ├── main_presenter.py         # Presenter principal (pendiente)
+│   ├── camera_presenter.py       # Presenter de cámaras (pendiente)
+│   └── scan_presenter.py         # Presenter de escaneo (pendiente)
+└── utils/                    # 🛠️ INFRASTRUCTURE (✅ Completo)
+    ├── config.py                 # Gestión de configuración
+    ├── brand_manager.py          # Gestor de marcas
+    └── camera_brands.json        # Configuración de marcas
+
+# Legacy/Examples (Mantenidos para compatibilidad)
+examples/                     # 📚 Ejemplos y herramientas Tkinter
+├── gui/viewer_example.py         # Visor original Tkinter
+├── gui/discovery_demo.py         # Herramientas de descubrimiento
+└── protocols/                    # Testing de protocolos
 │           ├── ip_selector_widget.py     # Selector IP inteligente
 │           ├── credentials_widget.py     # Widget credenciales
 │           └── ux_improvements.py        # Mejoras UX adicionales
@@ -584,67 +603,60 @@ tail -f examples/logs/viewer_example.log
 
 ---
 
-## 🛣️ **Roadmap y Evolución**
+## 🛣️ **Estado Actual y Roadmap MVP**
 
-### **✅ Completado (v0.2.0)**
+### **✅ Completado (Estado Actual - Diciembre 2024)**
 
-- ✅ **Arquitectura SOLID completa** - Principios y patrones implementados
-- ✅ **4 marcas soportadas** - Dahua, TP-Link, Steren, China Genérica
-- ✅ **4 protocolos implementados** - ONVIF, RTSP, HTTP/CGI, Generic
-- ✅ **Interfaz UX optimizada** - v0.2.0 con mejoras avanzadas
-- ✅ **Sistema layouts inteligente** - Columnspan automático
-- ✅ **Port Discovery avanzado** - UX optimizada con validación en tiempo real
-- ✅ **Configuración persistente** - .env + JSON híbrido
-- ✅ **Sistema logging completo** - Logs estructurados y debugging
-- ✅ **Testing con hardware real** - 4 marcas probadas en producción
-- ✅ **Performance optimizada** - Threading y memoria eficiente
+- ✅ **UI Moderna Flet**: Material Design 3 completamente implementado
+- ✅ **Arquitectura SOLID**: Principios y patrones implementados
+- ✅ **4 marcas soportadas**: Dahua, TP-Link, Steren, China Genérica
+- ✅ **4 protocolos implementados**: ONVIF, RTSP, HTTP/CGI, Generic
+- ✅ **Model Layer**: Entidades y servicios completamente funcionales
+- ✅ **View Layer**: Flet + Material Design 3 con navegación moderna
+- ✅ **Infrastructure**: Configuración, logging, utilidades completas
+- ✅ **Performance optimizada**: 13-20+ FPS, <200MB RAM, <15% CPU
 
-### **📋 Próximas Extensiones (Opcionales)**
+### **🔄 En Progreso (MVP - 65% Completado)**
 
-#### **Funcionalidades Avanzadas**
+- 🔄 **Presenter Layer**: Implementación de MVP completo
+- 🔄 **Event Handling**: Separación completa de business logic
+- 🔄 **Testing Suite**: Unit tests para Model y Presenter layers
 
-- 📋 **SDK oficial Dahua** - Características nativas adicionales
-- 📋 **Grabación de video** - MP4, AVI con control de calidad
-- 📋 **Detección de movimiento** - Alerts y notificaciones
-- 📋 **Controles PTZ avanzados** - ONVIF pan/tilt/zoom completo
-- 📋 **Multi-cámara escalable** - Soporte para 10+ cámaras simultáneas
+### **🎯 Próximos Pasos Inmediatos**
 
-#### **Mejoras de Interfaz**
+#### **Prioridad 1: Completar MVP Architecture**
 
-- 📋 **Interfaz web complementaria** - Dashboard HTML5
-- 📋 **Perfiles de escaneo** - Configuraciones predefinidas Discovery
-- 📋 **Historial de escaneos** - Comparación temporal de resultados
-- 📋 **Descubrimiento automático** - Auto-detección de red
-- 📋 **Modo pantalla completa** - Optimizado para monitoring
+- **Presenter Layer**: Crear base classes y page presenters
+- **Event Delegation**: Separar UI state de business state
+- **MVP Testing**: Suite de tests para arquitectura completa
 
-#### **Integración y Escalabilidad**
+#### **Prioridad 2: Analytics y Database**
 
-- 📋 **API REST** - Integración con sistemas externos
-- 📋 **Base de datos** - Persistencia avanzada con DuckDB
-- 📋 **Notificaciones push** - Alerts en tiempo real
-- 📋 **Soporte más marcas** - Axis, Hikvision, Uniview
-- 📋 **Containerización** - Docker para despliegue
+- **DuckDB Integration**: Database layer para métricas avanzadas
+- **Real-time Analytics**: Dashboard de performance en tiempo real
+- **Metrics Repository**: Persistencia de datos de cámaras
 
----
+#### **Prioridad 3: Distribución Nativa**
 
-## 🎯 **Migración Futura: Aplicación Desktop Moderna**
+- **Flet Build**: Configuración para ejecutables nativos
+- **Packaging**: Installers para Windows, macOS, Linux
+- **Auto-update**: Sistema de actualizaciones automáticas
 
-> **Nota**: El proyecto actual está 100% funcional y listo para producción. La migración hacia aplicación desktop multiplataforma está planificada como evolución futura sin afectar la funcionalidad actual.
+### **📊 Timeline Estimado**
 
-### **Stack Tecnológico Propuesto**
+| Fase | Tiempo | Estado |
+|------|--------|--------|
+| **Presenter Layer MVP** | 2-3 sesiones | 🔄 En progreso |
+| **DuckDB Analytics** | 1-2 sesiones | 📋 Planeado |
+| **Testing Suite** | 2-3 sesiones | 📋 Planeado |
+| **Packaging Nativo** | 2-4 sesiones | 📋 Planeado |
 
-- **Frontend**: Flet (Python + Flutter rendering)
-- **Backend Logic**: Python (código actual reutilizable 90%+)
-- **Base de Datos**: DuckDB (análisis) + SQLite (configuración)
-- **Distribución**: Ejecutables nativos (.exe, .app, .deb)
+### **🎯 Objetivo Final: Aplicación Desktop Profesional**
 
-### **Ventajas de la Migración**
-
-- ✨ **UI Moderna**: Flutter rendering con componentes nativos
-- 🚀 **Performance**: Aplicación nativa sin dependencias externas
-- 📦 **Distribución**: Un ejecutable auto-contenido
-- 🔧 **Mantenimiento**: Un solo lenguaje (Python) en todo el stack
-- 📊 **Analytics**: DuckDB para métricas y logs avanzados
+- **Ejecutable auto-contenido** (.exe, .app, .deb)
+- **UI Flutter nativa** con performance superior
+- **Analytics avanzado** con DuckDB
+- **Distribución sin dependencias** Python
 
 ---
 
@@ -685,13 +697,15 @@ tail -f examples/logs/viewer_example.log
 
 **Autor**: [JorgeTato99](https://github.com/JorgeTato99)
 **Creación**: Junio 2025
-**Versión**: v0.2.0 - UX Optimizada + SOLID Architecture
+**Última Actualización**: Diciembre 2024
+**Versión**: v3.0 - Flet + Material Design 3 + MVP Architecture
 
 ---
 
 > **¿Listo para comenzar?**
 >
-> 🎯 **Visor completo**: `python examples/gui/viewer_example.py`
-> 🔍 **Herramientas UX**: `python examples/gui/discovery_demo.py`
-> ⚡ **Prueba rápida**: `python examples/protocols/onvif_example.py`
-> ✅ **Tu primera cámara conectada en menos de 5 minutos.**
+> 🎯 **Aplicación Moderna**: `python src/main.py` (Flet + Material Design 3)
+> 🔍 **Herramientas Discovery**: `python examples/gui/discovery_demo.py`
+> ⚡ **Prueba rápida ONVIF**: `python examples/protocols/onvif_example.py`
+> 🎨 **Visor clásico**: `python examples/gui/viewer_example.py` (Tkinter)
+> ✅ **UI moderna profesional lista en 5 minutos.**

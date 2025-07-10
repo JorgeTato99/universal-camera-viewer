@@ -75,31 +75,48 @@ class MainView:
         self.presenter.set_error_callback(self._on_error)
     
     def build(self) -> ft.Column:
-        """Construye la interfaz principal."""
+        """Construye la interfaz principal moderna."""
         self._main_container = ft.Column([
+            # === BARRA DE HERRAMIENTAS MODERNA ===
             self._build_toolbar(),
-            ft.Divider(height=1),
+            
+            # === CONTENIDO PRINCIPAL ===
             ft.Container(
                 content=ft.Row([
-                    # Panel lateral izquierdo
+                    # === PANEL LATERAL IZQUIERDO ===
                     ft.Container(
                         content=self._build_side_panel(),
-                        width=280,
-                        bgcolor=ft.Colors.GREY_100,
-                        padding=ft.padding.all(10),
-                        border_radius=8
+                        width=300,
+                        padding=ft.padding.all(16),
+                        bgcolor=ft.Colors.GREY_50,
+                        border_radius=ft.border_radius.only(
+                            bottom_left=12,
+                            top_right=12,
+                            bottom_right=12
+                        ),
+                        shadow=ft.BoxShadow(
+                            spread_radius=0,
+                            blur_radius=8,
+                            color=ft.Colors.with_opacity(0.06, ft.Colors.SHADOW),
+                            offset=ft.Offset(2, 0)
+                        ),
+                        border=ft.border.only(
+                            right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
+                        )
                     ),
-                    ft.VerticalDivider(width=1),
-                    # Área principal de cámaras
+                    
+                    # === ÁREA PRINCIPAL DE CÁMARAS ===
                     ft.Container(
                         content=self._build_camera_area(),
                         expand=True,
-                        padding=ft.padding.all(10)
+                        padding=ft.padding.all(20),
+                        bgcolor=ft.Colors.WHITE
                     )
-                ]),
+                ], spacing=0),
                 expand=True
             ),
-            ft.Divider(height=1),
+            
+            # === BARRA DE ESTADO MODERNA ===
             self._build_status_bar()
         ],
         expand=True,
@@ -109,241 +126,649 @@ class MainView:
         return self._main_container
     
     def _build_toolbar(self) -> ft.Container:
-        """Construye la barra de herramientas."""
+        """Construye la barra de herramientas moderna."""
         self._toolbar = ft.Row([
-            # Logo y título
-            ft.Row([
-                ft.Icon(ft.Icons.VIDEOCAM, color=ft.Colors.PRIMARY, size=28),
-                ft.Text(
-                    "Visor Universal de Cámaras",
-                    size=20,
-                    weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.PRIMARY
-                )
-            ]),
+            # === LOGO Y BRANDING MODERNO ===
+            ft.Container(
+                content=ft.Row([
+                    # Icono principal con mejor diseño
+                    ft.Container(
+                        content=ft.Icon(
+                            ft.Icons.VIDEO_CAMERA_FRONT_ROUNDED,
+                            color=ft.Colors.PRIMARY,
+                            size=32
+                        ),
+                        padding=ft.padding.all(8),
+                        bgcolor=ft.Colors.PRIMARY_CONTAINER,
+                        border_radius=12,
+                        shadow=ft.BoxShadow(
+                            spread_radius=1,
+                            blur_radius=4,
+                            color=ft.Colors.with_opacity(0.15, ft.Colors.PRIMARY),
+                            offset=ft.Offset(0, 2)
+                        )
+                    ),
+                    
+                    ft.Container(width=12),  # Spacing moderno
+                    
+                    # Título con mejor tipografía
+                    ft.Column([
+                        ft.Text(
+                            "Visor Universal de Cámaras",
+                            size=22,
+                            weight=ft.FontWeight.W_600,
+                            color=ft.Colors.ON_SURFACE
+                        ),
+                        ft.Text(
+                            "Multi-Marca v2.0",
+                            size=12,
+                            weight=ft.FontWeight.W_400,
+                            color=ft.Colors.ON_SURFACE_VARIANT
+                        )
+                    ], spacing=0, tight=True)
+                ], tight=True),
+                padding=ft.padding.symmetric(horizontal=8)
+            ),
             
-            ft.Container(expand=True),  # Spacer
+            ft.Container(expand=True),  # Spacer flexible
             
-            # Controles principales
-            ft.Row([
-                # Botón conectar todas
-                ft.ElevatedButton(
-                    text="Conectar Todas",
-                    icon=ft.Icons.PLAY_ARROW,
-                    on_click=self._on_connect_all_clicked,
-                    bgcolor=ft.Colors.GREEN_600,
-                    color=ft.Colors.WHITE
-                ),
-                
-                # Botón desconectar todas
-                ft.ElevatedButton(
-                    text="Desconectar",
-                    icon=ft.Icons.STOP,
-                    on_click=self._on_disconnect_all_clicked,
-                    bgcolor=ft.Colors.RED_600,
-                    color=ft.Colors.WHITE
-                ),
-                
-                ft.VerticalDivider(width=10),
-                
-                # Botón escanear red
-                ft.ElevatedButton(
-                    text="Escanear Red",
-                    icon=ft.Icons.SEARCH,
-                    on_click=self._on_scan_clicked,
-                    bgcolor=ft.Colors.BLUE_600,
-                    color=ft.Colors.WHITE
-                ),
-                
-                # Botón configuración
-                ft.IconButton(
-                    icon=ft.Icons.SETTINGS,
-                    tooltip="Configuración",
-                    on_click=self._on_settings_clicked
-                )
-            ], spacing=10)
-        ])
+            # === CONTROLES PRINCIPALES MODERNOS ===
+            ft.Container(
+                content=ft.Row([
+                    # Botón conectar todas - Estilo Filled
+                    ft.FilledButton(
+                        text="Conectar Todas",
+                        icon=ft.Icons.PLAY_CIRCLE_FILLED_ROUNDED,
+                        on_click=self._on_connect_all_clicked,
+                        style=ft.ButtonStyle(
+                            bgcolor={
+                                ft.ControlState.DEFAULT: ft.Colors.GREEN_600,
+                                ft.ControlState.HOVERED: ft.Colors.GREEN_700,
+                            },
+                            color={
+                                ft.ControlState.DEFAULT: ft.Colors.WHITE,
+                            },
+                            elevation={
+                                ft.ControlState.DEFAULT: 2,
+                                ft.ControlState.HOVERED: 4,
+                            },
+                            shadow_color=ft.Colors.GREEN_400,
+                            shape=ft.RoundedRectangleBorder(radius=12)
+                        )
+                    ),
+                    
+                    ft.Container(width=8),  # Spacing
+                    
+                    # Botón desconectar - Estilo Outlined
+                    ft.OutlinedButton(
+                        text="Desconectar",
+                        icon=ft.Icons.STOP_CIRCLE_ROUNDED,
+                        on_click=self._on_disconnect_all_clicked,
+                        style=ft.ButtonStyle(
+                            color={
+                                ft.ControlState.DEFAULT: ft.Colors.RED_600,
+                                ft.ControlState.HOVERED: ft.Colors.RED_700,
+                            },
+                            side={
+                                ft.ControlState.DEFAULT: ft.BorderSide(2, ft.Colors.RED_600),
+                                ft.ControlState.HOVERED: ft.BorderSide(2, ft.Colors.RED_700),
+                            },
+                            bgcolor={
+                                ft.ControlState.HOVERED: ft.Colors.with_opacity(0.08, ft.Colors.RED_600),
+                            },
+                            shape=ft.RoundedRectangleBorder(radius=12)
+                        )
+                    ),
+                    
+                    ft.Container(width=16),  # Separador visual
+                    
+                    # Botón escanear red - Estilo Filled Tonal
+                    ft.FilledTonalButton(
+                        text="Escanear Red",
+                        icon=ft.Icons.RADAR_ROUNDED,
+                        on_click=self._on_scan_clicked,
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=12),
+                            elevation={
+                                ft.ControlState.DEFAULT: 1,
+                                ft.ControlState.HOVERED: 3,
+                            }
+                        )
+                    ),
+                    
+                    ft.Container(width=8),  # Spacing
+                    
+                    # Botón configuración - Estilo Icon Button moderno
+                    ft.Container(
+                        content=ft.IconButton(
+                            icon=ft.Icons.SETTINGS_ROUNDED,
+                            tooltip="Configuración",
+                            on_click=self._on_settings_clicked,
+                            icon_color=ft.Colors.PRIMARY,
+                            bgcolor=ft.Colors.GREY_100,
+                            style=ft.ButtonStyle(
+                                shape=ft.CircleBorder(),
+                                elevation={
+                                    ft.ControlState.DEFAULT: 0,
+                                    ft.ControlState.HOVERED: 2,
+                                }
+                            )
+                        ),
+                        tooltip="Configuración de la aplicación"
+                    )
+                ], tight=True),
+                padding=ft.padding.symmetric(horizontal=8)
+            )
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
         
         return ft.Container(
             content=self._toolbar,
             bgcolor=ft.Colors.SURFACE,
-            padding=ft.padding.all(15),
-            border_radius=ft.border_radius.only(top_left=8, top_right=8)
+            padding=ft.padding.all(20),
+            border_radius=ft.border_radius.only(top_left=12, top_right=12),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.1, ft.Colors.SHADOW),
+                offset=ft.Offset(0, 2)
+            ),
+            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
         )
     
     def _build_side_panel(self) -> ft.Column:
-        """Construye el panel lateral con controles."""
+        """Construye el panel lateral moderno con controles."""
         return ft.Column([
-            # Título del panel
-            ft.Text(
-                "Panel de Control",
-                size=16,
-                weight=ft.FontWeight.BOLD,
-                color=ft.Colors.PRIMARY
+            # === HEADER DEL PANEL ===
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(
+                        ft.Icons.CONTROL_CAMERA_ROUNDED,
+                        color=ft.Colors.PRIMARY,
+                        size=24
+                    ),
+                    ft.Container(width=8),
+                    ft.Text(
+                        "Panel de Control",
+                        size=18,
+                        weight=ft.FontWeight.W_600,
+                        color=ft.Colors.ON_SURFACE
+                    )
+                ], tight=True),
+                padding=ft.padding.all(16),
+                bgcolor=ft.Colors.PRIMARY_CONTAINER,
+                border_radius=12,
+                margin=ft.margin.only(bottom=12)
             ),
-            ft.Divider(),
             
-            # Controles de layout
+            # === CONTROLES DE LAYOUT MODERNOS ===
             self._build_layout_controls(),
-            ft.Divider(),
             
-            # Estadísticas
+            ft.Container(height=8),  # Spacing consistente
+            
+            # === ESTADÍSTICAS MEJORADAS ===
             self._build_statistics_section(),
-            ft.Divider(),
             
-            # Controles de escaneo
+            ft.Container(height=8),  # Spacing consistente
+            
+            # === CONTROLES DE ESCANEO MODERNOS ===
             self._build_scan_controls(),
             
-            ft.Container(expand=True),  # Spacer
+            ft.Container(expand=True),  # Spacer flexible
             
-            # Progreso de escaneo
+            # === PROGRESO DE ESCANEO ===
             self._build_scan_progress()
-        ], spacing=10)
+        ], spacing=0, tight=True)
     
     def _build_layout_controls(self) -> ft.Container:
-        """Construye controles de layout de cámaras."""
+        """Construye controles modernos de layout de cámaras."""
         self._layout_controls = ft.Column([
-            ft.Text("Layout de Cámaras", weight=ft.FontWeight.BOLD),
+            # Header con icono
             ft.Row([
-                ft.Text("Columnas:"),
+                ft.Icon(
+                    ft.Icons.VIEW_MODULE_ROUNDED,
+                    color=ft.Colors.SECONDARY,
+                    size=20
+                ),
+                ft.Container(width=8),
+                ft.Text(
+                    "Layout de Cámaras",
+                    weight=ft.FontWeight.W_500,
+                    color=ft.Colors.ON_SURFACE,
+                    size=16
+                )
+            ], tight=True),
+            
+            ft.Container(height=12),
+            
+            # Selector de columnas mejorado
+            ft.Row([
+                ft.Icon(
+                    ft.Icons.VIEW_COLUMN_ROUNDED,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    size=16
+                ),
+                ft.Container(width=8),
+                ft.Text(
+                    "Columnas:",
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    size=14,
+                    weight=ft.FontWeight.W_500
+                ),
+                ft.Container(width=8),
                 ft.Dropdown(
                     value=str(self._current_layout),
                     options=[
-                        ft.dropdown.Option("1", "1 Columna"),
-                        ft.dropdown.Option("2", "2 Columnas"),
-                        ft.dropdown.Option("3", "3 Columnas"),
-                        ft.dropdown.Option("4", "4 Columnas"),
-                        ft.dropdown.Option("6", "6 Columnas"),
+                        ft.dropdown.Option("1", "1 Col"),
+                        ft.dropdown.Option("2", "2 Cols"),
+                        ft.dropdown.Option("3", "3 Cols"),
+                        ft.dropdown.Option("4", "4 Cols"),
+                        ft.dropdown.Option("6", "6 Cols"),
                     ],
-                    width=120,
-                    on_change=self._on_layout_changed
+                    width=80,
+                    on_change=self._on_layout_changed,
+                    border_color=ft.Colors.OUTLINE_VARIANT,
+                    bgcolor=ft.Colors.SURFACE
                 )
-            ])
-        ])
+            ], tight=True)
+        ], spacing=0, tight=True)
         
-        return ft.Container(content=self._layout_controls)
+        return ft.Container(
+            content=self._layout_controls,
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.SURFACE,
+            border_radius=12,
+            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.08, ft.Colors.SHADOW),
+                offset=ft.Offset(0, 1)
+            )
+        )
     
     def _build_statistics_section(self) -> ft.Container:
-        """Construye la sección de estadísticas."""
-        self._camera_count_text = ft.Text("Cámaras: 0/0")
+        """Construye la sección moderna de estadísticas."""
+        self._camera_count_text = ft.Text(
+            "Cámaras: 0/0",
+            size=14,
+            weight=ft.FontWeight.W_500,
+            color=ft.Colors.ON_SURFACE
+        )
         
         return ft.Container(
             content=ft.Column([
-                ft.Text("Estadísticas", weight=ft.FontWeight.BOLD),
-                self._camera_count_text,
-                ft.Text("Estado: Listo"),
-                ft.Text("Última conexión: --")
-            ]),
+                # Header con icono
+                ft.Row([
+                    ft.Icon(
+                        ft.Icons.ANALYTICS_ROUNDED,
+                        color=ft.Colors.TERTIARY,
+                        size=20
+                    ),
+                    ft.Container(width=8),
+                    ft.Text(
+                        "Estadísticas",
+                        weight=ft.FontWeight.W_500,
+                        color=ft.Colors.ON_SURFACE,
+                        size=16
+                    )
+                ], tight=True),
+                
+                ft.Container(height=12),
+                
+                # Métricas con iconos
+                ft.Column([
+                    ft.Row([
+                        ft.Icon(ft.Icons.VIDEOCAM_ROUNDED, size=16, color=ft.Colors.GREEN_600),
+                        ft.Container(width=8),
+                        self._camera_count_text
+                    ], tight=True),
+                    
+                    ft.Container(height=8),
+                    
+                    ft.Row([
+                        ft.Icon(ft.Icons.CIRCLE, size=16, color=ft.Colors.BLUE_600),
+                        ft.Container(width=8),
+                        ft.Text(
+                            "Estado: Listo",
+                            size=14,
+                            color=ft.Colors.ON_SURFACE_VARIANT
+                        )
+                    ], tight=True),
+                    
+                    ft.Container(height=8),
+                    
+                    ft.Row([
+                        ft.Icon(ft.Icons.ACCESS_TIME_ROUNDED, size=16, color=ft.Colors.ORANGE_600),
+                        ft.Container(width=8),
+                        ft.Text(
+                            "Última conexión: --",
+                            size=14,
+                            color=ft.Colors.ON_SURFACE_VARIANT
+                        )
+                    ], tight=True)
+                ], spacing=0, tight=True)
+            ], spacing=0, tight=True),
+            padding=ft.padding.all(16),
             bgcolor=ft.Colors.SURFACE,
-            padding=ft.padding.all(10),
-            border_radius=8
+            border_radius=12,
+            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.08, ft.Colors.SHADOW),
+                offset=ft.Offset(0, 1)
+            )
         )
     
     def _build_scan_controls(self) -> ft.Container:
-        """Construye controles de escaneo."""
+        """Construye controles modernos de escaneo."""
         self._network_field = ft.TextField(
-            label="Red",
+            label="Red a escanear",
             value="192.168.1.0/24",
-            width=150
+            hint_text="Ej: 192.168.1.0/24",
+            prefix_icon=ft.Icons.NETWORK_CHECK_ROUNDED,
+            border_color=ft.Colors.OUTLINE_VARIANT,
+            bgcolor=ft.Colors.SURFACE,
+            border_radius=8
         )
         
         self._ports_field = ft.TextField(
             label="Puertos",
             value="80,8080,554",
-            width=150
+            hint_text="Ej: 80,8080,554",
+            prefix_icon=ft.Icons.SETTINGS_ETHERNET_ROUNDED,
+            border_color=ft.Colors.OUTLINE_VARIANT,
+            bgcolor=ft.Colors.SURFACE,
+            border_radius=8
         )
         
         return ft.Container(
             content=ft.Column([
-                ft.Text("Escaneo de Red", weight=ft.FontWeight.BOLD),
-                ft.Row([self._network_field]),
-                ft.Row([self._ports_field]),
-                ft.ElevatedButton(
+                # Header con icono
+                ft.Row([
+                    ft.Icon(
+                        ft.Icons.NETWORK_PING_ROUNDED,
+                        color=ft.Colors.SECONDARY,
+                        size=20
+                    ),
+                    ft.Container(width=8),
+                    ft.Text(
+                        "Escaneo de Red",
+                        weight=ft.FontWeight.W_500,
+                        color=ft.Colors.ON_SURFACE,
+                        size=16
+                    )
+                ], tight=True),
+                
+                ft.Container(height=12),
+                
+                # Campos de entrada mejorados
+                self._network_field,
+                ft.Container(height=8),
+                self._ports_field,
+                
+                ft.Container(height=16),
+                
+                # Botón de configuración mejorado
+                ft.FilledTonalButton(
                     text="Configurar Escaneo",
-                    icon=ft.Icons.TUNE,
+                    icon=ft.Icons.TUNE_ROUNDED,
                     on_click=self._on_configure_scan_clicked,
-                    width=200
+                    style=ft.ButtonStyle(
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                        elevation={
+                            ft.ControlState.DEFAULT: 1,
+                            ft.ControlState.HOVERED: 2,
+                        }
+                    )
                 )
-            ])
+            ], spacing=0, tight=True),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.SURFACE,
+            border_radius=12,
+            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.08, ft.Colors.SHADOW),
+                offset=ft.Offset(0, 1)
+            )
         )
     
     def _build_scan_progress(self) -> ft.Container:
-        """Construye indicador de progreso de escaneo."""
+        """Construye indicador moderno de progreso de escaneo."""
         self._scan_progress_bar = ft.ProgressBar(
             value=0,
             visible=False,
-            bgcolor=ft.Colors.SURFACE,
-            color=ft.Colors.BLUE
+            bgcolor=ft.Colors.GREY_200,
+            color=ft.Colors.PRIMARY,
+            border_radius=8
         )
         
-        self._scan_progress_text = ft.Text("")
+        self._scan_progress_text = ft.Text(
+            "",
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            text_align=ft.TextAlign.CENTER
+        )
         
         return ft.Container(
             content=ft.Column([
-                ft.Text("Progreso de Escaneo", weight=ft.FontWeight.BOLD),
-                self._scan_progress_bar,
+                # Header con icono
+                ft.Row([
+                    ft.Icon(
+                        ft.Icons.SYNC_ROUNDED,
+                        color=ft.Colors.PRIMARY,
+                        size=20
+                    ),
+                    ft.Container(width=8),
+                    ft.Text(
+                        "Progreso de Escaneo",
+                        weight=ft.FontWeight.W_500,
+                        color=ft.Colors.ON_SURFACE,
+                        size=16
+                    )
+                ], tight=True),
+                
+                ft.Container(height=12),
+                
+                # Barra de progreso con diseño moderno
+                ft.Container(
+                    content=self._scan_progress_bar,
+                    border_radius=8,
+                    shadow=ft.BoxShadow(
+                        spread_radius=0,
+                        blur_radius=2,
+                        color=ft.Colors.with_opacity(0.15, ft.Colors.PRIMARY),
+                        offset=ft.Offset(0, 1)
+                    )
+                ),
+                
+                ft.Container(height=8),
+                
+                # Texto de progreso
                 self._scan_progress_text
-            ])
+            ], spacing=0, tight=True),
+            padding=ft.padding.all(16),
+            bgcolor=ft.Colors.SURFACE,
+            border_radius=12,
+            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.08, ft.Colors.SHADOW),
+                offset=ft.Offset(0, 1)
+            )
         )
     
     def _build_camera_area(self) -> ft.Container:
-        """Construye el área principal de cámaras."""
+        """Construye el área principal moderna de cámaras."""
         self._camera_grid = ft.GridView(
             expand=True,
             runs_count=self._current_layout,
             max_extent=400,
             child_aspect_ratio=1.3,
-            spacing=10,
-            run_spacing=10,
-            padding=ft.padding.all(10)
+            spacing=16,
+            run_spacing=16,
+            padding=ft.padding.all(16)
         )
         
         return ft.Container(
             content=ft.Column([
-                ft.Row([
-                    ft.Text(
-                        "Cámaras Activas",
-                        size=18,
-                        weight=ft.FontWeight.BOLD
-                    ),
-                    ft.Container(expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.ADD,
-                        tooltip="Agregar Cámara",
-                        on_click=self._on_add_camera_clicked
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.REFRESH,
-                        tooltip="Actualizar",
-                        on_click=self._on_refresh_clicked
+                # === HEADER DEL ÁREA DE CÁMARAS ===
+                ft.Container(
+                    content=ft.Row([
+                        ft.Row([
+                            ft.Icon(
+                                ft.Icons.VIDEOCAM_ROUNDED,
+                                color=ft.Colors.PRIMARY,
+                                size=28
+                            ),
+                            ft.Container(width=12),
+                            ft.Column([
+                                ft.Text(
+                                    "Cámaras Activas",
+                                    size=20,
+                                    weight=ft.FontWeight.W_600,
+                                    color=ft.Colors.ON_SURFACE
+                                ),
+                                ft.Text(
+                                    "Monitor en tiempo real",
+                                    size=12,
+                                    color=ft.Colors.ON_SURFACE_VARIANT
+                                )
+                            ], spacing=0, tight=True)
+                        ], tight=True),
+                        
+                        ft.Container(expand=True),
+                        
+                        # Controles de acción rápida
+                        ft.Row([
+                            ft.IconButton(
+                                icon=ft.Icons.ADD_CIRCLE_ROUNDED,
+                                tooltip="Agregar cámara",
+                                on_click=self._on_add_camera_clicked,
+                                icon_color=ft.Colors.PRIMARY,
+                                bgcolor=ft.Colors.PRIMARY_CONTAINER,
+                                style=ft.ButtonStyle(
+                                    shape=ft.CircleBorder(),
+                                    elevation={
+                                        ft.ControlState.DEFAULT: 2,
+                                        ft.ControlState.HOVERED: 4,
+                                    }
+                                )
+                            ),
+                            ft.Container(width=8),
+                            ft.IconButton(
+                                icon=ft.Icons.REFRESH_ROUNDED,
+                                tooltip="Actualizar vista",
+                                on_click=self._on_refresh_clicked,
+                                icon_color=ft.Colors.SECONDARY,
+                                bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                                style=ft.ButtonStyle(
+                                    shape=ft.CircleBorder(),
+                                    elevation={
+                                        ft.ControlState.DEFAULT: 2,
+                                        ft.ControlState.HOVERED: 4,
+                                    }
+                                )
+                            )
+                        ], tight=True)
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=ft.padding.all(20),
+                    bgcolor=ft.Colors.SURFACE,
+                    border_radius=12,
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                    margin=ft.margin.only(bottom=16),
+                    shadow=ft.BoxShadow(
+                        spread_radius=0,
+                        blur_radius=4,
+                        color=ft.Colors.with_opacity(0.08, ft.Colors.SHADOW),
+                        offset=ft.Offset(0, 2)
                     )
-                ]),
-                ft.Divider(),
+                ),
+                
+                # === GRILLA DE CÁMARAS ===
                 ft.Container(
                     content=self._camera_grid,
                     expand=True,
-                    bgcolor=ft.Colors.GREY_100,
-                    border_radius=8,
-                    padding=ft.padding.all(5)
+                    bgcolor=ft.Colors.SURFACE,
+                    border_radius=12,
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                    shadow=ft.BoxShadow(
+                        spread_radius=0,
+                        blur_radius=6,
+                        color=ft.Colors.with_opacity(0.10, ft.Colors.SHADOW),
+                        offset=ft.Offset(0, 2)
+                    )
                 )
-            ]),
-            expand=True
+            ], spacing=0, tight=True)
         )
     
     def _build_status_bar(self) -> ft.Container:
-        """Construye la barra de estado."""
-        self._status_bar = ft.Row([
-            ft.Icon(ft.Icons.CIRCLE, color=ft.Colors.GREEN, size=12),
-            ft.Text("Sistema iniciado", expand=True),
-            ft.Text("Última actualización: --"),
-            ft.Text("v2.0.0-MVP")
-        ])
+        """Construye la barra de estado moderna."""
+        self._status_text = ft.Text(
+            "Listo para conectar",
+            size=14,
+            color=ft.Colors.ON_SURFACE_VARIANT
+        )
         
         return ft.Container(
-            content=self._status_bar,
+            content=ft.Row([
+                # Indicador de estado con icono
+                ft.Row([
+                    ft.Icon(
+                        ft.Icons.CIRCLE,
+                        size=12,
+                        color=ft.Colors.GREEN_500
+                    ),
+                    ft.Container(width=8),
+                    self._status_text
+                ], tight=True),
+                
+                ft.Container(expand=True),
+                
+                # Información del sistema
+                ft.Row([
+                    ft.Icon(
+                        ft.Icons.COMPUTER_ROUNDED,
+                        size=16,
+                        color=ft.Colors.ON_SURFACE_VARIANT
+                    ),
+                    ft.Container(width=8),
+                    ft.Text(
+                        "Visor Universal v2.0",
+                        size=12,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                        weight=ft.FontWeight.W_500
+                    ),
+                    ft.Container(width=16),
+                    ft.Icon(
+                        ft.Icons.UPDATE_ROUNDED,
+                        size=16,
+                        color=ft.Colors.ON_SURFACE_VARIANT
+                    ),
+                    ft.Container(width=8),
+                    ft.Text(
+                        "Conectado",
+                        size=12,
+                        color=ft.Colors.GREEN_600,
+                        weight=ft.FontWeight.W_500
+                    )
+                ], tight=True)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            padding=ft.padding.symmetric(horizontal=20, vertical=12),
             bgcolor=ft.Colors.SURFACE,
-            padding=ft.padding.all(10),
-            border_radius=ft.border_radius.only(bottom_left=8, bottom_right=8)
+            border_radius=ft.border_radius.only(bottom_left=12, bottom_right=12),
+            border=ft.border.only(
+                top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
+            ),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.SHADOW),
+                offset=ft.Offset(0, -1)
+            )
         )
     
     # === Manejo de Eventos ===
@@ -499,20 +924,17 @@ class MainView:
             self.update()
     
     def _update_status(self, message: str, color=ft.Colors.BLUE):
-        """Actualiza la barra de estado."""
-        if self._status_bar:
-            # Recrear controles de la barra de estado para evitar errores de asignación
-            timestamp = datetime.now().strftime('%H:%M:%S')
-            
-            # Recrear la barra de estado con los nuevos valores
-            self._status_bar.controls = [
-                ft.Icon(ft.Icons.CIRCLE, color=color, size=12),
-                ft.Text(message, expand=True),
-                ft.Text(f"Última actualización: {timestamp}"),
-                ft.Text("v2.0.0-MVP")
-            ]
-            
-            self.update()
+        """Actualiza el mensaje de estado en la barra inferior."""
+        try:
+            if hasattr(self, '_status_text') and self._status_text:
+                self._status_text.value = message
+                self._status_text.color = color
+                
+                if hasattr(self.page, 'update'):
+                    self.page.update()
+                    
+        except Exception as e:
+            self.logger.error(f"Error actualizando estado: {e}")
     
     def _update_scan_ui(self, is_scanning: bool, progress: float, message: str):
         """Actualiza la UI de escaneo."""

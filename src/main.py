@@ -96,10 +96,135 @@ class CameraViewerApp:
         page.padding = 0
         page.window.prevent_close = True
         
-        # Configurar tema personalizado
+        # === TEMA MODERNO MATERIAL DESIGN 3 ===
+        # Color primario de la marca (tecnología/cámaras)
+        primary_color = ft.Colors.BLUE_700  # Azul profesional
+        
+        # Configurar tema moderno con Material Design 3
         page.theme = ft.Theme(
-            color_scheme_seed=ft.Colors.BLUE
+            # Esquema de colores moderno usando seed color como base
+            color_scheme_seed=primary_color,
+            # Configurar ColorScheme personalizado
+            color_scheme=ft.ColorScheme(
+                # Colores principales
+                primary=primary_color,
+                on_primary=ft.Colors.WHITE,
+                primary_container=ft.Colors.BLUE_100,
+                on_primary_container=ft.Colors.BLUE_900,
+                
+                # Colores secundarios
+                secondary=ft.Colors.BLUE_600,
+                on_secondary=ft.Colors.WHITE,
+                secondary_container=ft.Colors.BLUE_50,
+                on_secondary_container=ft.Colors.BLUE_800,
+                
+                # Colores terciarios para acentos
+                tertiary=ft.Colors.INDIGO_600,
+                on_tertiary=ft.Colors.WHITE,
+                tertiary_container=ft.Colors.INDIGO_50,
+                on_tertiary_container=ft.Colors.INDIGO_800,
+                
+                # Superficies
+                surface=ft.Colors.GREY_50,
+                on_surface=ft.Colors.GREY_900,
+                surface_variant=ft.Colors.GREY_100,
+                on_surface_variant=ft.Colors.GREY_700,
+                
+                # Fondo
+                background=ft.Colors.WHITE,
+                on_background=ft.Colors.BLACK,
+                
+                # Errores
+                error=ft.Colors.RED_600,
+                on_error=ft.Colors.WHITE,
+                error_container=ft.Colors.RED_50,
+                on_error_container=ft.Colors.RED_800,
+                
+                # Outlines y sombras
+                outline=ft.Colors.GREY_400,
+                outline_variant=ft.Colors.GREY_200,
+                shadow=ft.Colors.BLACK,
+                scrim=ft.Colors.BLACK,
+                
+                # Superficie inversa para elementos como SnackBar
+                inverse_surface=ft.Colors.GREY_800,
+                on_inverse_surface=ft.Colors.GREY_100,
+                inverse_primary=ft.Colors.BLUE_200,
+                
+                # Surface tint para elevación
+                surface_tint=primary_color,
+            ),
+            # Visual density optimizada para desktop
+            visual_density=ft.VisualDensity.COMFORTABLE,
+            # Usar Material 3
+            use_material3=True
         )
+        
+        # Tema oscuro moderno
+        page.dark_theme = ft.Theme(
+            color_scheme_seed=primary_color,
+            color_scheme=ft.ColorScheme(
+                # Colores principales en modo oscuro
+                primary=ft.Colors.BLUE_200,
+                on_primary=ft.Colors.BLUE_900,
+                primary_container=ft.Colors.BLUE_800,
+                on_primary_container=ft.Colors.BLUE_100,
+                
+                # Colores secundarios en modo oscuro
+                secondary=ft.Colors.BLUE_300,
+                on_secondary=ft.Colors.BLUE_900,
+                secondary_container=ft.Colors.BLUE_700,
+                on_secondary_container=ft.Colors.BLUE_100,
+                
+                # Colores terciarios en modo oscuro
+                tertiary=ft.Colors.INDIGO_300,
+                on_tertiary=ft.Colors.INDIGO_900,
+                tertiary_container=ft.Colors.INDIGO_700,
+                on_tertiary_container=ft.Colors.INDIGO_100,
+                
+                # Superficies en modo oscuro
+                surface=ft.Colors.GREY_900,
+                on_surface=ft.Colors.GREY_100,
+                surface_variant=ft.Colors.GREY_800,
+                on_surface_variant=ft.Colors.GREY_300,
+                
+                # Fondo en modo oscuro
+                background=ft.Colors.BLACK,
+                on_background=ft.Colors.WHITE,
+                
+                # Errores en modo oscuro
+                error=ft.Colors.RED_300,
+                on_error=ft.Colors.RED_900,
+                error_container=ft.Colors.RED_800,
+                on_error_container=ft.Colors.RED_100,
+                
+                # Outlines y sombras en modo oscuro
+                outline=ft.Colors.GREY_600,
+                outline_variant=ft.Colors.GREY_700,
+                shadow=ft.Colors.BLACK,
+                scrim=ft.Colors.BLACK,
+                
+                # Superficie inversa en modo oscuro
+                inverse_surface=ft.Colors.GREY_100,
+                on_inverse_surface=ft.Colors.GREY_900,
+                inverse_primary=ft.Colors.BLUE_700,
+                
+                # Surface tint para elevación en modo oscuro
+                surface_tint=ft.Colors.BLUE_200,
+            ),
+            visual_density=ft.VisualDensity.COMFORTABLE,
+            use_material3=True
+        )
+        
+        # Configuración adicional de ventana
+        page.window.title_bar_hidden = False
+        page.window.title_bar_buttons_hidden = False
+        page.scroll = ft.ScrollMode.ADAPTIVE
+        
+        # Configurar fondo según el tema
+        page.bgcolor = ft.Colors.SURFACE
+        
+        self.logger.info("🎨 Tema Material Design 3 configurado")
     
     async def _initialize_mvp(self, page: ft.Page):
         """Inicializa la arquitectura MVP completa."""
