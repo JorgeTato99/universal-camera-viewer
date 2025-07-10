@@ -1,9 +1,10 @@
 # Universal Camera Viewer - Makefile
-# Professional development and deployment commands
+# Comandos profesionales de desarrollo y despliegue
+# Proyecto: Visor Universal de Cámaras Multi-Marca
 
 .PHONY: help install install-dev test test-cov lint format clean run run-legacy build pre-commit docs security backup
 
-# Default Python and pip commands
+# Comandos predeterminados de Python y herramientas
 PYTHON := python
 PIP := pip
 PYTEST := pytest
@@ -13,14 +14,14 @@ FLAKE8 := flake8
 MYPY := mypy
 BANDIT := bandit
 
-# Project directories
+# Directorios del proyecto
 SRC_DIR := src
 TEST_DIR := tests
 EXAMPLES_DIR := examples
 CONFIG_DIR := config
 DATA_DIR := data
 
-# Colors for terminal output
+# Colores para salida en terminal (mejora la experiencia de usuario)
 RED := \033[0;31m
 GREEN := \033[0;32m
 YELLOW := \033[0;33m
@@ -30,124 +31,125 @@ CYAN := \033[0;36m
 WHITE := \033[0;37m
 RESET := \033[0m
 
-##@ Help
+##@ Ayuda
 
-help: ## Display this help message
-	@echo "$(CYAN)Universal Camera Viewer - Development Commands$(RESET)"
+help: ## Mostrar este mensaje de ayuda
+	@echo "$(CYAN)Universal Camera Viewer - Comandos de Desarrollo$(RESET)"
+	@echo "$(WHITE)Visor Universal de Cámaras Multi-Marca v0.7.0$(RESET)"
 	@echo ""
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make $(CYAN)<target>$(RESET)\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(CYAN)%-15s$(RESET) %s\n", $$1, $$2 } /^##@/ { printf "\n$(PURPLE)%s$(RESET)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUso:\n  make $(CYAN)<comando>$(RESET)\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(CYAN)%-15s$(RESET) %s\n", $$1, $$2 } /^##@/ { printf "\n$(PURPLE)%s$(RESET)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-##@ Installation
+##@ Instalación
 
-install: ## Install production dependencies
-	@echo "$(YELLOW)Installing production dependencies...$(RESET)"
+install: ## Instalar dependencias de producción
+	@echo "$(YELLOW)Instalando dependencias de producción...$(RESET)"
 	$(PIP) install -r requirements.txt
-	@echo "$(GREEN)✓ Production dependencies installed$(RESET)"
+	@echo "$(GREEN)✓ Dependencias de producción instaladas$(RESET)"
 
-install-dev: install ## Install development dependencies
-	@echo "$(YELLOW)Installing development dependencies...$(RESET)"
+install-dev: install ## Instalar dependencias de desarrollo
+	@echo "$(YELLOW)Instalando dependencias de desarrollo...$(RESET)"
 	$(PIP) install -r requirements-dev.txt
-	@echo "$(GREEN)✓ Development dependencies installed$(RESET)"
+	@echo "$(GREEN)✓ Dependencias de desarrollo instaladas$(RESET)"
 
-install-pre-commit: install-dev ## Install and setup pre-commit hooks
-	@echo "$(YELLOW)Setting up pre-commit hooks...$(RESET)"
+install-pre-commit: install-dev ## Instalar y configurar hooks de pre-commit
+	@echo "$(YELLOW)Configurando hooks de pre-commit...$(RESET)"
 	pre-commit install
 	pre-commit install --hook-type commit-msg
-	@echo "$(GREEN)✓ Pre-commit hooks installed$(RESET)"
+	@echo "$(GREEN)✓ Hooks de pre-commit instalados$(RESET)"
 
-##@ Development
+##@ Desarrollo
 
-run: ## Run the Flet application (main)
-	@echo "$(BLUE)🚀 Starting Universal Camera Viewer (Flet)...$(RESET)"
+run: ## Ejecutar la aplicación Flet (principal)
+	@echo "$(BLUE)🚀 Iniciando Universal Camera Viewer (Flet)...$(RESET)"
 	cd $(SRC_DIR) && $(PYTHON) main.py
 
-run-debug: ## Run application with debug output
-	@echo "$(BLUE)🔍 Starting with debug mode...$(RESET)"
+run-debug: ## Ejecutar aplicación con salida de depuración
+	@echo "$(BLUE)🔍 Iniciando en modo debug...$(RESET)"
 	cd $(SRC_DIR) && $(PYTHON) main.py --debug
 
-run-legacy: ## Run legacy Tkinter version (if available)
-	@echo "$(BLUE)🕰️  Starting legacy Tkinter version...$(RESET)"
+run-legacy: ## Ejecutar versión legacy de Tkinter (si está disponible)
+	@echo "$(BLUE)🕰️  Iniciando versión legacy de Tkinter...$(RESET)"
 	@if [ -f "main_tkinter.py" ]; then \
 		$(PYTHON) main_tkinter.py; \
 	else \
-		echo "$(RED)❌ Legacy version not found$(RESET)"; \
+		echo "$(RED)❌ Versión legacy no encontrada$(RESET)"; \
 	fi
 
-dev: install-dev run ## Quick development setup and run
+dev: install-dev run ## Configuración rápida de desarrollo y ejecución
 
-##@ Code Quality
+##@ Calidad de Código
 
-format: ## Format code with black and isort
-	@echo "$(YELLOW)🎨 Formatting code...$(RESET)"
+format: ## Formatear código con black e isort
+	@echo "$(YELLOW)🎨 Formateando código...$(RESET)"
 	$(BLACK) $(SRC_DIR) --line-length 88
 	$(ISORT) $(SRC_DIR) --profile black
-	@echo "$(GREEN)✓ Code formatted$(RESET)"
+	@echo "$(GREEN)✓ Código formateado correctamente$(RESET)"
 
-lint: ## Run all linting checks
-	@echo "$(YELLOW)🔍 Running linting checks...$(RESET)"
+lint: ## Ejecutar todas las verificaciones de linting
+	@echo "$(YELLOW)🔍 Ejecutando verificaciones de linting...$(RESET)"
 	$(FLAKE8) $(SRC_DIR) --max-line-length=88 --extend-ignore=E203,W503
-	@echo "$(GREEN)✓ Flake8 passed$(RESET)"
+	@echo "$(GREEN)✓ Flake8 ejecutado exitosamente$(RESET)"
 
-type-check: ## Run type checking with mypy
-	@echo "$(YELLOW)🔍 Running type checks...$(RESET)"
+type-check: ## Ejecutar verificación de tipos con mypy
+	@echo "$(YELLOW)🔍 Ejecutando verificación de tipos...$(RESET)"
 	$(MYPY) $(SRC_DIR) --ignore-missing-imports
-	@echo "$(GREEN)✓ Type checking passed$(RESET)"
+	@echo "$(GREEN)✓ Verificación de tipos completada$(RESET)"
 
-security: ## Run security checks with bandit
-	@echo "$(YELLOW)🔒 Running security analysis...$(RESET)"
+security: ## Ejecutar análisis de seguridad con bandit
+	@echo "$(YELLOW)🔒 Ejecutando análisis de seguridad...$(RESET)"
 	$(BANDIT) -r $(SRC_DIR) -f json -o security-report.json || true
 	$(BANDIT) -r $(SRC_DIR)
-	@echo "$(GREEN)✓ Security analysis completed$(RESET)"
+	@echo "$(GREEN)✓ Análisis de seguridad completado$(RESET)"
 
-pre-commit: ## Run pre-commit hooks on all files
-	@echo "$(YELLOW)🚀 Running pre-commit hooks...$(RESET)"
+pre-commit: ## Ejecutar hooks de pre-commit en todos los archivos
+	@echo "$(YELLOW)🚀 Ejecutando hooks de pre-commit...$(RESET)"
 	pre-commit run --all-files
-	@echo "$(GREEN)✓ Pre-commit checks completed$(RESET)"
+	@echo "$(GREEN)✓ Verificaciones de pre-commit completadas$(RESET)"
 
-check-all: format lint type-check security ## Run all code quality checks
-	@echo "$(GREEN)✅ All quality checks completed$(RESET)"
+check-all: format lint type-check security ## Ejecutar todas las verificaciones de calidad
+	@echo "$(GREEN)✅ Todas las verificaciones de calidad completadas$(RESET)"
 
-##@ Testing
+##@ Pruebas y Testing
 
-test: ## Run tests with pytest
-	@echo "$(YELLOW)🧪 Running tests...$(RESET)"
+test: ## Ejecutar pruebas con pytest
+	@echo "$(YELLOW)🧪 Ejecutando pruebas...$(RESET)"
 	$(PYTEST) $(TEST_DIR) -v
-	@echo "$(GREEN)✓ Tests completed$(RESET)"
+	@echo "$(GREEN)✓ Pruebas completadas$(RESET)"
 
-test-cov: ## Run tests with coverage report
-	@echo "$(YELLOW)📊 Running tests with coverage...$(RESET)"
+test-cov: ## Ejecutar pruebas con reporte de cobertura
+	@echo "$(YELLOW)📊 Ejecutando pruebas con cobertura...$(RESET)"
 	$(PYTEST) $(TEST_DIR) --cov=$(SRC_DIR) --cov-report=html --cov-report=term-missing
-	@echo "$(GREEN)✓ Coverage report generated in htmlcov/$(RESET)"
+	@echo "$(GREEN)✓ Reporte de cobertura generado en htmlcov/$(RESET)"
 
-test-watch: ## Run tests in watch mode
-	@echo "$(YELLOW)👀 Running tests in watch mode...$(RESET)"
+test-watch: ## Ejecutar pruebas en modo observación
+	@echo "$(YELLOW)👀 Ejecutando pruebas en modo observación...$(RESET)"
 	$(PYTEST) $(TEST_DIR) -f
 
-test-examples: ## Test example scripts
-	@echo "$(YELLOW)📋 Testing example scripts...$(RESET)"
+test-examples: ## Probar scripts de ejemplo
+	@echo "$(YELLOW)📋 Probando scripts de ejemplo...$(RESET)"
 	@for script in $(EXAMPLES_DIR)/testing/*.py; do \
-		echo "Testing $$script..."; \
-		$(PYTHON) $$script || echo "$(RED)❌ $$script failed$(RESET)"; \
+		echo "Probando $$script..."; \
+		$(PYTHON) $$script || echo "$(RED)❌ $$script falló$(RESET)"; \
 	done
-	@echo "$(GREEN)✓ Example tests completed$(RESET)"
+	@echo "$(GREEN)✓ Pruebas de ejemplos completadas$(RESET)"
 
-##@ Database & Data
+##@ Base de Datos y Datos
 
-db-backup: ## Backup camera database
-	@echo "$(YELLOW)💾 Creating database backup...$(RESET)"
+db-backup: ## Hacer respaldo de la base de datos de cámaras
+	@echo "$(YELLOW)💾 Creando respaldo de base de datos...$(RESET)"
 	@mkdir -p $(DATA_DIR)/backups
 	@cp $(DATA_DIR)/camera_data.db $(DATA_DIR)/backups/camera_data_backup_$$(date +%Y%m%d_%H%M%S).db
-	@echo "$(GREEN)✓ Database backed up$(RESET)"
+	@echo "$(GREEN)✓ Base de datos respaldada$(RESET)"
 
-db-clean: ## Clean database cache
-	@echo "$(YELLOW)🧹 Cleaning database cache...$(RESET)"
+db-clean: ## Limpiar caché de base de datos
+	@echo "$(YELLOW)🧹 Limpiando caché de base de datos...$(RESET)"
 	@rm -rf $(DATA_DIR)/cache/*
-	@echo "$(GREEN)✓ Database cache cleaned$(RESET)"
+	@echo "$(GREEN)✓ Caché de base de datos limpiado$(RESET)"
 
-##@ Cleanup
+##@ Limpieza y Mantenimiento
 
-clean: ## Clean temporary files and caches
-	@echo "$(YELLOW)🧹 Cleaning temporary files...$(RESET)"
+clean: ## Limpiar archivos temporales y cachés
+	@echo "$(YELLOW)🧹 Limpiando archivos temporales...$(RESET)"
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
@@ -157,94 +159,94 @@ clean: ## Clean temporary files and caches
 	rm -rf dist/
 	rm -rf build/
 	rm -f security-report.json
-	@echo "$(GREEN)✓ Cleanup completed$(RESET)"
+	@echo "$(GREEN)✓ Limpieza completada$(RESET)"
 
-clean-all: clean ## Deep clean including data caches
-	@echo "$(YELLOW)🧹 Deep cleaning...$(RESET)"
+clean-all: clean ## Limpieza profunda incluyendo cachés de datos
+	@echo "$(YELLOW)🧹 Ejecutando limpieza profunda...$(RESET)"
 	rm -rf $(DATA_DIR)/cache/*
 	rm -rf $(DATA_DIR)/snapshots/*
-	@echo "$(GREEN)✓ Deep cleanup completed$(RESET)"
+	@echo "$(GREEN)✓ Limpieza profunda completada$(RESET)"
 
-##@ Documentation
+##@ Documentación
 
-docs: ## Generate documentation
-	@echo "$(YELLOW)📚 Generating documentation...$(RESET)"
-	@echo "$(BLUE)Project documentation available in:$(RESET)"
+docs: ## Generar documentación del proyecto
+	@echo "$(YELLOW)📚 Generando documentación...$(RESET)"
+	@echo "$(BLUE)Documentación del proyecto disponible en:$(RESET)"
 	@echo "  - README.md"
 	@echo "  - CURRENT_STATUS.md" 
 	@echo "  - CHANGELOG.md"
-	@echo "$(GREEN)✓ Documentation ready$(RESET)"
+	@echo "$(GREEN)✓ Documentación lista$(RESET)"
 
-##@ Packaging & Distribution
+##@ Empaquetado y Distribución
 
-build: clean ## Build distribution packages
-	@echo "$(YELLOW)📦 Building distribution packages...$(RESET)"
+build: clean ## Construir paquetes de distribución
+	@echo "$(YELLOW)📦 Construyendo paquetes de distribución...$(RESET)"
 	$(PYTHON) -m build
-	@echo "$(GREEN)✓ Distribution packages built in dist/$(RESET)"
+	@echo "$(GREEN)✓ Paquetes de distribución construidos en dist/$(RESET)"
 
-build-app: ## Build standalone application with Flet
-	@echo "$(YELLOW)📱 Building standalone application...$(RESET)"
+build-app: ## Construir aplicación independiente con Flet
+	@echo "$(YELLOW)📱 Construyendo aplicación independiente...$(RESET)"
 	cd $(SRC_DIR) && flet pack main.py --name "Universal Camera Viewer" --icon ../assets/icon.ico
-	@echo "$(GREEN)✓ Standalone application built$(RESET)"
+	@echo "$(GREEN)✓ Aplicación independiente construida$(RESET)"
 
-release-check: ## Check if ready for release
-	@echo "$(YELLOW)🔍 Checking release readiness...$(RESET)"
+release-check: ## Verificar si está listo para lanzamiento
+	@echo "$(YELLOW)🔍 Verificando preparación para lanzamiento...$(RESET)"
 	$(PYTHON) -m twine check dist/*
-	@echo "$(GREEN)✓ Release check completed$(RESET)"
+	@echo "$(GREEN)✓ Verificación de lanzamiento completada$(RESET)"
 
-##@ Configuration
+##@ Configuración
 
-config-backup: ## Backup configuration files
-	@echo "$(YELLOW)💾 Backing up configuration...$(RESET)"
+config-backup: ## Respaldar archivos de configuración
+	@echo "$(YELLOW)💾 Respaldando configuración...$(RESET)"
 	@mkdir -p $(CONFIG_DIR)/backups
 	@cp $(CONFIG_DIR)/*.json $(CONFIG_DIR)/backups/ 2>/dev/null || true
-	@echo "$(GREEN)✓ Configuration backed up$(RESET)"
+	@echo "$(GREEN)✓ Configuración respaldada$(RESET)"
 
-config-restore: ## Restore configuration from backup
-	@echo "$(YELLOW)📁 Available configuration backups:$(RESET)"
-	@ls -la $(CONFIG_DIR)/backups/ || echo "$(RED)No backups found$(RESET)"
+config-restore: ## Restaurar configuración desde respaldo
+	@echo "$(YELLOW)📁 Respaldos de configuración disponibles:$(RESET)"
+	@ls -la $(CONFIG_DIR)/backups/ || echo "$(RED)No se encontraron respaldos$(RESET)"
 
-##@ Monitoring & Analysis
+##@ Monitoreo y Análisis
 
-performance: ## Run performance analysis
-	@echo "$(YELLOW)⚡ Running performance analysis...$(RESET)"
+performance: ## Ejecutar análisis de rendimiento
+	@echo "$(YELLOW)⚡ Ejecutando análisis de rendimiento...$(RESET)"
 	cd $(EXAMPLES_DIR)/testing && $(PYTHON) performance_test.py
-	@echo "$(GREEN)✓ Performance analysis completed$(RESET)"
+	@echo "$(GREEN)✓ Análisis de rendimiento completado$(RESET)"
 
-network-test: ## Test network connectivity for cameras
-	@echo "$(YELLOW)🌐 Testing network connectivity...$(RESET)"
+network-test: ## Probar conectividad de red para cámaras
+	@echo "$(YELLOW)🌐 Probando conectividad de red...$(RESET)"
 	cd $(EXAMPLES_DIR)/diagnostics && $(PYTHON) network_analyzer.py
-	@echo "$(GREEN)✓ Network test completed$(RESET)"
+	@echo "$(GREEN)✓ Prueba de red completada$(RESET)"
 
-##@ Quick Commands
+##@ Comandos Rápidos
 
-all: install-dev check-all test ## Full development setup and validation
-	@echo "$(GREEN)🎉 All checks passed! Ready for development$(RESET)"
+all: install-dev check-all test ## Configuración completa de desarrollo y validación
+	@echo "$(GREEN)🎉 ¡Todas las verificaciones pasaron! Listo para desarrollo$(RESET)"
 
-ci: format lint test ## Continuous integration checks
-	@echo "$(GREEN)✅ CI checks completed$(RESET)"
+ci: format lint test ## Verificaciones de integración continua
+	@echo "$(GREEN)✅ Verificaciones de CI completadas$(RESET)"
 
-fresh-start: clean-all install-dev pre-commit run ## Fresh development start
-	@echo "$(GREEN)🌟 Fresh start completed$(RESET)"
+fresh-start: clean-all install-dev install-pre-commit run ## Inicio fresco de desarrollo
+	@echo "$(GREEN)🌟 Inicio fresco completado$(RESET)"
 
-##@ Information
+##@ Información
 
-status: ## Show project status
-	@echo "$(CYAN)📊 Universal Camera Viewer Status$(RESET)"
-	@echo "$(YELLOW)Version:$(RESET) 0.7.0"
+status: ## Mostrar estado del proyecto
+	@echo "$(CYAN)📊 Estado de Universal Camera Viewer$(RESET)"
+	@echo "$(YELLOW)Versión:$(RESET) 0.7.0"
 	@echo "$(YELLOW)Python:$(RESET) $$($(PYTHON) --version)"
-	@echo "$(YELLOW)Architecture:$(RESET) MVP Pattern (65% complete)"
-	@echo "$(YELLOW)UI Framework:$(RESET) Flet + Material Design 3"
-	@echo "$(YELLOW)Camera Brands:$(RESET) Dahua, TP-Link, Steren, Generic"
-	@echo "$(YELLOW)Protocols:$(RESET) ONVIF, RTSP, HTTP/CGI"
+	@echo "$(YELLOW)Arquitectura:$(RESET) Patrón MVP (65% completo)"
+	@echo "$(YELLOW)Framework UI:$(RESET) Flet + Material Design 3"
+	@echo "$(YELLOW)Marcas de Cámaras:$(RESET) Dahua, TP-Link, Steren, Genérica"
+	@echo "$(YELLOW)Protocolos:$(RESET) ONVIF, RTSP, HTTP/CGI"
 	@echo ""
-	@echo "$(GREEN)📁 Project Structure:$(RESET)"
-	@echo "  src/          - Source code (MVP architecture)"
-	@echo "  tests/        - Test suites"
-	@echo "  examples/     - Example scripts and diagnostics"
-	@echo "  config/       - Configuration files"
-	@echo "  data/         - Database and cache"
+	@echo "$(GREEN)📁 Estructura del Proyecto:$(RESET)"
+	@echo "  src/          - Código fuente (arquitectura MVP)"
+	@echo "  tests/        - Suites de pruebas"
+	@echo "  examples/     - Scripts de ejemplo y diagnósticos"
+	@echo "  config/       - Archivos de configuración"
+	@echo "  data/         - Base de datos y caché"
 
-version: ## Show version information
+version: ## Mostrar información de versión
 	@echo "$(CYAN)Universal Camera Viewer v0.7.0$(RESET)"
-	@echo "$(BLUE)Multi-brand camera viewer with modern Flet UI$(RESET)" 
+	@echo "$(BLUE)Visor de cámaras multi-marca con UI moderna en Flet$(RESET)" 
