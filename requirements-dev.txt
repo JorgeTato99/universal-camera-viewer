@@ -1,45 +1,45 @@
-# Development dependencies for Universal Camera Viewer
-# Install with: pip install -r requirements-dev.txt
+# Dependencias de desarrollo para Universal Camera Viewer
+# Instalar con: pip install -r requirements-dev.txt
 
-# Code formatting and linting
-black>=23.0.0              # Code formatter
-isort>=5.12.0              # Import sorter  
-flake8>=6.0.0              # Linter
-mypy>=1.0.0                # Type checker
+# Formateo y análisis de código
+black>=23.0.0              # Formateador de código
+isort>=5.12.0              # Organizador de imports  
+flake8>=6.0.0              # Linter de código
+mypy>=1.0.0                # Verificador de tipos
 
-# Testing framework
-pytest>=7.0.0              # Testing framework
-pytest-cov>=4.0.0          # Coverage reporting
-pytest-mock>=3.10.0        # Mocking utilities
-pytest-asyncio>=0.21.0     # Async test support
+# Framework de testing
+pytest>=7.0.0              # Framework de pruebas
+pytest-cov>=4.0.0          # Reporte de cobertura
+pytest-mock>=3.10.0        # Utilidades de mocking
+pytest-asyncio>=0.21.0     # Soporte para tests asíncronos
 
-# Development tools
-pre-commit>=3.0.0          # Git hooks
-ipython>=8.10.0            # Enhanced REPL
-jupyter>=1.0.0             # Notebook support (optional analytics)
+# Herramientas de desarrollo
+pre-commit>=3.0.0          # Hooks de Git
+ipython>=8.10.0            # REPL mejorado
+jupyter>=1.0.0             # Soporte para notebooks (analytics opcional)
 
-# Documentation
-sphinx>=6.0.0              # Documentation generator
-sphinx-rtd-theme>=1.2.0    # Documentation theme
+# Documentación
+sphinx>=6.0.0              # Generador de documentación
+sphinx-rtd-theme>=1.2.0    # Tema para documentación
 
-# Analytics extras (for future development)
-duckdb>=0.9.0              # Analytics database
-plotly>=5.17.0             # Interactive plots
-dash>=2.14.0               # Web dashboards
+# Analytics extras (desarrollo futuro)
+duckdb>=0.9.0              # Base de datos para analytics
+plotly>=5.17.0             # Gráficos interactivos
+dash>=2.14.0               # Dashboards web
 
-# Packaging and distribution
-pyinstaller>=6.0.0         # Executable creation
-auto-py-to-exe>=2.40.0     # GUI for PyInstaller
-flet>=0.24.1               # Required for flet pack
+# Empaquetado y distribución
+pyinstaller>=6.0.0         # Creación de ejecutables
+auto-py-to-exe>=2.40.0     # GUI para PyInstaller
+flet>=0.24.1               # Requerido para flet pack
 
-# Performance profiling
-memory-profiler>=0.60.0    # Memory usage profiling
-psutil>=5.9.0              # System monitoring
+# Profiling de rendimiento
+memory-profiler>=0.60.0    # Profiling de memoria
+psutil>=5.9.0              # Monitoreo del sistema
 
-# Development utilities
-watchdog>=3.0.0            # File watching for auto-reload
-python-dotenv>=1.0.0       # Environment variables (also in main deps)
+# Utilidades de desarrollo
+watchdog>=3.0.0            # Observador de archivos para auto-reload
+python-dotenv>=1.0.0       # Variables de entorno (también en deps principales)
 
-# Security scanning
-bandit>=1.7.5              # Security linter
-safety>=2.3.0              # Dependency vulnerability scanner 
+# Escaneo de seguridad
+bandit>=1.7.5              # Linter de seguridad
+safety>=2.3.0              # Escáner de vulnerabilidades en dependencias 

@@ -1,37 +1,34 @@
-# Dependencias core para conexiones de cámara
-opencv-python>=4.8.0
-requests>=2.31.0
-numpy>=1.24.0
+# Dependencias principales para Universal Camera Viewer
+# Instalar con: pip install -r requirements.txt
 
-# Image processing
-Pillow>=10.0.0
+# Procesamiento de video e imágenes
+opencv-python>=4.8.0          # Captura y procesamiento de video
+Pillow>=10.0.0                 # Manipulación de imágenes
+numpy>=1.24.0                  # Operaciones numéricas para imágenes
 
-# ONVIF support
-onvif-zeep>=0.2.12
+# Protocolos de cámara
+onvif-zeep>=0.2.12             # Protocolo ONVIF para cámaras IP
+requests>=2.31.0               # HTTP/HTTPS para APIs REST y CGI
 
-# HTTP connections (using requests directly)
-# Note: amcrest library removed due to distutils compatibility issues
+# Interfaz de usuario
+flet>=0.21.0                   # Framework UI moderno con Material Design
 
-# Environment variables
-python-dotenv>=1.0.0
+# Configuración y entorno
+python-dotenv>=1.0.0           # Variables de entorno desde archivos .env
 
-# System monitoring and performance
-psutil>=5.9.0
+# Monitoreo del sistema
+psutil>=5.9.0                  # Información de CPU, memoria y red
 
-# Security and encryption
-cryptography>=41.0.0
+# Seguridad y encriptación
+cryptography>=41.0.0           # Cifrado para credenciales y comunicaciones
 
-# Data analysis (optional)
-pandas>=2.0.0
+# Análisis de datos (opcional)
+pandas>=2.0.0                  # Manipulación de datos tabulares
 
-# GUI (tkinter comes with Python by default)
+# Testing básico
+pytest>=7.4.0                  # Framework de pruebas
+pytest-cov>=4.1.0              # Cobertura de código
 
-# Testing
-pytest>=7.4.0
-pytest-cov>=4.1.0
-
-# Development
-black>=23.0.0
-flake8>=6.0.0 
-
-flet>=0.21.0 
+# Herramientas de desarrollo básicas
+black>=23.0.0                  # Formateador de código
+flake8>=6.0.0                  # Linter básico 
