@@ -90,7 +90,8 @@ class ScanRange:
         try:
             start = ipaddress.ip_address(self.start_ip)
             end = ipaddress.ip_address(self.end_ip)
-            if start > end:
+            # Comparar direcciones IP como enteros
+            if int(start) > int(end):
                 raise ValueError("start_ip debe ser menor o igual que end_ip")
         except ipaddress.AddressValueError as e:
             raise ValueError(f"IP inválida: {e}")
@@ -221,7 +222,7 @@ class ScanModel:
     def __init__(self, 
                  scan_id: str,
                  scan_range: ScanRange,
-                 methods: List[ScanMethod] = None,
+                 methods: Optional[List[ScanMethod]] = None,
                  max_concurrent: int = 50,
                  timeout: float = 5.0,
                  include_offline: bool = False):
