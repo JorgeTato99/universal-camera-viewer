@@ -63,5 +63,8 @@
     "venv",
     "videovigilancia",
     "zeep"
+  ],
+  "conventionalCommits.scopes": [
+    "Main"
   ]
 }
