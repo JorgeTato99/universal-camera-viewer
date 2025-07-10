@@ -24,8 +24,9 @@ from pathlib import Path
 # Configurar path para importaciones
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.views.main_view import MainView
+from src.views.main_view_new import create_main_view
 from src.presenters import get_main_presenter, cleanup_all_presenters
+from src.services.theme_service import theme_service, ThemeMode
 
 
 class CameraViewerApp:
@@ -92,139 +93,31 @@ class CameraViewerApp:
         page.window.height = 900
         page.window.min_width = 1000
         page.window.min_height = 700
-        page.theme_mode = ft.ThemeMode.LIGHT
         page.padding = 0
         page.window.prevent_close = True
-        
-        # === TEMA MODERNO MATERIAL DESIGN 3 ===
-        # Color primario de la marca (tecnología/cámaras)
-        primary_color = ft.Colors.BLUE_700  # Azul profesional
-        
-        # Configurar tema moderno con Material Design 3
-        page.theme = ft.Theme(
-            # Esquema de colores moderno usando seed color como base
-            color_scheme_seed=primary_color,
-            # Configurar ColorScheme personalizado
-            color_scheme=ft.ColorScheme(
-                # Colores principales
-                primary=primary_color,
-                on_primary=ft.Colors.WHITE,
-                primary_container=ft.Colors.BLUE_100,
-                on_primary_container=ft.Colors.BLUE_900,
-                
-                # Colores secundarios
-                secondary=ft.Colors.BLUE_600,
-                on_secondary=ft.Colors.WHITE,
-                secondary_container=ft.Colors.BLUE_50,
-                on_secondary_container=ft.Colors.BLUE_800,
-                
-                # Colores terciarios para acentos
-                tertiary=ft.Colors.INDIGO_600,
-                on_tertiary=ft.Colors.WHITE,
-                tertiary_container=ft.Colors.INDIGO_50,
-                on_tertiary_container=ft.Colors.INDIGO_800,
-                
-                # Superficies
-                surface=ft.Colors.GREY_50,
-                on_surface=ft.Colors.GREY_900,
-                surface_variant=ft.Colors.GREY_100,
-                on_surface_variant=ft.Colors.GREY_700,
-                
-                # Fondo
-                background=ft.Colors.WHITE,
-                on_background=ft.Colors.BLACK,
-                
-                # Errores
-                error=ft.Colors.RED_600,
-                on_error=ft.Colors.WHITE,
-                error_container=ft.Colors.RED_50,
-                on_error_container=ft.Colors.RED_800,
-                
-                # Outlines y sombras
-                outline=ft.Colors.GREY_400,
-                outline_variant=ft.Colors.GREY_200,
-                shadow=ft.Colors.BLACK,
-                scrim=ft.Colors.BLACK,
-                
-                # Superficie inversa para elementos como SnackBar
-                inverse_surface=ft.Colors.GREY_800,
-                on_inverse_surface=ft.Colors.GREY_100,
-                inverse_primary=ft.Colors.BLUE_200,
-                
-                # Surface tint para elevación
-                surface_tint=primary_color,
-            ),
-            # Visual density optimizada para desktop
-            visual_density=ft.VisualDensity.COMFORTABLE,
-            # Usar Material 3
-            use_material3=True
-        )
-        
-        # Tema oscuro moderno
-        page.dark_theme = ft.Theme(
-            color_scheme_seed=primary_color,
-            color_scheme=ft.ColorScheme(
-                # Colores principales en modo oscuro
-                primary=ft.Colors.BLUE_200,
-                on_primary=ft.Colors.BLUE_900,
-                primary_container=ft.Colors.BLUE_800,
-                on_primary_container=ft.Colors.BLUE_100,
-                
-                # Colores secundarios en modo oscuro
-                secondary=ft.Colors.BLUE_300,
-                on_secondary=ft.Colors.BLUE_900,
-                secondary_container=ft.Colors.BLUE_700,
-                on_secondary_container=ft.Colors.BLUE_100,
-                
-                # Colores terciarios en modo oscuro
-                tertiary=ft.Colors.INDIGO_300,
-                on_tertiary=ft.Colors.INDIGO_900,
-                tertiary_container=ft.Colors.INDIGO_700,
-                on_tertiary_container=ft.Colors.INDIGO_100,
-                
-                # Superficies en modo oscuro
-                surface=ft.Colors.GREY_900,
-                on_surface=ft.Colors.GREY_100,
-                surface_variant=ft.Colors.GREY_800,
-                on_surface_variant=ft.Colors.GREY_300,
-                
-                # Fondo en modo oscuro
-                background=ft.Colors.BLACK,
-                on_background=ft.Colors.WHITE,
-                
-                # Errores en modo oscuro
-                error=ft.Colors.RED_300,
-                on_error=ft.Colors.RED_900,
-                error_container=ft.Colors.RED_800,
-                on_error_container=ft.Colors.RED_100,
-                
-                # Outlines y sombras en modo oscuro
-                outline=ft.Colors.GREY_600,
-                outline_variant=ft.Colors.GREY_700,
-                shadow=ft.Colors.BLACK,
-                scrim=ft.Colors.BLACK,
-                
-                # Superficie inversa en modo oscuro
-                inverse_surface=ft.Colors.GREY_100,
-                on_inverse_surface=ft.Colors.GREY_900,
-                inverse_primary=ft.Colors.BLUE_700,
-                
-                # Surface tint para elevación en modo oscuro
-                surface_tint=ft.Colors.BLUE_200,
-            ),
-            visual_density=ft.VisualDensity.COMFORTABLE,
-            use_material3=True
-        )
         
         # Configuración adicional de ventana
         page.window.title_bar_hidden = False
         page.window.title_bar_buttons_hidden = False
         page.scroll = ft.ScrollMode.ADAPTIVE
         
-        # Configurar fondo según el tema
-        page.bgcolor = ft.Colors.SURFACE
+        # === CONFIGURAR TEMA USANDO THEME SERVICE ===
+        # Configurar temas sin actualizar aún
+        page.theme = theme_service.get_light_theme()
+        page.dark_theme = theme_service.get_dark_theme()
         
-        self.logger.info("🎨 Tema Material Design 3 configurado")
+        # Establecer modo de tema
+        if theme_service.current_theme == ThemeMode.LIGHT:
+            page.theme_mode = ft.ThemeMode.LIGHT
+            page.bgcolor = ft.Colors.GREY_50
+        elif theme_service.current_theme == ThemeMode.DARK:
+            page.theme_mode = ft.ThemeMode.DARK
+            page.bgcolor = ft.Colors.GREY_900
+        else:
+            page.theme_mode = ft.ThemeMode.SYSTEM
+            page.bgcolor = ft.Colors.GREY_50
+        
+        self.logger.info("🎨 Tema Material Design 3 configurado con ThemeService")
     
     async def _initialize_mvp(self, page: ft.Page):
         """Inicializa la arquitectura MVP completa."""
@@ -232,21 +125,22 @@ class CameraViewerApp:
             # Obtener presenter principal
             self.main_presenter = get_main_presenter()
             
-            # Crear vista principal
-            self.main_view = MainView(page)
-            
-            # Inicializar vista de forma asíncrona
-            await self.main_view.initialize_async()
+            # Crear vista principal refactorizada (ya inicializada)
+            self.main_view = create_main_view(page)
             
             # Construir y agregar vista a la página
             main_view_control = self.main_view.build()
             page.add(main_view_control)
-            page.update()
+            
+            # Aplicar configuración final del tema después de agregar componentes
+            # Usar forzar recarga para resolver problemas de inicialización
+            theme_service.force_theme_reload(page)
             
             # Configurar callback de resize (no disponible en Flet actual)
             # page.on_window_resize = self._on_window_resize
             
-            self.logger.info("🏗️ Arquitectura MVP inicializada")
+            self.logger.info("🏗️ Arquitectura MVP refactorizada inicializada")
+            self.logger.info("🎯 Navegación horizontal implementada")
             
         except Exception as e:
             self.logger.error(f"❌ Error inicializando MVP: {str(e)}")
@@ -275,7 +169,8 @@ class CameraViewerApp:
     def _on_window_resize(self, e):
         """Maneja redimensionamiento de ventana."""
         if self.main_view:
-            self.main_view.update()
+            # La nueva vista se actualiza automáticamente
+            pass
     
     async def _on_window_event(self, e):
         """
@@ -294,7 +189,7 @@ class CameraViewerApp:
             
             # Limpiar vista principal
             if self.main_view:
-                await self.main_view.cleanup_async()
+                self.main_view.cleanup()
             
             # Limpiar todos los presenters
             await cleanup_all_presenters()

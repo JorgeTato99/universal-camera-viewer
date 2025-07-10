@@ -7,6 +7,75 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.7.2] - 2025-01-20
+
+### ✨ Added - Sistema de Temas Completo
+
+- **ThemeService** para gestión de temas claro/oscuro
+- **Configuración Material Design 3** optimizada para ambos temas
+- **Persistencia de tema** con archivos de configuración JSON
+- **Sistema de notificaciones** para cambios de tema
+- **ThemeToggle** component para cambio rápido de tema
+- **ThemeSelector** component para configuración avanzada
+- **Integración con NavigationBar** para acceso rápido
+
+### 🏗️ Enhanced - Mejoras de Apariencia
+
+- **Tema claro como predeterminado** con paleta mejorada
+- **Mejor contraste de colores** y accesibilidad
+- **Aplicación unificada** del tema en todos los componentes
+- **Página de Configuración** completamente rediseñada
+- **Panel de navegación** en configuración con secciones organizadas
+
+### 🛠️ Fixed - Problemas de Tema
+
+- **Aplicación incorrecta** del tema oscuro por defecto
+- **Compatibilidad de colores** con framework Flet
+- **Cambio dinámico** de tema con actualización instantánea
+- **Persistencia** de preferencias de tema entre sesiones
+
+### 📊 Technical
+
+- **ThemeService** con configuraciones light/dark completas
+- **Persistencia JSON** para configuraciones de usuario
+- **Integración de componentes** con sistema de temas
+- **Optimización MD3** para mejor experiencia visual
+
+---
+
+## [0.7.1] - 2025-01-20
+
+### ✨ Added - Sistema de Componentes Completo
+
+- **ModernToolbar** con Material Design 3 y acciones configurables
+- **SidePanel/CollapsibleSidePanel** para navegación lateral moderna
+- **CameraGrid/CameraCard** con estados dinámicos y controles de reproducción
+- **StatusBar** especializada con métricas en tiempo real
+- **Funciones helper** específicas para diferentes contextos de uso
+
+### 🏗️ Enhanced - Arquitectura Modular
+
+- **Estructura MVP** refactorizada al 100% - todos los TODOs completados
+- **Componentes reutilizables** organizados en subcarpetas temáticas
+- **Sistema de importaciones** limpio y escalable en `__init__.py`
+- **Separación de responsabilidades** clara entre layout, common y navigation
+
+### 🛠️ Fixed - Code Quality
+
+- **Linting errors** corregidos en main_view_new.py y progress_indicator.py  
+- **Type checking** robusto con `type: ignore` donde es necesario
+- **Error handling** defensivo para compatibilidad entre versiones de Flet
+- **Documentación** completa en todos los componentes nuevos
+
+### 📊 Technical
+
+- **600+ líneas** de componentes UI implementados
+- **Material Design 3** consistente en toda la interfaz
+- **Responsive design** adaptativo con grids flexibles
+- **Estado management** local en cada componente
+
+---
+
 ## [0.7.0] - 2025-07-10
 
 ### ✨ Added - UI Moderna Completa
