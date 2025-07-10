@@ -1,0 +1,27 @@
+# Handling line endings
+* text=auto eol=lf
+*.py text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.mp4 binary
+*.avi binary
+
+# Database files
+*.db binary
+*.sqlite binary
+
+# Config files
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+
+# Documentation
+*.md text eol=lf
+
+# Don't ignore
+!.env.example

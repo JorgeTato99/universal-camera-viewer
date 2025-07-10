@@ -1,0 +1,45 @@
+# Development dependencies for Universal Camera Viewer
+# Install with: pip install -r requirements-dev.txt
+
+# Code formatting and linting
+black>=23.0.0              # Code formatter
+isort>=5.12.0              # Import sorter  
+flake8>=6.0.0              # Linter
+mypy>=1.0.0                # Type checker
+
+# Testing framework
+pytest>=7.0.0              # Testing framework
+pytest-cov>=4.0.0          # Coverage reporting
+pytest-mock>=3.10.0        # Mocking utilities
+pytest-asyncio>=0.21.0     # Async test support
+
+# Development tools
+pre-commit>=3.0.0          # Git hooks
+ipython>=8.10.0            # Enhanced REPL
+jupyter>=1.0.0             # Notebook support (optional analytics)
+
+# Documentation
+sphinx>=6.0.0              # Documentation generator
+sphinx-rtd-theme>=1.2.0    # Documentation theme
+
+# Analytics extras (for future development)
+duckdb>=0.9.0              # Analytics database
+plotly>=5.17.0             # Interactive plots
+dash>=2.14.0               # Web dashboards
+
+# Packaging and distribution
+pyinstaller>=6.0.0         # Executable creation
+auto-py-to-exe>=2.40.0     # GUI for PyInstaller
+flet>=0.24.1               # Required for flet pack
+
+# Performance profiling
+memory-profiler>=0.60.0    # Memory usage profiling
+psutil>=5.9.0              # System monitoring
+
+# Development utilities
+watchdog>=3.0.0            # File watching for auto-reload
+python-dotenv>=1.0.0       # Environment variables (also in main deps)
+
+# Security scanning
+bandit>=1.7.5              # Security linter
+safety>=2.3.0              # Dependency vulnerability scanner 

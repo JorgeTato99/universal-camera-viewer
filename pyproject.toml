@@ -1,0 +1,147 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "universal-camera-viewer"
+version = "0.7.0"
+description = "Sistema de videovigilancia profesional moderno con soporte multi-marca y UI Flutter nativa"
+authors = [{name = "JorgeTato99", email = "jorgetato99@example.com"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["camera", "surveillance", "flet", "onvif", "rtsp", "dahua", "tplink", "steren", "material-design"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video :: Display",
+    "Topic :: System :: Monitoring",
+    "Topic :: Desktop Environment",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "flet>=0.24.1",
+    "opencv-python>=4.8.0",
+    "onvif-zeep>=0.2.12",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "cryptography>=41.0.0",
+    "pandas>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/JorgeTato99/universal-camera-viewer"
+Repository = "https://github.com/JorgeTato99/universal-camera-viewer"
+Issues = "https://github.com/JorgeTato99/universal-camera-viewer/issues"
+Discussions = "https://github.com/JorgeTato99/universal-camera-viewer/discussions"
+Documentation = "https://github.com/JorgeTato99/universal-camera-viewer#readme"
+
+[project.scripts]
+universal-camera-viewer = "src.main:main"
+ucv = "src.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pre-commit>=3.0.0",
+    "mypy>=1.0.0",
+    "isort>=5.12.0",
+]
+analytics = [
+    "duckdb>=0.9.0",
+    "plotly>=5.17.0",
+    "dash>=2.14.0",
+]
+packaging = [
+    "pyinstaller>=6.0.0",
+    "auto-py-to-exe>=2.40.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.wsdl", "*.xsd"]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | src_old
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["src"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503", "E501"]
+exclude = [".git", "__pycache__", "build", "dist", ".venv", "src_old"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+exclude = ["src_old/", "examples/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "hardware: marks tests that require actual camera hardware",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "src_old/*", "examples/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+] 
