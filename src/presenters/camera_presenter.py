@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 
 from .base_presenter import BasePresenter, PresenterState
-from ..models import CameraModel, ConnectionModel, ConnectionConfig
+from ..models import CameraModel, ConnectionModel, ConnectionConfig, ProtocolType, ConnectionType
 from ..services import get_connection_service, get_data_service, get_config_service
 
 
@@ -39,7 +39,7 @@ class CameraPresenter(BasePresenter):
         Args:
             camera_id: Identificador único de la cámara
         """
-        super().__init__(f"CameraPresenter_{camera_id}")
+        super().__init__()
         
         self.camera_id = camera_id
         self._camera_model: Optional[CameraModel] = None
@@ -178,31 +178,38 @@ class CameraPresenter(BasePresenter):
         Returns:
             True si la conexión fue exitosa
         """
-        await self.set_busy("Conectando cámara...")
+        await self.set_busy(True)
         
         try:
             self._connection_attempts += 1
-            self.update_metric("connection_attempts", self._connection_attempts)
+            self.add_metric("connection_attempts", self._connection_attempts)
             
             # Usar configuración proporcionada o crear desde modelo
-            connection_config = config or await self._create_connection_config()
+            if config:
+                # Actualizar modelo con nueva configuración
+                if self._camera_model:
+                    self._camera_model.update_connection_config(
+                        ip=config.ip,
+                        username=config.username,
+                        password=config.password
+                    )
             
-            if not connection_config:
+            if not self._camera_model:
                 raise ValueError("No se pudo crear configuración de conexión")
             
             # Intentar conexión a través del servicio
-            self._connection_model = await self._connection_service.connect_camera(
-                camera_id=self.camera_id,
-                config=connection_config
+            success = await self._connection_service.connect_camera_async(
+                camera=self._camera_model,
+                connection_type=ConnectionType.RTSP_STREAM
             )
             
-            if self._connection_model and self._connection_model.is_connected:
+            if success:
                 self._successful_connections += 1
-                self.update_metric("successful_connections", self._successful_connections)
+                self.add_metric("successful_connections", self._successful_connections)
                 
                 # Notificar cambio de conexión
                 if self._on_connection_change:
-                    await self.execute_safe(
+                    await self.execute_safely(
                         self._on_connection_change,
                         True,
                         "Conectado exitosamente"
@@ -212,7 +219,7 @@ class CameraPresenter(BasePresenter):
                 if await self._should_auto_stream():
                     await self.start_streaming()
                 
-                await self.set_ready("Cámara conectada exitosamente")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"✅ Cámara {self.camera_id} conectada exitosamente")
                 
                 # Guardar datos de conexión exitosa
@@ -227,7 +234,7 @@ class CameraPresenter(BasePresenter):
             self.logger.error(f"❌ {error_msg}")
             
             if self._on_connection_change:
-                await self.execute_safe(self._on_connection_change, False, error_msg)
+                await self.execute_safely(self._on_connection_change, False, error_msg)
             
             await self.set_error(error_msg)
             return False
@@ -239,7 +246,7 @@ class CameraPresenter(BasePresenter):
         Returns:
             True si la desconexión fue exitosa
         """
-        await self.set_busy("Desconectando cámara...")
+        await self.set_busy(True)
         
         try:
             # Detener streaming primero
@@ -247,57 +254,30 @@ class CameraPresenter(BasePresenter):
                 await self.stop_streaming()
             
             # Desconectar a través del servicio
-            if self._connection_model:
-                success = await self._connection_service.disconnect_camera(self.camera_id)
+            success = self._connection_service.disconnect_camera(self.camera_id)
+            
+            if success:
+                self._connection_model = None
                 
-                if success:
-                    self._connection_model = None
-                    
-                    # Notificar cambio de conexión
-                    if self._on_connection_change:
-                        await self.execute_safe(
-                            self._on_connection_change,
-                            False,
-                            "Desconectado"
-                        )
-                    
-                    await self.set_ready("Cámara desconectada")
-                    self.logger.info(f"✅ Cámara {self.camera_id} desconectada")
-                    return True
-                else:
-                    raise ConnectionError("Error en desconexión del servicio")
-            else:
-                # Ya estaba desconectada
-                await self.set_ready("Cámara ya estaba desconectada")
+                # Notificar cambio de conexión
+                if self._on_connection_change:
+                    await self.execute_safely(
+                        self._on_connection_change,
+                        False,
+                        "Desconectado"
+                    )
+                
+                self._set_state(PresenterState.READY)
+                self.logger.info(f"✅ Cámara {self.camera_id} desconectada")
                 return True
+            else:
+                raise ConnectionError("Error en desconexión del servicio")
                 
         except Exception as e:
             error_msg = f"Error desconectando cámara: {str(e)}"
             self.logger.error(f"❌ {error_msg}")
             await self.set_error(error_msg)
             return False
-    
-    async def _create_connection_config(self) -> Optional[ConnectionConfig]:
-        """Crea configuración de conexión desde el modelo de cámara."""
-        if not self._camera_model or not self._camera_model.ip_address:
-            return None
-        
-        try:
-            # Obtener credenciales desde configuración
-            credentials = await self._config_service.get_camera_credentials(
-                self._camera_model.brand
-            )
-            
-            return ConnectionConfig(
-                ip=self._camera_model.ip_address,
-                username=credentials.get("username", "admin"),
-                password=credentials.get("password", ""),
-                port=credentials.get("port", 80),
-                protocol=self._camera_model.protocols[0] if self._camera_model.protocols else "http"
-            )
-        except Exception as e:
-            self.logger.error(f"❌ Error creando configuración de conexión: {str(e)}")
-            return None
     
     async def _should_auto_stream(self) -> bool:
         """Determina si debe iniciar streaming automáticamente."""
@@ -322,7 +302,7 @@ class CameraPresenter(BasePresenter):
         Returns:
             True si el streaming se inició correctamente
         """
-        if not self._connection_model or not self._connection_model.is_connected:
+        if not self._camera_model or not self._camera_model.is_connected:
             await self.set_error("No hay conexión de cámara para streaming")
             return False
         
@@ -330,26 +310,22 @@ class CameraPresenter(BasePresenter):
             self.logger.warning(f"⚠️ Streaming ya está activo para cámara {self.camera_id}")
             return True
         
-        await self.set_busy("Iniciando streaming...")
+        await self.set_busy(True)
         
         try:
             self._stream_quality = quality
-            self.update_metric("stream_quality", quality)
+            self.add_metric("stream_quality", quality)
             
             # Configurar streaming a través del servicio de conexión
             # (Esta funcionalidad se implementará cuando se migre el código de streaming)
             
             self._is_streaming = True
-            self.update_metric("is_streaming", True)
+            self.add_metric("is_streaming", True)
             
             # Iniciar tarea de monitoreo de frames
-            await self.start_background_task(
-                "frame_monitor",
-                self._frame_monitor_task,
-                "Monitoreo de frames de video"
-            )
+            self._add_background_task(self._frame_monitor_task())
             
-            await self.set_ready("Streaming iniciado")
+            self._set_state(PresenterState.READY)
             self.logger.info(f"📹 Streaming iniciado para cámara {self.camera_id}")
             return True
             
@@ -369,21 +345,18 @@ class CameraPresenter(BasePresenter):
         if not self._is_streaming:
             return True
         
-        await self.set_busy("Deteniendo streaming...")
+        await self.set_busy(True)
         
         try:
-            # Detener tarea de monitoreo
-            await self.stop_background_task("frame_monitor")
-            
             # Detener streaming a través del servicio
             # (Esta funcionalidad se implementará cuando se migre el código de streaming)
             
             self._is_streaming = False
             self._stream_fps = 0.0
-            self.update_metric("is_streaming", False)
-            self.update_metric("current_fps", 0.0)
+            self.add_metric("is_streaming", False)
+            self.add_metric("current_fps", 0.0)
             
-            await self.set_ready("Streaming detenido")
+            self._set_state(PresenterState.READY)
             self.logger.info(f"⏹️ Streaming detenido para cámara {self.camera_id}")
             return True
             
@@ -397,7 +370,7 @@ class CameraPresenter(BasePresenter):
         """Tarea de fondo para monitorear frames y calcular FPS."""
         frame_times = []
         
-        while self._is_streaming and not self._shutdown:
+        while self._is_streaming and not self._shutdown_event.is_set():
             try:
                 # Simular recepción de frame (se reemplazará con lógica real)
                 await asyncio.sleep(0.033)  # ~30 FPS
@@ -423,23 +396,23 @@ class CameraPresenter(BasePresenter):
                 self._last_frame_time = current_time
                 
                 # Actualizar métricas
-                self.update_metric("current_fps", round(self._stream_fps, 2))
-                self.update_metric("total_frames", self._total_frames)
-                self.update_metric("last_frame_time", current_time.isoformat())
+                self.add_metric("current_fps", round(self._stream_fps, 2))
+                self.add_metric("total_frames", self._total_frames)
+                self.add_metric("last_frame_time", current_time.isoformat())
                 
                 # Notificar frame recibido (placeholder)
                 if self._on_frame_received:
-                    await self.execute_safe(self._on_frame_received, None)
+                    await self.execute_safely(self._on_frame_received, None)
                 
                 # Notificar actualización de métricas
                 if self._on_metrics_update:
-                    await self.execute_safe(
+                    await self.execute_safely(
                         self._on_metrics_update,
                         self.get_metrics()
                     )
                 
             except Exception as e:
-                if not self._shutdown:
+                if not self._shutdown_event.is_set():
                     self.logger.error(f"❌ Error en monitoreo de frames: {str(e)}")
                 break
     
@@ -455,11 +428,11 @@ class CameraPresenter(BasePresenter):
         Returns:
             Ruta del archivo guardado o None si falló
         """
-        if not self._connection_model or not self._connection_model.is_connected:
+        if not self._camera_model or not self._camera_model.is_connected:
             await self.set_error("No hay conexión de cámara para captura")
             return None
         
-        await self.set_busy("Capturando snapshot...")
+        await self.set_busy(True)
         
         try:
             # Capturar snapshot a través del servicio
@@ -474,11 +447,11 @@ class CameraPresenter(BasePresenter):
                 # Guardar datos del snapshot
                 await self._save_snapshot_data(filepath)
                 
-                await self.set_ready("Snapshot capturado")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"📸 Snapshot capturado: {filepath}")
                 return filepath
             else:
-                await self.set_ready("Snapshot capturado en memoria")
+                self._set_state(PresenterState.READY)
                 return None
                 
         except Exception as e:
@@ -507,8 +480,8 @@ class CameraPresenter(BasePresenter):
     
     def is_connected(self) -> bool:
         """Retorna si la cámara está conectada."""
-        return (self._connection_model is not None and 
-                self._connection_model.is_connected)
+        return (self._camera_model is not None and 
+                self._camera_model.is_connected)
     
     def is_streaming(self) -> bool:
         """Retorna si la cámara está haciendo streaming."""

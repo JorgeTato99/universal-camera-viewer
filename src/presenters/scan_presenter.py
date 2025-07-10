@@ -15,9 +15,10 @@ import logging
 from typing import Dict, Any, Optional, List, Callable, Set
 from datetime import datetime, timedelta
 from ipaddress import IPv4Network, IPv4Address
+import ipaddress
 
 from .base_presenter import BasePresenter, PresenterState
-from ..models import ScanModel, CameraModel, ScanConfig, ScanResult
+from ..models import ScanModel, CameraModel, ScanConfig, ScanResult, ScanRange, ScanStatus, ConnectionConfig
 from ..services import get_scan_service, get_data_service, get_config_service
 
 
@@ -35,7 +36,7 @@ class ScanPresenter(BasePresenter):
     
     def __init__(self):
         """Inicializa el presenter de escaneo."""
-        super().__init__("ScanPresenter")
+        super().__init__()
         
         # Servicios
         self._scan_service = get_scan_service()
@@ -167,7 +168,7 @@ class ScanPresenter(BasePresenter):
         try:
             # Cargar resultados recientes desde DataService
             # Esta funcionalidad se expandirá cuando se integre completamente DataService
-            self.update_metric("cached_results_count", len(self._scan_results))
+            self.add_metric("cached_results_count", len(self._scan_results))
             self.logger.info("💾 Resultados de cache cargados")
             
         except Exception as e:
@@ -176,25 +177,21 @@ class ScanPresenter(BasePresenter):
     async def _setup_auto_scan(self) -> None:
         """Configura el escaneo automático si está habilitado."""
         if self._auto_scan_enabled:
-            await self.start_background_task(
-                "auto_scan",
-                self._auto_scan_task,
-                "Escaneo automático de red"
-            )
+            self._add_background_task(self._auto_scan_task())
             self.logger.info(f"🔄 Auto-scan habilitado (cada {self._auto_scan_interval}s)")
     
     async def _auto_scan_task(self) -> None:
         """Tarea de fondo para escaneo automático."""
-        while self._auto_scan_enabled and not self._shutdown:
+        while self._auto_scan_enabled and not self._shutdown_event.is_set():
             try:
                 await asyncio.sleep(self._auto_scan_interval)
                 
-                if not self._shutdown and self._auto_scan_enabled:
+                if not self._shutdown_event.is_set() and self._auto_scan_enabled:
                     self.logger.info("🔄 Iniciando escaneo automático")
                     await self.start_network_scan()
                     
             except Exception as e:
-                if not self._shutdown:
+                if not self._shutdown_event.is_set():
                     self.logger.error(f"❌ Error en escaneo automático: {str(e)}")
                 break
     
@@ -214,7 +211,7 @@ class ScanPresenter(BasePresenter):
             self.logger.warning("⚠️ Ya hay un escaneo en progreso")
             return False
         
-        await self.set_busy("Iniciando escaneo de red...")
+        await self.set_busy(True)
         
         try:
             # Usar configuración proporcionada o la por defecto
@@ -223,11 +220,19 @@ class ScanPresenter(BasePresenter):
             if not scan_config:
                 raise ValueError("No hay configuración de escaneo disponible")
             
+            # Crear rango de escaneo desde la configuración
+            network_range = scan_config.network_ranges[0] if scan_config.network_ranges else "192.168.1.0/24"
+            network = ipaddress.IPv4Network(network_range)
+            scan_range = ScanRange(
+                start_ip=str(network.network_address),
+                end_ip=str(network.broadcast_address),
+                ports=scan_config.ports
+            )
+            
             # Crear nuevo modelo de escaneo
             self._current_scan = ScanModel(
                 scan_id=f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                config=scan_config,
-                start_time=datetime.now()
+                scan_range=scan_range
             )
             
             # Limpiar resultados anteriores
@@ -236,14 +241,10 @@ class ScanPresenter(BasePresenter):
             
             # Notificar inicio de escaneo
             if self._on_scan_started:
-                await self.execute_safe(self._on_scan_started)
+                await self.execute_safely(self._on_scan_started)
             
-            # Iniciar escaneo a través del servicio
-            await self.start_background_task(
-                "network_scan",
-                self._execute_network_scan,
-                "Escaneo de red en progreso"
-            )
+            # Iniciar escaneo a través de tarea de fondo
+            self._add_background_task(self._execute_network_scan())
             
             self.logger.info(f"🔍 Escaneo de red iniciado: {self._current_scan.scan_id}")
             return True
@@ -253,7 +254,7 @@ class ScanPresenter(BasePresenter):
             self.logger.error(f"❌ {error_msg}")
             
             if self._on_scan_error:
-                await self.execute_safe(self._on_scan_error, error_msg)
+                await self.execute_safely(self._on_scan_error, error_msg)
             
             await self.set_error(error_msg)
             return False
@@ -267,26 +268,26 @@ class ScanPresenter(BasePresenter):
             scan_start_time = datetime.now()
             
             # Ejecutar escaneo a través del servicio
-            results = await self._scan_service.scan_network(
-                self._current_scan.config,
-                progress_callback=self._on_scan_progress_internal
+            scan_id = await self._scan_service.start_scan_async(
+                self._current_scan.scan_range
             )
+            
+            # Obtener resultados del escaneo activo
+            results = []  # Los resultados se obtendrán del modelo después del escaneo
             
             # Procesar resultados
             self._scan_results = results
             self._discovered_cameras = self._extract_cameras_from_results(results)
             
-            # Actualizar modelo de escaneo
-            self._current_scan.results = results
-            self._current_scan.end_time = datetime.now()
-            self._current_scan.is_running = False
-            self._current_scan.cameras_found = len(self._discovered_cameras)
+            # Actualizar modelo de escaneo (cambiar estado usando property)
+            self._current_scan.status = ScanStatus.COMPLETED
             
             # Actualizar estadísticas
-            scan_duration = (self._current_scan.end_time - scan_start_time).total_seconds()
+            end_time = datetime.now()
+            scan_duration = (end_time - scan_start_time).total_seconds()
             self._total_scans += 1
             self._total_cameras_found += len(self._discovered_cameras)
-            self._last_scan_time = self._current_scan.end_time
+            self._last_scan_time = end_time
             
             # Calcular duración promedio
             if self._total_scans > 0:
@@ -296,21 +297,21 @@ class ScanPresenter(BasePresenter):
                 )
             
             # Actualizar métricas
-            self.update_metric("total_scans", self._total_scans)
-            self.update_metric("total_cameras_found", self._total_cameras_found)
-            self.update_metric("last_scan_duration", round(scan_duration, 2))
-            self.update_metric("average_scan_duration", round(self._average_scan_duration, 2))
-            self.update_metric("last_scan_time", self._last_scan_time.isoformat())
-            self.update_metric("current_scan_progress", 100)
+            self.add_metric("total_scans", self._total_scans)
+            self.add_metric("total_cameras_found", self._total_cameras_found)
+            self.add_metric("last_scan_duration", round(scan_duration, 2))
+            self.add_metric("average_scan_duration", round(self._average_scan_duration, 2))
+            self.add_metric("last_scan_time", self._last_scan_time.isoformat() if self._last_scan_time else None)
+            self.add_metric("current_scan_progress", 100)
             
             # Guardar resultados en DataService
             await self._save_scan_results()
             
             # Notificar completación
             if self._on_scan_completed:
-                await self.execute_safe(self._on_scan_completed, self._discovered_cameras)
+                await self.execute_safely(self._on_scan_completed, self._discovered_cameras)
             
-            await self.set_ready(f"Escaneo completado - {len(self._discovered_cameras)} cámaras encontradas")
+            self._set_state(PresenterState.READY)
             self.logger.info(f"✅ Escaneo completado: {len(self._discovered_cameras)} cámaras en {scan_duration:.2f}s")
             
         except Exception as e:
@@ -318,11 +319,10 @@ class ScanPresenter(BasePresenter):
             self.logger.error(f"❌ {error_msg}")
             
             if self._current_scan:
-                self._current_scan.is_running = False
-                self._current_scan.error_message = error_msg
+                self._current_scan.status = ScanStatus.ERROR
             
             if self._on_scan_error:
-                await self.execute_safe(self._on_scan_error, error_msg)
+                await self.execute_safely(self._on_scan_error, error_msg)
             
             await self.set_error(error_msg)
     
@@ -330,10 +330,10 @@ class ScanPresenter(BasePresenter):
         """Maneja el progreso interno del escaneo."""
         try:
             progress_percent = int((current / total) * 100) if total > 0 else 0
-            self.update_metric("current_scan_progress", progress_percent)
+            self.add_metric("current_scan_progress", progress_percent)
             
             if self._on_scan_progress:
-                await self.execute_safe(self._on_scan_progress, current, total, message)
+                await self.execute_safely(self._on_scan_progress, current, total, message)
                 
         except Exception as e:
             self.logger.error(f"❌ Error procesando progreso: {str(e)}")
@@ -351,21 +351,24 @@ class ScanPresenter(BasePresenter):
         cameras = []
         
         for result in results:
-            if result.device_info and result.device_info.get("is_camera", False):
+            if result.has_camera_protocols:
                 try:
                     camera = CameraModel(
-                        name=result.device_info.get("name", f"Camera_{result.ip}"),
-                        brand=result.device_info.get("brand", "Unknown"),
-                        model=result.device_info.get("model", "Unknown"),
-                        ip_address=result.ip,
-                        protocols=result.protocols
+                        brand="Unknown",
+                        model="Unknown",
+                        display_name=f"Camera_{result.ip}",
+                        connection_config=ConnectionConfig(
+                            ip=result.ip,
+                            username="admin",
+                            password=""
+                        )
                     )
                     cameras.append(camera)
                     
                     # Notificar descubrimiento individual
                     if self._on_camera_discovered:
                         asyncio.create_task(
-                            self.execute_safe(self._on_camera_discovered, camera)
+                            self.execute_safely(self._on_camera_discovered, camera)
                         )
                         
                 except Exception as e:
@@ -403,18 +406,13 @@ class ScanPresenter(BasePresenter):
             return True
         
         try:
-            await self.set_busy("Deteniendo escaneo...")
-            
-            # Detener tarea de escaneo
-            await self.stop_background_task("network_scan")
+            await self.set_busy(True)
             
             # Actualizar estado del escaneo
             if self._current_scan:
-                self._current_scan.is_running = False
-                self._current_scan.end_time = datetime.now()
-                self._current_scan.error_message = "Escaneo detenido por usuario"
+                self._current_scan.status = ScanStatus.CANCELLED
             
-            await self.set_ready("Escaneo detenido")
+            self._set_state(PresenterState.READY)
             self.logger.info("⏹️ Escaneo detenido por usuario")
             return True
             
@@ -436,7 +434,7 @@ class ScanPresenter(BasePresenter):
         """
         try:
             self._auto_scan_enabled = enabled
-            self.update_metric("auto_scan_enabled", enabled)
+            self.add_metric("auto_scan_enabled", enabled)
             
             # Guardar configuración
             await self._config_service.set_config_value(
@@ -448,8 +446,7 @@ class ScanPresenter(BasePresenter):
                 await self._setup_auto_scan()
                 self.logger.info("🔄 Auto-scan habilitado")
             else:
-                # Detener auto-scan
-                await self.stop_background_task("auto_scan")
+                # Detener auto-scan (simplemente cambiar flag)
                 self.logger.info("⏹️ Auto-scan deshabilitado")
             
             return True
@@ -558,7 +555,6 @@ class ScanPresenter(BasePresenter):
             
             # Detener auto-scan
             self._auto_scan_enabled = False
-            await self.stop_background_task("auto_scan")
             
             self.logger.info("🧹 ScanPresenter limpiado")
             

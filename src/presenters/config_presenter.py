@@ -35,7 +35,7 @@ class ConfigPresenter(BasePresenter):
     
     def __init__(self):
         """Inicializa el presenter de configuración."""
-        super().__init__("ConfigPresenter")
+        super().__init__()
         
         # Servicios
         self._config_service = get_config_service()
@@ -72,8 +72,8 @@ class ConfigPresenter(BasePresenter):
             # Configurar métricas iniciales
             await self._setup_metrics()
             
-            # Configurar observador de cambios
-            self._config_service.add_change_observer(self._on_config_change_internal)
+            # Configurar observador de cambios (función sync, no async)
+            self._config_service.add_change_observer(self._on_config_change_internal_sync)
             
             return True
             
@@ -114,15 +114,17 @@ class ConfigPresenter(BasePresenter):
         self.add_metric("last_save_time", None)
         self.add_metric("last_load_time", None)
     
-    async def _on_config_change_internal(self, key: str, old_value: Any, new_value: Any) -> None:
-        """Maneja cambios internos de configuración."""
+    def _on_config_change_internal_sync(self, key: str, old_value: Any, new_value: Any) -> None:
+        """Maneja cambios internos de configuración (función sync)."""
         try:
             self._unsaved_changes = True
-            self.update_metric("unsaved_changes", True)
+            self.add_metric("unsaved_changes", True)
             
-            # Notificar a la view
+            # Notificar a la view de forma asíncrona
             if self._on_config_changed:
-                await self.execute_safe(self._on_config_changed, key, new_value)
+                asyncio.create_task(
+                    self.execute_safely(self._on_config_changed, key, new_value)
+                )
                 
         except Exception as e:
             self.logger.error(f"❌ Error procesando cambio de configuración: {str(e)}")
@@ -169,7 +171,7 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se estableció correctamente
         """
-        await self.set_busy(f"Actualizando configuración {key}...")
+        await self.set_busy(True)
         
         try:
             success = await self._config_service.set_config_value(
@@ -182,7 +184,7 @@ class ConfigPresenter(BasePresenter):
             )
             
             if success:
-                await self.set_ready(f"Configuración {key} actualizada")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"✅ Configuración actualizada: {key}")
                 return True
             else:
@@ -195,7 +197,7 @@ class ConfigPresenter(BasePresenter):
             
             # Notificar error de validación
             if self._on_validation_error:
-                await self.execute_safe(self._on_validation_error, key, str(e))
+                await self.execute_safely(self._on_validation_error, key, str(e))
             
             return False
     
@@ -209,13 +211,13 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se eliminó correctamente
         """
-        await self.set_busy(f"Eliminando configuración {key}...")
+        await self.set_busy(True)
         
         try:
             success = await self._config_service.delete_config_value(key)
             
             if success:
-                await self.set_ready(f"Configuración {key} eliminada")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"🗑️ Configuración eliminada: {key}")
                 return True
             else:
@@ -242,7 +244,7 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se creó correctamente
         """
-        await self.set_busy(f"Creando perfil {name}...")
+        await self.set_busy(True)
         
         try:
             success = await self._config_service.create_profile(
@@ -255,9 +257,9 @@ class ConfigPresenter(BasePresenter):
             if success:
                 # Actualizar lista de perfiles
                 await self._load_available_profiles()
-                self.update_metric("total_profiles", len(self._available_profiles))
+                self.add_metric("total_profiles", len(self._available_profiles))
                 
-                await self.set_ready(f"Perfil {name} creado")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"✅ Perfil creado: {name}")
                 return True
             else:
@@ -279,7 +281,7 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se cambió correctamente
         """
-        await self.set_busy(f"Cambiando a perfil {profile_id}...")
+        await self.set_busy(True)
         
         try:
             success = await self._config_service.switch_profile(profile_id)
@@ -287,13 +289,13 @@ class ConfigPresenter(BasePresenter):
             if success:
                 # Actualizar perfil actual
                 await self._load_active_profile()
-                self.update_metric("active_profile", self._current_profile.name if self._current_profile else None)
+                self.add_metric("active_profile", self._current_profile.name if self._current_profile else None)
                 
                 # Notificar cambio de perfil
                 if self._on_profile_changed and self._current_profile:
-                    await self.execute_safe(self._on_profile_changed, self._current_profile)
+                    await self.execute_safely(self._on_profile_changed, self._current_profile)
                 
-                await self.set_ready(f"Perfil cambiado a {profile_id}")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"🔄 Perfil cambiado: {profile_id}")
                 return True
             else:
@@ -327,7 +329,7 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se establecieron correctamente
         """
-        await self.set_busy(f"Configurando credenciales para {brand}...")
+        await self.set_busy(True)
         
         try:
             success = await self._config_service.set_camera_credentials(
@@ -337,7 +339,7 @@ class ConfigPresenter(BasePresenter):
             )
             
             if success:
-                await self.set_ready(f"Credenciales configuradas para {brand}")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"🔐 Credenciales configuradas: {brand}")
                 return True
             else:
@@ -378,7 +380,7 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se exportó correctamente
         """
-        await self.set_busy("Exportando configuración...")
+        await self.set_busy(True)
         
         try:
             success = await self._config_service.export_config(
@@ -387,13 +389,13 @@ class ConfigPresenter(BasePresenter):
             )
             
             if success:
-                self.update_metric("last_save_time", datetime.now().isoformat())
+                self.add_metric("last_save_time", datetime.now().isoformat())
                 
                 # Notificar completación
                 if self._on_export_completed:
-                    await self.execute_safe(self._on_export_completed, True, filepath)
+                    await self.execute_safely(self._on_export_completed, True, filepath)
                 
-                await self.set_ready(f"Configuración exportada a {filepath}")
+                self._set_state(PresenterState.READY)
                 self.logger.info(f"📤 Configuración exportada: {filepath}")
                 return True
             else:
@@ -405,7 +407,7 @@ class ConfigPresenter(BasePresenter):
             
             # Notificar error
             if self._on_export_completed:
-                await self.execute_safe(self._on_export_completed, False, error_msg)
+                await self.execute_safely(self._on_export_completed, False, error_msg)
             
             await self.set_error(error_msg)
             return False
@@ -420,7 +422,7 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se importó correctamente
         """
-        await self.set_busy("Importando configuración...")
+        await self.set_busy(True)
         
         try:
             # Verificar que el archivo existe
@@ -434,14 +436,14 @@ class ConfigPresenter(BasePresenter):
             await self._load_available_profiles()
             await self._load_active_profile()
             
-            self.update_metric("last_load_time", datetime.now().isoformat())
-            self.update_metric("total_profiles", len(self._available_profiles))
+            self.add_metric("last_load_time", datetime.now().isoformat())
+            self.add_metric("total_profiles", len(self._available_profiles))
             
             # Notificar completación
             if self._on_import_completed:
-                await self.execute_safe(self._on_import_completed, True, filepath)
+                await self.execute_safely(self._on_import_completed, True, filepath)
             
-            await self.set_ready(f"Configuración importada desde {filepath}")
+            self._set_state(PresenterState.READY)
             self.logger.info(f"📥 Configuración importada: {filepath}")
             return True
             
@@ -451,7 +453,7 @@ class ConfigPresenter(BasePresenter):
             
             # Notificar error
             if self._on_import_completed:
-                await self.execute_safe(self._on_import_completed, False, error_msg)
+                await self.execute_safely(self._on_import_completed, False, error_msg)
             
             await self.set_error(error_msg)
             return False
@@ -463,7 +465,7 @@ class ConfigPresenter(BasePresenter):
         Returns:
             True si se restableció correctamente
         """
-        await self.set_busy("Restableciendo configuración por defecto...")
+        await self.set_busy(True)
         
         try:
             # Implementar reset a defaults
@@ -474,9 +476,9 @@ class ConfigPresenter(BasePresenter):
             await self._load_active_profile()
             
             self._unsaved_changes = False
-            self.update_metric("unsaved_changes", False)
+            self.add_metric("unsaved_changes", False)
             
-            await self.set_ready("Configuración restablecida a valores por defecto")
+            self._set_state(PresenterState.READY)
             self.logger.info("🔄 Configuración restablecida a defaults")
             return True
             
@@ -555,7 +557,7 @@ class ConfigPresenter(BasePresenter):
         """Implementación de limpieza específica del presenter."""
         try:
             # Remover observador de cambios
-            self._config_service.remove_change_observer(self._on_config_change_internal)
+            self._config_service.remove_change_observer(self._on_config_change_internal_sync)
             
             self.logger.info("🧹 ConfigPresenter limpiado")
             
