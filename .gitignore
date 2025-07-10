@@ -263,6 +263,11 @@ dev_*.log
 test_*.log
 
 # ==========================================
+# SRC Viejo
+# ==========================================
+src_old/
+
+# ==========================================
 # ARCHIVOS A MANTENER (COMENTADOS)
 # ==========================================
 # Los siguientes archivos SÍ deben incluirse en el repositorio:

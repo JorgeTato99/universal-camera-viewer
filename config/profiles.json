@@ -1,0 +1,39 @@
+{
+  "config_version": "1.0",
+  "last_saved": "2025-07-10T13:28:40.533407",
+  "profiles": [
+    {
+      "profile_id": "basic",
+      "name": "Configuraci\u00f3n B\u00e1sica",
+      "description": "Configuraci\u00f3n b\u00e1sica para uso general",
+      "category": "basic",
+      "items": [],
+      "is_default": true,
+      "created_at": "2025-07-10T13:28:40.533397",
+      "updated_at": "2025-07-10T13:28:40.533399",
+      "tags": []
+    },
+    {
+      "profile_id": "advanced",
+      "name": "Configuraci\u00f3n Avanzada",
+      "description": "Configuraci\u00f3n avanzada con todas las caracter\u00edsticas",
+      "category": "advanced",
+      "items": [],
+      "is_default": false,
+      "created_at": "2025-07-10T13:28:40.533402",
+      "updated_at": "2025-07-10T13:28:40.533402",
+      "tags": []
+    },
+    {
+      "profile_id": "development",
+      "name": "Desarrollo",
+      "description": "Configuraci\u00f3n para desarrollo y testing",
+      "category": "development",
+      "items": [],
+      "is_default": false,
+      "created_at": "2025-07-10T13:28:40.533403",
+      "updated_at": "2025-07-10T13:28:40.533403",
+      "tags": []
+    }
+  ]
+}

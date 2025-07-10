@@ -1,0 +1,293 @@
+{
+  "brands": {
+    "dahua": {
+      "name": "Dahua",
+      "default_ports": {
+        "rtsp": 554,
+        "http": 80,
+        "onvif": 80,
+        "sdk": 37777
+      },
+      "rtsp_urls": [
+        "/cam/realmonitor?channel={channel}&subtype={subtype}",
+        "/cam/realmonitor?channel={channel}&subtype=1"
+      ],
+      "protocols": ["rtsp", "onvif", "amcrest"],
+      "models": [
+        {
+          "id": "hero-k51h",
+          "name": "Hero-K51H",
+          "display_name": "Dahua Hero-K51H",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        },
+        {
+          "id": "ipc-hdw2831t",
+          "name": "IPC-HDW2831T",
+          "display_name": "Dahua IPC-HDW2831T",
+          "supported_protocols": ["rtsp", "onvif", "amcrest"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        },
+        {
+          "id": "dh-ipc-hdbw2431r",
+          "name": "DH-IPC-HDBW2431R",
+          "display_name": "Dahua DH-IPC-HDBW2431R",
+          "supported_protocols": ["rtsp", "onvif", "amcrest"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        }
+      ]
+    },
+    "tplink": {
+      "name": "TP-Link",
+      "default_ports": {
+        "rtsp": 554,
+        "http": 80,
+        "onvif": 2020,
+        "sdk": null
+      },
+      "rtsp_urls": [
+        "/stream1",
+        "/stream2"
+      ],
+      "protocols": ["rtsp", "onvif"],
+      "models": [
+        {
+          "id": "tapo-c520ws",
+          "name": "Tapo C520WS",
+          "display_name": "TP-Link Tapo C520WS",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        },
+        {
+          "id": "tapo-c200",
+          "name": "Tapo C200",
+          "display_name": "TP-Link Tapo C200",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        },
+        {
+          "id": "tapo-c210",
+          "name": "Tapo C210", 
+          "display_name": "TP-Link Tapo C210",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        }
+      ]
+    },
+    "hikvision": {
+      "name": "Hikvision",
+      "default_ports": {
+        "rtsp": 554,
+        "http": 80,
+        "onvif": 80,
+        "sdk": 8000
+      },
+      "rtsp_urls": [
+        "/Streaming/Channels/{channel}01",
+        "/Streaming/Channels/{channel}02"
+      ],
+      "protocols": ["rtsp", "onvif"],
+      "models": [
+        {
+          "id": "ds-2cd2021g1-idw1",
+          "name": "DS-2CD2021G1-IDW1",
+          "display_name": "Hikvision DS-2CD2021G1-IDW1",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        }
+      ]
+    },
+    "axis": {
+      "name": "Axis",
+      "default_ports": {
+        "rtsp": 554,
+        "http": 80,
+        "onvif": 80,
+        "sdk": null
+      },
+      "rtsp_urls": [
+        "/axis-media/media.amp?videocodec=h264",
+        "/axis-media/media.amp?videocodec=h265"
+      ],
+      "protocols": ["rtsp", "onvif"],
+      "models": [
+        {
+          "id": "m3047-p",
+          "name": "M3047-P",
+          "display_name": "Axis M3047-P",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          }
+        }
+      ]
+    },
+    "steren": {
+      "name": "Steren",
+      "default_ports": {
+        "rtsp": 5543,
+        "http": 8000,
+        "onvif": 8000,
+        "sdk": null
+      },
+      "rtsp_urls": [
+        "/live/channel0",
+        "/live/channel1"
+      ],
+      "protocols": ["rtsp", "onvif"],
+      "models": [
+        {
+          "id": "cctv-235",
+          "name": "CCTV-235",
+          "display_name": "Steren CCTV-235",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 0,
+            "subtype": 0
+          },
+          "onvif_profiles": {
+            "main": {
+              "token": "PROFILE_395207",
+              "resolution": "2560x1440",
+              "codec": "HEVC",
+              "channel": "channel0"
+            },
+            "sub": {
+              "token": "PROFILE_395208", 
+              "resolution": "640x360",
+              "codec": "H264",
+              "channel": "channel1"
+            }
+          },
+          "device_info": {
+            "manufacturer": "Happytimesoft",
+            "model": "IPCamera",
+            "firmware": "1.0"
+          }
+        }
+      ]
+    },
+    "generic": {
+      "name": "Genérica/China",
+      "default_ports": {
+        "rtsp": 554,
+        "http": 80,
+        "onvif": 80,
+        "sdk": null
+      },
+      "rtsp_urls": [
+        "/stream1",
+        "/stream2",
+        "/live/stream1",
+        "/live/stream2",
+        "/stream",
+        "/live",
+        "/live/main",
+        "/live/sub",
+        "/h264",
+        "/h264_stream",
+        "/video",
+        "/cam/realmonitor?channel=1&subtype=0",
+        "/cam/realmonitor?channel=1&subtype=1",
+        "/"
+      ],
+      "protocols": ["rtsp", "onvif"],
+      "models": [
+        {
+          "id": "generic-rtsp",
+          "name": "Cámara Genérica RTSP",
+          "display_name": "Cámara China Genérica",
+          "supported_protocols": ["rtsp", "onvif"],
+          "default_credentials": {
+            "username": "admin",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          },
+          "description": "Para cámaras chinas sin marca que solo exponen puerto 554 (RTSP). Prueba múltiples patrones de URL automáticamente."
+        },
+        {
+          "id": "generic-noauth",
+          "name": "Cámara Genérica Sin Auth",
+          "display_name": "Cámara China Sin Autenticación",
+          "supported_protocols": ["rtsp"],
+          "default_credentials": {
+            "username": "",
+            "password": ""
+          },
+          "stream_config": {
+            "channel": 1,
+            "subtype": 0
+          },
+          "description": "Para cámaras que no requieren autenticación en RTSP."
+        }
+      ]
+    }
+  },
+  "default_config": {
+    "connection_timeout": 10,
+    "connection_retries": 3,
+    "default_brand": "dahua",
+    "default_protocol": "rtsp"
+  }
+} 
