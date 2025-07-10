@@ -30,13 +30,17 @@ try:
 except ImportError:
     ONVIF_AVAILABLE = False
 
-try:
-    import rtsp
-    RTSP_AVAILABLE = True
-except ImportError:
-    RTSP_AVAILABLE = False
+# RTSP no es un paquete real, se maneja con cv2
+RTSP_AVAILABLE = True  # cv2 maneja RTSP directamente
 
-from ..models import CameraModel, ConnectionConfig
+try:
+    from ..models import CameraModel, ConnectionConfig
+except ImportError:
+    # Fallback para ejecución directa
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent))
+    from models import CameraModel, ConnectionConfig
 
 
 class ProtocolType(Enum):
@@ -78,7 +82,7 @@ class ProtocolCapabilities:
     supports_ptz: bool = False
     supports_audio: bool = False
     max_resolution: str = "1920x1080"
-    supported_codecs: List[str] = None
+    supported_codecs: Optional[List[str]] = None
     
     def __post_init__(self):
         if self.supported_codecs is None:
@@ -92,7 +96,7 @@ class BaseProtocolHandler(ABC):
     Define la interfaz común para todos los protocolos de conexión.
     """
     
-    def __init__(self, config: ConnectionConfig, streaming_config: StreamingConfig = None):
+    def __init__(self, config: ConnectionConfig, streaming_config: Optional[StreamingConfig] = None):
         """
         Inicializa el manejador de protocolo.
         
@@ -239,7 +243,7 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
     Implementa conexión completa usando el estándar ONVIF para cámaras compatibles.
     """
     
-    def __init__(self, config: ConnectionConfig, streaming_config: StreamingConfig = None):
+    def __init__(self, config: ConnectionConfig, streaming_config: Optional[StreamingConfig] = None):
         """Inicializa el manejador ONVIF."""
         super().__init__(config, streaming_config)
         
@@ -258,7 +262,7 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
         self._set_state(ConnectionState.CONNECTING)
         
         try:
-            self.logger.info(f"Conectando ONVIF a {self.config.ip}:{self.config.port}")
+            self.logger.info(f"Conectando ONVIF a {self.config.ip}:{self.config.onvif_port}")
             
             # Crear cámara ONVIF en thread separado para evitar bloqueo
             loop = asyncio.get_event_loop()
@@ -266,6 +270,9 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
                 None,
                 self._create_onvif_camera
             )
+            
+            if not self._camera:
+                raise ConnectionError("No se pudo crear cámara ONVIF")
             
             # Crear servicios
             self._device_service = self._camera.create_devicemgmt_service()
@@ -277,7 +284,8 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
                 self._device_service.GetDeviceInformation
             )
             
-            self.logger.info(f"Conectado a {device_info.Manufacturer} {device_info.Model}")
+            if device_info and hasattr(device_info, 'Manufacturer') and hasattr(device_info, 'Model'):
+                self.logger.info(f"Conectado a {device_info.Manufacturer} {device_info.Model}")
             
             # Obtener perfiles
             self._profiles = await loop.run_in_executor(
@@ -296,18 +304,22 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
             self._set_state(ConnectionState.ERROR)
             return False
     
-    def _create_onvif_camera(self) -> ONVIFCamera:
+    def _create_onvif_camera(self) -> Optional[ONVIFCamera]:
         """Crea la instancia de cámara ONVIF (operación bloqueante)."""
-        return ONVIFCamera(
-            self.config.ip,
-            self.config.port,
-            self.config.username,
-            self.config.password
-        )
+        try:
+            return ONVIFCamera(
+                self.config.ip,
+                self.config.onvif_port,
+                self.config.username,
+                self.config.password
+            )
+        except Exception as e:
+            self.logger.error(f"Error creando cámara ONVIF: {str(e)}")
+            return None
     
     async def _setup_media_uris(self):
         """Configura URIs de snapshot y streaming."""
-        if not self._profiles:
+        if not self._profiles or not self._media_service:
             self.logger.warning("No hay perfiles de media disponibles")
             return
         
@@ -317,33 +329,39 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
             profile_token = self._get_profile_token(profile)
             
             # Configurar snapshot URI
-            try:
-                loop = asyncio.get_event_loop()
-                snapshot_uri = await loop.run_in_executor(
-                    None,
-                    lambda: self._media_service.GetSnapshotUri({'ProfileToken': profile_token})
-                )
-                self._snapshot_uri = snapshot_uri.Uri
-                self.logger.info(f"Snapshot URI: {self._snapshot_uri}")
-            except Exception as e:
-                self.logger.warning(f"No se pudo obtener Snapshot URI: {str(e)}")
+            if self._media_service:
+                try:
+                    loop = asyncio.get_event_loop()
+                    media_service = self._media_service  # Variable local para el linter
+                    snapshot_uri = await loop.run_in_executor(
+                        None,
+                        lambda: media_service.GetSnapshotUri({'ProfileToken': profile_token})
+                    )
+                    if snapshot_uri and hasattr(snapshot_uri, 'Uri'):
+                        self._snapshot_uri = snapshot_uri.Uri
+                        self.logger.info(f"Snapshot URI: {self._snapshot_uri}")
+                except Exception as e:
+                    self.logger.warning(f"No se pudo obtener Snapshot URI: {str(e)}")
             
             # Configurar stream URI
-            try:
-                stream_uri = await loop.run_in_executor(
-                    None,
-                    lambda: self._media_service.GetStreamUri({
-                        'StreamSetup': {
-                            'Stream': 'RTP-Unicast',
-                            'Transport': {'Protocol': 'RTSP'}
-                        },
-                        'ProfileToken': profile_token
-                    })
-                )
-                self._stream_uri = stream_uri.Uri
-                self.logger.info(f"Stream URI: {self._stream_uri}")
-            except Exception as e:
-                self.logger.warning(f"No se pudo obtener Stream URI: {str(e)}")
+            if self._media_service:
+                try:
+                    media_service = self._media_service  # Variable local para el linter
+                    stream_uri = await loop.run_in_executor(
+                        None,
+                        lambda: media_service.GetStreamUri({
+                            'StreamSetup': {
+                                'Stream': 'RTP-Unicast',
+                                'Transport': {'Protocol': 'RTSP'}
+                            },
+                            'ProfileToken': profile_token
+                        })
+                    )
+                    if stream_uri and hasattr(stream_uri, 'Uri'):
+                        self._stream_uri = stream_uri.Uri
+                        self.logger.info(f"Stream URI: {self._stream_uri}")
+                except Exception as e:
+                    self.logger.warning(f"No se pudo obtener Stream URI: {str(e)}")
                 
         except Exception as e:
             self.logger.error(f"Error configurando URIs: {str(e)}")
@@ -388,7 +406,7 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
                 None,
                 lambda: ONVIFCamera(
                     self.config.ip,
-                    self.config.port,
+                    self.config.onvif_port,
                     self.config.username,
                     self.config.password
                 )
@@ -412,13 +430,18 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
         if not self.is_connected or not self._snapshot_uri:
             return None
         
+        if not self._snapshot_uri:
+            return None
+            
         try:
+            from requests.auth import HTTPDigestAuth
             loop = asyncio.get_event_loop()
+            snapshot_uri = str(self._snapshot_uri)  # Cast para el linter
             response = await loop.run_in_executor(
                 None,
                 lambda: requests.get(
-                    self._snapshot_uri,
-                    auth=requests.auth.HTTPDigestAuth(self.config.username, self.config.password),
+                    snapshot_uri,
+                    auth=HTTPDigestAuth(self.config.username, self.config.password),
                     timeout=10
                 )
             )
@@ -438,15 +461,19 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
         if not self.is_connected or not self._stream_uri:
             return False
         
+        if not self._stream_uri:
+            return False
+            
         try:
             # Crear captura de video en thread separado
             loop = asyncio.get_event_loop()
+            stream_uri = str(self._stream_uri)  # Cast para el linter
             self._stream_handle = await loop.run_in_executor(
                 None,
-                lambda: cv2.VideoCapture(self._stream_uri)
+                lambda: cv2.VideoCapture(stream_uri)
             )
             
-            if not self._stream_handle.isOpened():
+            if not self._stream_handle or not self._stream_handle.isOpened():
                 self.logger.error("No se pudo abrir stream de video")
                 return False
             
@@ -555,7 +582,7 @@ class RTSPProtocolHandler(BaseProtocolHandler):
                 lambda: cv2.VideoCapture(rtsp_url)
             )
             
-            if test_cap.isOpened():
+            if test_cap and test_cap.isOpened():
                 test_cap.release()
                 self._connection_handle = rtsp_url
                 self._set_state(ConnectionState.CONNECTED)
@@ -573,10 +600,10 @@ class RTSPProtocolHandler(BaseProtocolHandler):
         """Construye URL RTSP."""
         # URLs comunes por marca
         rtsp_patterns = {
-            "dahua": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:554/cam/realmonitor?channel=1&subtype=0",
-            "tplink": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:554/stream1",
-            "hikvision": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:554/Streaming/Channels/101",
-            "generic": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:554/stream"
+            "dahua": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/cam/realmonitor?channel=1&subtype=0",
+            "tplink": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/stream1",
+            "hikvision": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/Streaming/Channels/101",
+            "generic": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/stream"
         }
         
         # Detectar marca desde config o usar genérico
@@ -607,8 +634,9 @@ class RTSPProtocolHandler(BaseProtocolHandler):
                 lambda: cv2.VideoCapture(rtsp_url)
             )
             
-            is_open = test_cap.isOpened()
-            test_cap.release()
+            is_open = test_cap and test_cap.isOpened()
+            if test_cap:
+                test_cap.release()
             return is_open
             
         except Exception:
@@ -616,16 +644,19 @@ class RTSPProtocolHandler(BaseProtocolHandler):
     
     async def capture_snapshot(self) -> Optional[bytes]:
         """Captura snapshot desde stream RTSP."""
-        if not self.is_connected:
+        if not self.is_connected or not self._connection_handle:
             return None
         
         try:
             loop = asyncio.get_event_loop()
             cap = await loop.run_in_executor(
                 None,
-                lambda: cv2.VideoCapture(self._connection_handle)
+                lambda: cv2.VideoCapture(str(self._connection_handle))
             )
             
+            if not cap:
+                return None
+                
             ret, frame = cap.read()
             cap.release()
             
@@ -642,17 +673,17 @@ class RTSPProtocolHandler(BaseProtocolHandler):
     
     async def start_streaming(self) -> bool:
         """Inicia streaming RTSP."""
-        if not self.is_connected:
+        if not self.is_connected or not self._connection_handle:
             return False
         
         try:
             loop = asyncio.get_event_loop()
             self._stream_handle = await loop.run_in_executor(
                 None,
-                lambda: cv2.VideoCapture(self._connection_handle)
+                lambda: cv2.VideoCapture(str(self._connection_handle))
             )
             
-            if not self._stream_handle.isOpened():
+            if not self._stream_handle or not self._stream_handle.isOpened():
                 return False
             
             self._streaming_active = True
@@ -790,7 +821,7 @@ class ProtocolService:
     
     async def create_connection(self, camera_id: str, protocol: ProtocolType, 
                               config: ConnectionConfig, 
-                              streaming_config: StreamingConfig = None) -> Optional[BaseProtocolHandler]:
+                              streaming_config: Optional[StreamingConfig] = None) -> Optional[BaseProtocolHandler]:
         """
         Crea una conexión usando el protocolo especificado.
         
@@ -823,7 +854,7 @@ class ProtocolService:
             return None
     
     def _create_handler(self, protocol: ProtocolType, config: ConnectionConfig, 
-                       streaming_config: StreamingConfig = None) -> BaseProtocolHandler:
+                       streaming_config: Optional[StreamingConfig] = None) -> BaseProtocolHandler:
         """Crea instancia de manejador de protocolo."""
         handler_class = self._protocol_handlers[protocol]
         return handler_class(config, streaming_config)

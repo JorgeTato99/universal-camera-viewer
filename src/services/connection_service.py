@@ -26,9 +26,18 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional, Set, Callable, Any, Tuple
 
-from ..models.camera_model import CameraModel, ProtocolType, ConnectionStatus
-from ..models.connection_model import ConnectionModel, ConnectionType, ConnectionHealth
-from ..utils.config import ConfigurationManager
+try:
+    from ..models.camera_model import CameraModel, ProtocolType, ConnectionStatus
+    from ..models.connection_model import ConnectionModel, ConnectionType, ConnectionHealth
+    from ..utils.config import ConfigurationManager
+except ImportError:
+    # Fallback para ejecución directa
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from models.camera_model import CameraModel, ProtocolType, ConnectionStatus
+    from models.connection_model import ConnectionModel, ConnectionType, ConnectionHealth
+    from utils.config import ConfigurationManager
 
 
 class ServiceStatus(Enum):
@@ -376,14 +385,23 @@ class ConnectionService:
                 self.logger.warning(f"Camera {camera_id} is already connected")
                 return True
         
-        self.logger.info(f"Connecting camera {camera_id} with protocol {camera.protocol.value}")
+        # Verificar que el protocolo esté definido
+        if not camera.protocol:
+            self.logger.error(f"Camera {camera_id} has no protocol defined")
+            camera.connection_status = ConnectionStatus.ERROR
+            return False
+        
+        # Usar variable local para evitar problemas de tipo
+        protocol = camera.protocol
+        
+        self.logger.info(f"Connecting camera {camera_id} with protocol {protocol.value}")
         
         try:
             # Crear nueva conexión
             connection = ConnectionModel(
                 camera_id=camera_id,
                 ip=camera.ip,
-                protocol=camera.protocol,
+                protocol=protocol,
                 connection_type=connection_type,
                 username=camera.username,
                 password=camera.password,
@@ -402,7 +420,7 @@ class ConnectionService:
                 self.connections[camera_id] = connection
                 
                 # Actualizar métricas
-                self._update_metrics_on_connect(camera.protocol)
+                self._update_metrics_on_connect(protocol)
                 
                 # Actualizar estado de cámara
                 camera.connection_status = ConnectionStatus.CONNECTED
@@ -410,7 +428,7 @@ class ConnectionService:
                 
                 # Callback de éxito
                 if self.on_connection_established:
-                    self.on_connection_established(camera_id, camera.protocol)
+                    self.on_connection_established(camera_id, protocol)
                 
                 self.logger.info(f"Camera {camera_id} connected successfully")
                 return True

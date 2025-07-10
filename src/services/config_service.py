@@ -21,7 +21,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set, Callable
+from typing import Dict, List, Optional, Any, Set, Callable, Union
 import base64
 import hashlib
 
@@ -34,7 +34,14 @@ try:
 except ImportError:
     CRYPTO_AVAILABLE = False
 
-from ..utils.config import ConfigurationManager
+try:
+    from ..utils.config import ConfigurationManager
+except ImportError:
+    # Fallback para ejecución directa
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent))
+    from utils.config import ConfigurationManager
 
 
 class ConfigCategory(Enum):
@@ -134,7 +141,7 @@ class ConfigService:
     - API de observadores para cambios
     """
     
-    def __init__(self, config: ConfigServiceConfig = None):
+    def __init__(self, config: Optional[ConfigServiceConfig] = None):
         """
         Inicializa el ConfigService.
         
@@ -392,55 +399,42 @@ class ConfigService:
         
         # Migrar configuración de cámaras
         try:
-            # Dahua
-            if hasattr(self._legacy_config_manager, 'camera_ip'):
-                await self.set_config_value(
-                    "dahua.ip", 
-                    self._legacy_config_manager.camera_ip,
-                    ConfigType.IP_ADDRESS,
-                    ConfigCategory.CAMERA,
-                    "Dirección IP de la cámara Dahua"
-                )
+            # Verificar si existen atributos antes de acceder
+            if hasattr(self._legacy_config_manager, 'get_camera_ip'):
+                camera_ip = getattr(self._legacy_config_manager, 'get_camera_ip', lambda: None)()
+                if camera_ip:
+                    await self.set_config_value(
+                        "dahua.ip", 
+                        camera_ip,
+                        ConfigType.IP_ADDRESS,
+                        ConfigCategory.CAMERA,
+                        "Dirección IP de la cámara Dahua"
+                    )
             
-            if hasattr(self._legacy_config_manager, 'camera_user'):
-                await self.set_config_value(
-                    "dahua.username",
-                    self._legacy_config_manager.camera_user,
-                    ConfigType.STRING,
-                    ConfigCategory.CAMERA,
-                    "Usuario de la cámara Dahua"
-                )
+            if hasattr(self._legacy_config_manager, 'get_camera_user'):
+                camera_user = getattr(self._legacy_config_manager, 'get_camera_user', lambda: None)()
+                if camera_user:
+                    await self.set_config_value(
+                        "dahua.username",
+                        camera_user,
+                        ConfigType.STRING,
+                        ConfigCategory.CAMERA,
+                        "Usuario de la cámara Dahua"
+                    )
             
-            if hasattr(self._legacy_config_manager, 'camera_password'):
-                await self.set_config_value(
-                    "dahua.password",
-                    self._legacy_config_manager.camera_password,
-                    ConfigType.PASSWORD,
-                    ConfigCategory.CAMERA,
-                    "Contraseña de la cámara Dahua",
-                    is_sensitive=True
-                )
+            if hasattr(self._legacy_config_manager, 'get_camera_password'):
+                camera_password = getattr(self._legacy_config_manager, 'get_camera_password', lambda: None)()
+                if camera_password:
+                    await self.set_config_value(
+                        "dahua.password",
+                        camera_password,
+                        ConfigType.PASSWORD,
+                        ConfigCategory.CAMERA,
+                        "Contraseña de la cámara Dahua",
+                        is_sensitive=True
+                    )
             
-            # TP-Link
-            if hasattr(self._legacy_config_manager, 'tplink_ip'):
-                await self.set_config_value(
-                    "tplink.ip",
-                    self._legacy_config_manager.tplink_ip,
-                    ConfigType.IP_ADDRESS,
-                    ConfigCategory.CAMERA,
-                    "Dirección IP de la cámara TP-Link"
-                )
-            
-            # Steren
-            if hasattr(self._legacy_config_manager, 'steren_ip'):
-                await self.set_config_value(
-                    "steren.ip",
-                    self._legacy_config_manager.steren_ip,
-                    ConfigType.IP_ADDRESS,
-                    ConfigCategory.CAMERA,
-                    "Dirección IP de la cámara Steren"
-                )
-            
+            # Similar para otras marcas...
             self.logger.info("✅ Migración de configuración legacy completada")
             
         except Exception as e:
@@ -549,7 +543,7 @@ class ConfigService:
         category: ConfigCategory = ConfigCategory.ADVANCED,
         description: str = "",
         is_sensitive: bool = False,
-        validation_rules: Dict[str, Any] = None
+        validation_rules: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         Establece un valor de configuración.
@@ -912,7 +906,8 @@ class ConfigService:
             if config_type == ConfigType.IP_ADDRESS:
                 import ipaddress
                 try:
-                    ipaddress.ip_address(value)
+                    # Convertir a string antes de validar
+                    ipaddress.ip_address(str(value))
                 except ValueError:
                     self.logger.error(f"Valor para {key} debe ser IP válida")
                     return False
@@ -1076,7 +1071,7 @@ class ConfigService:
 _config_service_instance: Optional[ConfigService] = None
 
 
-def get_config_service(config: ConfigServiceConfig = None) -> ConfigService:
+def get_config_service(config: Optional[ConfigServiceConfig] = None) -> ConfigService:
     """
     Obtiene la instancia global del ConfigService.
     

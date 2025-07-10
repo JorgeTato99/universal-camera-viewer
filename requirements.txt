@@ -18,6 +18,12 @@ python-dotenv>=1.0.0
 # System monitoring and performance
 psutil>=5.9.0
 
+# Security and encryption
+cryptography>=41.0.0
+
+# Data analysis (optional)
+pandas>=2.0.0
+
 # GUI (tkinter comes with Python by default)
 
 # Testing

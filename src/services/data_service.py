@@ -21,7 +21,7 @@ from collections import defaultdict
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set, Tuple
+from typing import Dict, List, Optional, Any, Set, Tuple, Union
 import csv
 import tempfile
 import shutil
@@ -42,7 +42,14 @@ except ImportError:
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ..models import CameraModel, ConnectionModel, ScanModel
+try:
+    from ..models import CameraModel, ConnectionModel, ScanModel
+except ImportError:
+    # Fallback para ejecución directa
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent))
+    from models import CameraModel, ConnectionModel, ScanModel
 
 
 class DatabaseType(Enum):
@@ -143,7 +150,7 @@ class DataService:
     - Limpieza automática
     """
     
-    def __init__(self, config: DataServiceConfig = None):
+    def __init__(self, config: Optional[DataServiceConfig] = None):
         """
         Inicializa el DataService.
         
@@ -158,7 +165,7 @@ class DataService:
         self._shutdown = False
         
         # Base de datos
-        self._db_connection = None
+        self._db_connection: Optional[Union[sqlite3.Connection, Any]] = None
         self._db_lock = threading.RLock()
         
         # Cache en memoria
@@ -297,6 +304,9 @@ class DataService:
     
     async def _create_tables_sqlite(self) -> None:
         """Crea las tablas necesarias en SQLite."""
+        if not self._db_connection:
+            raise RuntimeError("Base de datos no inicializada")
+            
         cursor = self._db_connection.cursor()
         
         # Tabla de cámaras
@@ -388,6 +398,9 @@ class DataService:
     
     async def _load_recent_cameras_to_cache(self) -> None:
         """Carga cámaras recientes al cache."""
+        if not self._db_connection:
+            return
+            
         try:
             with self._db_lock:
                 cursor = self._db_connection.cursor()
@@ -423,6 +436,9 @@ class DataService:
     
     async def _load_recent_scans_to_cache(self) -> None:
         """Carga escaneos recientes al cache."""
+        if not self._db_connection:
+            return
+            
         try:
             with self._db_lock:
                 cursor = self._db_connection.cursor()
@@ -467,13 +483,23 @@ class DataService:
             True si se guardó correctamente
         """
         try:
+            # Obtener protocolos soportados de manera segura
+            protocols = []
+            if hasattr(camera, 'capabilities') and camera.capabilities and hasattr(camera.capabilities, 'supported_protocols'):
+                protocols = [p.value if hasattr(p, 'value') else str(p) for p in camera.capabilities.supported_protocols]
+            elif hasattr(camera, 'get_available_protocols'):
+                available_protocols = camera.get_available_protocols()
+                protocols = [p.value if hasattr(p, 'value') else str(p) for p in available_protocols]
+            elif hasattr(camera, 'protocol') and camera.protocol:
+                protocols = [camera.protocol.value] if hasattr(camera.protocol, 'value') else [str(camera.protocol)]
+                
             camera_data = CameraData(
                 camera_id=camera.camera_id,
                 brand=camera.brand,
                 model=camera.model,
                 ip=camera.ip,
                 last_seen=datetime.now(),
-                protocols=camera.supported_protocols
+                protocols=protocols
             )
             
             # Actualizar cache
@@ -501,6 +527,9 @@ class DataService:
     
     async def _save_camera_to_db(self, camera_data: CameraData) -> None:
         """Guarda cámara en base de datos."""
+        if not self._db_connection:
+            raise RuntimeError("Base de datos no inicializada")
+            
         with self._db_lock:
             cursor = self._db_connection.cursor()
             cursor.execute("""
@@ -551,6 +580,9 @@ class DataService:
     
     async def _get_camera_from_db(self, camera_id: str) -> Optional[CameraData]:
         """Obtiene cámara desde base de datos."""
+        if not self._db_connection:
+            return None
+            
         try:
             with self._db_lock:
                 cursor = self._db_connection.cursor()
@@ -558,19 +590,26 @@ class DataService:
                 row = cursor.fetchone()
                 
                 if row:
+                    # Acceso seguro a los campos de la row
+                    def safe_get(field_name: str, default: Any = None) -> Any:
+                        try:
+                            return row[field_name] if row else default
+                        except (KeyError, TypeError, IndexError):
+                            return default
+                    
                     camera_data = CameraData(
-                        camera_id=row['camera_id'],
-                        brand=row['brand'],
-                        model=row['model'],
-                        ip=row['ip'],
-                        last_seen=datetime.fromisoformat(row['last_seen']),
-                        connection_count=row['connection_count'],
-                        successful_connections=row['successful_connections'],
-                        failed_connections=row['failed_connections'],
-                        total_uptime_minutes=row['total_uptime_minutes'],
-                        snapshots_count=row['snapshots_count'],
-                        protocols=json.loads(row['protocols'] or '[]'),
-                        metadata=json.loads(row['metadata'] or '{}')
+                        camera_id=safe_get('camera_id', ''),
+                        brand=safe_get('brand', ''),
+                        model=safe_get('model', ''),
+                        ip=safe_get('ip', ''),
+                        last_seen=datetime.fromisoformat(safe_get('last_seen', datetime.now().isoformat())),
+                        connection_count=safe_get('connection_count', 0),
+                        successful_connections=safe_get('successful_connections', 0),
+                        failed_connections=safe_get('failed_connections', 0),
+                        total_uptime_minutes=safe_get('total_uptime_minutes', 0),
+                        snapshots_count=safe_get('snapshots_count', 0),
+                        protocols=json.loads(safe_get('protocols') or '[]'),
+                        metadata=json.loads(safe_get('metadata') or '{}')
                     )
                     
                     # Actualizar cache
@@ -587,7 +626,7 @@ class DataService:
     
     # === Métodos de exportación ===
     
-    async def export_data(self, format: ExportFormat, filter_params: Dict[str, Any] = None) -> Optional[str]:
+    async def export_data(self, format: ExportFormat, filter_params: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """
         Exporta datos en el formato especificado.
         
@@ -629,7 +668,7 @@ class DataService:
             self.logger.error(f"Error exportando datos: {e}")
             return None
     
-    async def _export_to_csv(self, filepath: Path, filter_params: Dict[str, Any] = None) -> None:
+    async def _export_to_csv(self, filepath: Path, filter_params: Optional[Dict[str, Any]] = None) -> None:
         """Exporta datos a CSV."""
         with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
@@ -652,7 +691,7 @@ class DataService:
                     ', '.join(camera.protocols)
                 ])
     
-    async def _export_to_json(self, filepath: Path, filter_params: Dict[str, Any] = None) -> None:
+    async def _export_to_json(self, filepath: Path, filter_params: Optional[Dict[str, Any]] = None) -> None:
         """Exporta datos a JSON."""
         cameras = await self._get_filtered_cameras(filter_params)
         
@@ -666,7 +705,7 @@ class DataService:
         with open(filepath, 'w', encoding='utf-8') as jsonfile:
             json.dump(export_data, jsonfile, indent=2, default=str)
     
-    async def _export_to_html(self, filepath: Path, filter_params: Dict[str, Any] = None) -> None:
+    async def _export_to_html(self, filepath: Path, filter_params: Optional[Dict[str, Any]] = None) -> None:
         """Exporta datos a HTML."""
         cameras = await self._get_filtered_cameras(filter_params)
         stats = self.get_statistics()
@@ -737,8 +776,11 @@ class DataService:
         with open(filepath, 'w', encoding='utf-8') as htmlfile:
             htmlfile.write(html_content)
     
-    async def _get_filtered_cameras(self, filter_params: Dict[str, Any] = None) -> List[CameraData]:
+    async def _get_filtered_cameras(self, filter_params: Optional[Dict[str, Any]] = None) -> List[CameraData]:
         """Obtiene cámaras con filtros aplicados."""
+        if not self._db_connection:
+            return []
+            
         # Implementación simplificada - obtener todas las cámaras
         cameras = []
         
@@ -782,19 +824,41 @@ class DataService:
     
     async def get_camera_statistics(self) -> Dict[str, Any]:
         """Obtiene estadísticas específicas de cámaras."""
+        if not self._db_connection:
+            return {}
+            
         try:
             with self._db_lock:
                 cursor = self._db_connection.cursor()
                 
+                # Función auxiliar para acceso seguro
+                def safe_fetchone_get(cursor_result: Any, field: str, default: Any = 0) -> Any:
+                    try:
+                        row = cursor_result
+                        if row and hasattr(row, '__getitem__'):
+                            return row[field]
+                        return default
+                    except (KeyError, TypeError):
+                        return default
+                
                 # Estadísticas básicas
                 cursor.execute("SELECT COUNT(*) as total FROM cameras")
-                total_cameras = cursor.fetchone()['total']
+                result = cursor.fetchone()
+                total_cameras = safe_fetchone_get(result, 'total', 0)
                 
                 cursor.execute("SELECT brand, COUNT(*) as count FROM cameras GROUP BY brand")
-                brands = {row['brand']: row['count'] for row in cursor.fetchall()}
+                brands = {}
+                for row in cursor.fetchall():
+                    try:
+                        brand = row['brand'] if row else 'unknown'
+                        count = row['count'] if row else 0
+                        brands[brand] = count
+                    except (KeyError, TypeError):
+                        continue
                 
                 cursor.execute("SELECT AVG(successful_connections) as avg_success FROM cameras")
-                avg_success = cursor.fetchone()['avg_success'] or 0
+                result = cursor.fetchone()
+                avg_success = safe_fetchone_get(result, 'avg_success', 0)
                 
                 return {
                     "total_cameras": total_cameras,
@@ -874,10 +938,10 @@ class DataService:
     
     async def _create_backup(self) -> bool:
         """Crea un backup de la base de datos."""
-        try:
-            if self.config.database_type == DatabaseType.MEMORY:
-                return True  # No hay nada que hacer backup en memoria
+        if not self._db_connection:
+            return True # No hay nada que hacer backup en memoria
             
+        try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = Path("data/backups") / f"backup_{timestamp}.db"
             
@@ -914,6 +978,9 @@ class DataService:
     
     async def _cleanup_old_data(self) -> None:
         """Limpia datos antiguos según configuración."""
+        if not self._db_connection:
+            return
+            
         try:
             cutoff_date = datetime.now() - timedelta(days=self.config.auto_cleanup_days)
             
@@ -948,7 +1015,7 @@ class DataService:
 _data_service_instance: Optional[DataService] = None
 
 
-def get_data_service(config: DataServiceConfig = None) -> DataService:
+def get_data_service(config: Optional[DataServiceConfig] = None) -> DataService:
     """
     Obtiene la instancia global del DataService.
     
