@@ -1,6 +1,6 @@
 {
   "config_version": "1.0",
-  "last_saved": "2025-07-10T14:12:19.726484",
+  "last_saved": "2025-07-10T23:04:26.970930",
   "active_profile_id": null,
   "config_items": [
     {
@@ -209,6 +209,32 @@
       "validation_rules": {},
       "is_sensitive": false,
       "last_modified": "2025-07-10T14:12:19.726479",
+      "modified_by": "user"
+    },
+    {
+      "key": "Dahua.username",
+      "value": "admin",
+      "type": "string",
+      "category": "camera",
+      "description": "Usuario para c\u00e1maras Dahua",
+      "default_value": "admin",
+      "required": false,
+      "validation_rules": {},
+      "is_sensitive": false,
+      "last_modified": "2025-07-10T23:04:26.970256",
+      "modified_by": "user"
+    },
+    {
+      "key": "Dahua.password",
+      "value": "Z0FBQUFBQm9jSnRhOHdFd2ZFUjIxY2k3WFZLd0pubURnQWp3OV9UeXZha180bmhkZjJWSU1pY3I0NzdPcTJpYUR6RGhMNFRWbGhaSTJfNkx2enBERGJXR1phekU2TWpISWhvOW1ZM3ZQaGZsMDF6UVdiSGJyOTQ9",
+      "type": "password",
+      "category": "camera",
+      "description": "Contrase\u00f1a para c\u00e1maras Dahua",
+      "default_value": "3gfwb3ToWfeWNqm22223DGbzcH-4si",
+      "required": false,
+      "validation_rules": {},
+      "is_sensitive": true,
+      "last_modified": "2025-07-10T23:04:26.970924",
       "modified_by": "user"
     }
   ]

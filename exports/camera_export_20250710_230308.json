@@ -1,0 +1,46 @@
+{
+  "export_timestamp": "2025-07-10T23:03:08.738390",
+  "total_cameras": 2,
+  "cameras": [
+    {
+      "camera_id": "TP-Link_Tapo C200_192_168_1_101",
+      "brand": "TP-Link",
+      "model": "Tapo C200",
+      "ip": "192.168.1.101",
+      "last_seen": "2025-07-10 17:25:22.776490",
+      "connection_count": 0,
+      "successful_connections": 0,
+      "failed_connections": 0,
+      "total_uptime_minutes": 0,
+      "snapshots_count": 0,
+      "protocols": [],
+      "metadata": {}
+    },
+    {
+      "camera_id": "Dahua_IPC-HDW1200SP_192_168_1_100",
+      "brand": "Dahua",
+      "model": "IPC-HDW1200SP",
+      "ip": "192.168.1.100",
+      "last_seen": "2025-07-10 17:25:22.771527",
+      "connection_count": 0,
+      "successful_connections": 0,
+      "failed_connections": 0,
+      "total_uptime_minutes": 0,
+      "snapshots_count": 0,
+      "protocols": [],
+      "metadata": {}
+    }
+  ],
+  "statistics": {
+    "cameras_tracked": 0,
+    "scans_recorded": 0,
+    "snapshots_stored": 0,
+    "cache_hits": 0,
+    "cache_misses": 0,
+    "export_operations": 0,
+    "backup_operations": 0,
+    "cache_size": 2,
+    "database_type": "sqlite",
+    "uptime_minutes": 0.0
+  }
+}

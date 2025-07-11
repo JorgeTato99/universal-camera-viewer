@@ -1155,15 +1155,14 @@ class ProtocolService:
 
     def _get_onvif_handler(self):
         """Obtiene manejador ONVIF."""
-        from .protocol_handlers.onvif_handler import ONVIFHandler
-        return ONVIFHandler
+        return ONVIFProtocolHandler
 
     def _get_rtsp_handler(self):
         """Obtiene manejador RTSP."""
-        from .protocol_handlers.rtsp_handler import RTSPHandler
-        return RTSPHandler
+        return RTSPProtocolHandler
 
     def _get_amcrest_handler(self):
         """Obtiene manejador Amcrest."""
-        from .protocol_handlers.amcrest_handler import AmcrestHandler
-        return AmcrestHandler 
+        # Por ahora retornar RTSP como fallback para Amcrest
+        # TODO: Implementar AmcrestProtocolHandler específico
+        return RTSPProtocolHandler 
