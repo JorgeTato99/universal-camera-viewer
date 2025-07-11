@@ -268,6 +268,12 @@ test_*.log
 src_old/
 
 # ==========================================
+# Archivos de trabajo actual.
+# ==========================================
+*CURRENT*.md
+*current*.md
+
+# ==========================================
 # ARCHIVOS A MANTENER (COMENTADOS)
 # ==========================================
 # Los siguientes archivos SÍ deben incluirse en el repositorio:
@@ -276,3 +282,4 @@ src_old/
 # .cursor/rules/*.mdc - Reglas de desarrollo
 # examples/logs/.gitkeep - Para mantener la estructura de carpetas
 # .vscode/settings.json - Configuración específica del proyecto 
+!CURRENT_STATUS.md
