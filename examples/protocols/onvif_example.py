@@ -57,9 +57,77 @@ def setup_logging():
     print(f"📝 Logs guardándose en: {log_file}")
 
 
+def load_mock_camera_data() -> Dict[str, Any]:
+    """
+    Carga datos mock de cámaras desde archivo JSON.
+    
+    Returns:
+        Diccionario con datos de cámaras mock
+    """
+    mock_file = Path(__file__).parent / "mock_camera_data.json"
+    
+    try:
+        import json
+        with open(mock_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        print(f"❌ Error cargando datos mock: {e}")
+        return {"cameras": []}
+
+
+def select_camera_from_mock() -> Optional[Dict[str, Any]]:
+    """
+    Permite al usuario seleccionar una cámara de los datos mock.
+    
+    Returns:
+        Datos de la cámara seleccionada o None
+    """
+    mock_data = load_mock_camera_data()
+    cameras = mock_data.get("cameras", [])
+    
+    if not cameras:
+        print("❌ No hay cámaras disponibles en datos mock")
+        return None
+    
+    print("\n" + "="*60)
+    print("📋 CÁMARAS DISPONIBLES EN DATOS MOCK")
+    print("="*60)
+    
+    for i, camera in enumerate(cameras, 1):
+        print(f"{i}. {camera['display_name']}")
+        print(f"   📍 IP: {camera['ip']}")
+        print(f"   🏷️ Marca: {camera['brand']}")
+        print(f"   📱 Modelo: {camera['model']}")
+        print(f"   📡 Protocolos: {', '.join(camera['protocols'])}")
+        if camera.get('notes'):
+            print(f"   📝 Notas: {camera['notes']}")
+        print()
+    
+    while True:
+        try:
+            choice = input(f"🔢 Selecciona una cámara (1-{len(cameras)}): ").strip()
+            if not choice:
+                print("❌ Selección requerida")
+                continue
+            
+            index = int(choice) - 1
+            if 0 <= index < len(cameras):
+                selected_camera = cameras[index]
+                print(f"✅ Cámara seleccionada: {selected_camera['display_name']}")
+                return selected_camera
+            else:
+                print(f"❌ Opción inválida. Debe ser 1-{len(cameras)}")
+        except ValueError:
+            print("❌ Ingresa un número válido")
+        except KeyboardInterrupt:
+            print("\n🛑 Selección cancelada")
+            return None
+
+
 def get_user_configuration() -> Dict[str, str]:
     """
-    Solicita configuración al usuario por consola.
+    Solicita configuración al usuario por consola o usa datos mock.
     
     Returns:
         Diccionario con la configuración
@@ -68,6 +136,57 @@ def get_user_configuration() -> Dict[str, str]:
     print("🔧 CONFIGURACIÓN DE CÁMARA ONVIF")
     print("="*60)
     
+    # Preguntar si usar datos mock
+    use_mock = input("🤖 ¿Usar datos mock de cámaras? (s/n, Enter para sí): ").strip().lower()
+    
+    if use_mock in ['', 's', 'si', 'sí', 'y', 'yes']:
+        selected_camera = select_camera_from_mock()
+        if selected_camera:
+            # Usar datos de la cámara mock como valores por defecto
+            print("\n📝 Configuración con valores por defecto de datos mock:")
+            print("   (Presiona Enter para usar el valor por defecto, o ingresa un nuevo valor)")
+            
+            config = {}
+            
+            # IP de la cámara
+            default_ip = selected_camera['ip']
+            ip = input(f"📡 IP de la cámara (Enter para '{default_ip}'): ").strip()
+            config['ip'] = ip if ip else default_ip
+            
+            # Puerto ONVIF
+            default_port = selected_camera['onvif_port']
+            port = input(f"🔌 Puerto ONVIF (Enter para {default_port}): ").strip()
+            config['port'] = int(port) if port else default_port
+            
+            # Usuario
+            default_username = selected_camera['username']
+            username = input(f"👤 Usuario (Enter para '{default_username}'): ").strip()
+            config['username'] = username if username else default_username
+            
+            # Contraseña
+            default_password = selected_camera['password']
+            password = input(f"🔒 Contraseña (Enter para usar la del mock): ").strip()
+            config['password'] = password if password else default_password
+            
+            # Marca
+            default_brand = selected_camera['brand']
+            brand = input(f"🏷️ Marca de la cámara (Enter para '{default_brand}'): ").strip()
+            config['brand'] = brand if brand else default_brand
+            
+            # Modelo
+            default_model = selected_camera['model']
+            model = input(f"📱 Modelo de la cámara (Enter para '{default_model}'): ").strip()
+            config['model'] = model if model else default_model
+            
+            # Guardar datos mock para uso posterior
+            config['camera_id'] = selected_camera['id']
+            config['mock_data'] = selected_camera
+            
+            print("✅ Configuración completada con valores personalizados")
+            return config
+    
+    # Configuración manual
+    print("\n📝 Configuración manual:")
     config = {}
     
     # IP de la cámara
@@ -79,8 +198,8 @@ def get_user_configuration() -> Dict[str, str]:
         print("❌ IP es requerida")
     
     # Puerto ONVIF
-    port = input("🔌 Puerto ONVIF (Enter para 8000): ").strip()
-    config['port'] = int(port) if port else 8000
+    port = input("🔌 Puerto ONVIF (Enter para 80): ").strip()
+    config['port'] = int(port) if port else 80
     
     # Usuario
     username = input("👤 Usuario (Enter para 'admin'): ").strip()
@@ -361,6 +480,12 @@ async def test_error_handling(protocol_service: ProtocolService) -> bool:
             print("✅ Timeout capturado correctamente - IP inválida (3s)")
         except Exception as e:
             print(f"✅ Error capturado correctamente - IP inválida: {str(e)[:50]}...")
+        finally:
+            # Asegurar que la conexión de prueba se cierre
+            try:
+                await protocol_service.disconnect_camera("test_invalid")
+            except:
+                pass  # Ignorar errores al cerrar conexión de prueba
         
         # Probar con credenciales incorrectas (timeout reducido)
         print("\n2. Probando con credenciales incorrectas...")
@@ -391,6 +516,12 @@ async def test_error_handling(protocol_service: ProtocolService) -> bool:
             print("✅ Timeout capturado correctamente - credenciales incorrectas (5s)")
         except Exception as e:
             print(f"✅ Error capturado correctamente - credenciales incorrectas: {str(e)[:50]}...")
+        finally:
+            # Asegurar que la conexión de prueba se cierre
+            try:
+                await protocol_service.disconnect_camera("test_bad_creds")
+            except:
+                pass  # Ignorar errores al cerrar conexión de prueba
         
         return True
         
@@ -422,7 +553,13 @@ async def export_results(data_service: DataService, protocol_service: ProtocolSe
         
         # Obtener perfiles ONVIF para la exportación
         onvif_profiles = None
-        if results.get('tests', {}).get('connection', False):
+        
+        # Verificar si tenemos datos mock con perfiles
+        mock_data = results.get('config', {}).get('mock_data', {})
+        if mock_data and 'onvif_profiles' in mock_data:
+            onvif_profiles = mock_data['onvif_profiles']
+            print("📋 Usando perfiles ONVIF desde datos mock")
+        elif results.get('tests', {}).get('connection', False):
             # Si la conexión fue exitosa, intentar obtener perfiles
             try:
                 # Crear una conexión temporal para obtener perfiles
@@ -608,6 +745,10 @@ async def main():
     finally:
         # Cerrar servicios
         try:
+            # Cerrar todas las conexiones activas del ProtocolService
+            await protocol_service.cleanup()
+            print("🔌 ProtocolService limpiado correctamente")
+            
             await data_service.shutdown()
             print("✅ Servicios cerrados correctamente")
         except Exception as e:
