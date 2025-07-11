@@ -17,6 +17,7 @@ Características incluidas:
 import asyncio
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -157,10 +158,20 @@ async def test_onvif_discovery(protocol_service: ProtocolService, config: Dict[s
         
         print("✅ Protocolos detectados:")
         for protocol in detected_protocols:
-            print(f"   📡 {protocol.value}")
+            print(f"   📡 {protocol.value} (tipo: {type(protocol)})")
         
-        # Verificar si ONVIF está disponible
-        onvif_available = ProtocolType.ONVIF in detected_protocols
+        # Debug: mostrar contenido de la lista
+        print(f"🔍 Debug - detected_protocols: {detected_protocols}")
+        print(f"🔍 Debug - ProtocolType.ONVIF: {ProtocolType.ONVIF} (tipo: {type(ProtocolType.ONVIF)})")
+        
+        # Verificar si ONVIF está disponible (múltiples formas de validación)
+        onvif_available = (
+            ProtocolType.ONVIF in detected_protocols or
+            any(p.value == "onvif" for p in detected_protocols) or
+            any(str(p) == "ProtocolType.ONVIF" for p in detected_protocols)
+        )
+        
+        print(f"🔍 Debug - onvif_available: {onvif_available}")
         
         if not onvif_available:
             print("❌ ONVIF no está disponible en esta cámara")
@@ -174,7 +185,7 @@ async def test_onvif_discovery(protocol_service: ProtocolService, config: Dict[s
         return False
 
 
-async def test_onvif_connection(protocol_service: ProtocolService, config: Dict[str, str]) -> bool:
+async def test_onvif_connection(protocol_service: ProtocolService, data_service: DataService, config: Dict[str, str]) -> bool:
     """
     Demuestra la conexión ONVIF completa.
     
@@ -229,21 +240,71 @@ async def test_onvif_connection(protocol_service: ProtocolService, config: Dict[
         else:
             print("⚠️ No se pudo obtener información del dispositivo")
         
-        # Obtener perfiles de media (simulado)
-        print("\n📹 Obteniendo perfiles de media...")
-        print("✅ Perfiles encontrados: 1")
-        print("   Perfil 1: Main Stream")
+        # Obtener perfiles ONVIF detallados
+        print("\n📹 Obteniendo perfiles ONVIF detallados...")
+        onvif_profiles = await protocol_service.get_onvif_profiles(camera.camera_id)
         
-        # Capturar snapshot (simulado)
-        print("\n📸 Capturando snapshot...")
-        snapshot_path = f"examples/logs/onvif_snapshot_{int(time.time())}.jpg"
-        print(f"✅ Snapshot capturado: 1024 bytes")
-        print(f"   Guardado en: {snapshot_path}")
+        if onvif_profiles:
+            print(f"✅ Perfiles ONVIF encontrados: {len(onvif_profiles)}")
+            for i, profile in enumerate(onvif_profiles):
+                print(f"   Perfil {i+1}: {profile.get('name', 'Unknown')}")
+                print(f"      Token: {profile.get('token', 'N/A')}")
+                
+                # Información de video
+                if 'video' in profile:
+                    video = profile['video']
+                    print(f"      Video: {video.get('encoding', 'Unknown')}")
+                    if video.get('resolution'):
+                        res = video['resolution']
+                        print(f"         Resolución: {res.get('width', 0)}x{res.get('height', 0)}")
+                    print(f"         FPS: {video.get('framerate', 0)}")
+                    print(f"         Bitrate: {video.get('bitrate', 0)} kbps")
+                
+                # Información de audio
+                if 'audio' in profile:
+                    audio = profile['audio']
+                    print(f"      Audio: {audio.get('encoding', 'Unknown')}")
+                    print(f"         Bitrate: {audio.get('bitrate', 0)} kbps")
+                
+                # URLs
+                if 'stream_uri' in profile:
+                    print(f"      Stream URL: {profile['stream_uri']}")
+                if 'snapshot_uri' in profile:
+                    print(f"      Snapshot URL: {profile['snapshot_uri']}")
+        else:
+            print("⚠️ No se pudieron obtener perfiles ONVIF")
         
-        # Probar streaming (simulado)
-        print("\n🎥 Probando streaming de video...")
-        print("✅ Frame capturado: 1920x1080")
-        print("✅ Total frames capturados: 4")
+        # Obtener información adicional del dispositivo
+        print("\n📋 Información adicional del dispositivo:")
+        print(f"   IP: {camera.connection_config.ip}")
+        print(f"   Marca: {camera.brand}")
+        print(f"   Modelo: {camera.model}")
+        print(f"   Protocolo: ONVIF")
+        
+        # Obtener URL de stream MJPEG (método disponible)
+        print("\n🎥 Obteniendo URL de streaming...")
+        stream_url = protocol_service.get_mjpeg_stream_url(camera.camera_id)
+        
+        if stream_url:
+            print(f"✅ Stream URL obtenida: {stream_url}")
+            print("✅ Streaming MJPEG disponible")
+        else:
+            print("⚠️ No se pudo obtener URL de streaming")
+        
+        # Guardar datos de la cámara en DataService
+        print("\n💾 Guardando datos de cámara...")
+        
+        # Crear CameraModel para guardar
+        camera_to_save = CameraModel(
+            brand=camera.brand,
+            model=camera.model,
+            display_name=f"ONVIF Test {camera.connection_config.ip}",
+            connection_config=camera.connection_config
+        )
+        
+        # Guardar en DataService
+        await data_service.save_camera_data(camera_to_save)
+        print("✅ Datos de cámara guardados en DataService")
         
         # Cerrar conexión
         await protocol_service.disconnect_camera(camera.camera_id)
@@ -271,7 +332,7 @@ async def test_error_handling(protocol_service: ProtocolService) -> bool:
     print("="*60)
     
     try:
-        # Probar con IP inválida
+        # Probar con IP inválida (timeout reducido)
         print("1. Probando con IP inválida...")
         invalid_config = ConnectionConfig(
             ip="192.168.1.999",  # IP inválida
@@ -279,19 +340,29 @@ async def test_error_handling(protocol_service: ProtocolService) -> bool:
             password="password"
         )
         
-        connection = await protocol_service.create_connection(
-            camera_id="test_invalid",
-            protocol=ProtocolType.ONVIF,  # type: ignore
-            config=invalid_config
-        )
+        try:
+            # Usar timeout de 3 segundos para IP inválida
+            connection = await asyncio.wait_for(
+                protocol_service.create_connection(
+                    camera_id="test_invalid",
+                    protocol=ProtocolType.ONVIF,  # type: ignore
+                    config=invalid_config
+                ),
+                timeout=3.0  # 3 segundos máximo
+            )
+            
+            if connection:
+                print("⚠️ ADVERTENCIA: Conexión exitosa con IP inválida")
+                await protocol_service.disconnect_camera("test_invalid")
+            else:
+                print("✅ Error capturado correctamente - IP inválida")
+                
+        except asyncio.TimeoutError:
+            print("✅ Timeout capturado correctamente - IP inválida (3s)")
+        except Exception as e:
+            print(f"✅ Error capturado correctamente - IP inválida: {str(e)[:50]}...")
         
-        if connection:
-            print("⚠️ ADVERTENCIA: Conexión exitosa con IP inválida")
-            await protocol_service.disconnect_camera("test_invalid")
-        else:
-            print("✅ Error capturado correctamente - IP inválida")
-        
-        # Probar con credenciales incorrectas
+        # Probar con credenciales incorrectas (timeout reducido)
         print("\n2. Probando con credenciales incorrectas...")
         bad_credentials_config = ConnectionConfig(
             ip="192.168.1.100",  # IP válida
@@ -299,17 +370,27 @@ async def test_error_handling(protocol_service: ProtocolService) -> bool:
             password="wrong_password"
         )
         
-        connection = await protocol_service.create_connection(
-            camera_id="test_bad_creds",
-            protocol=ProtocolType.ONVIF,  # type: ignore
-            config=bad_credentials_config
-        )
-        
-        if connection:
-            print("⚠️ ADVERTENCIA: Conexión exitosa con credenciales incorrectas")
-            await protocol_service.disconnect_camera("test_bad_creds")
-        else:
-            print("✅ Error capturado correctamente - credenciales incorrectas")
+        try:
+            # Usar timeout de 5 segundos en lugar de 21
+            connection = await asyncio.wait_for(
+                protocol_service.create_connection(
+                    camera_id="test_bad_creds",
+                    protocol=ProtocolType.ONVIF,  # type: ignore
+                    config=bad_credentials_config
+                ),
+                timeout=5.0  # 5 segundos máximo
+            )
+            
+            if connection:
+                print("⚠️ ADVERTENCIA: Conexión exitosa con credenciales incorrectas")
+                await protocol_service.disconnect_camera("test_bad_creds")
+            else:
+                print("✅ Error capturado correctamente - credenciales incorrectas")
+                
+        except asyncio.TimeoutError:
+            print("✅ Timeout capturado correctamente - credenciales incorrectas (5s)")
+        except Exception as e:
+            print(f"✅ Error capturado correctamente - credenciales incorrectas: {str(e)[:50]}...")
         
         return True
         
@@ -318,7 +399,7 @@ async def test_error_handling(protocol_service: ProtocolService) -> bool:
         return True
 
 
-async def export_results(data_service: DataService, results: Dict[str, Any]) -> bool:
+async def export_results(data_service: DataService, protocol_service: ProtocolService, results: Dict[str, Any]) -> bool:
     """
     Exporta los resultados del test.
     
@@ -334,30 +415,69 @@ async def export_results(data_service: DataService, results: Dict[str, Any]) -> 
     print("="*60)
     
     try:
-        # Guardar resultados en la base de datos
-        print("💾 Guardando resultados en base de datos...")
+        # Crear archivo de exportación específico para este test
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        test_ip = results.get('config', {}).get('ip', 'unknown')
+        filename = f"onvif_test_{test_ip}_{timestamp}.json"
         
-        # Crear datos de escaneo
-        scan_data = {
-            "scan_id": f"onvif_test_{int(time.time())}",
-            "target_ip": results.get('config', {}).get('ip', 'unknown'),
-            "timestamp": time.time(),
-            "duration_seconds": results.get('duration', 0),
-            "protocols_tested": ["ONVIF"],
-            "results": results
+        # Obtener perfiles ONVIF para la exportación
+        onvif_profiles = None
+        if results.get('tests', {}).get('connection', False):
+            # Si la conexión fue exitosa, intentar obtener perfiles
+            try:
+                # Crear una conexión temporal para obtener perfiles
+                connection_config = ConnectionConfig(
+                    ip=test_ip,
+                    username=results.get('config', {}).get('username', 'admin'),
+                    password=results.get('config', {}).get('password', '')
+                )
+                
+                temp_connection = await protocol_service.create_connection(
+                    camera_id=f"temp_{test_ip}",
+                    protocol=ProtocolType.ONVIF,  # type: ignore
+                    config=connection_config
+                )
+                
+                if temp_connection:
+                    onvif_profiles = await protocol_service.get_onvif_profiles(f"temp_{test_ip}")
+                    await protocol_service.disconnect_camera(f"temp_{test_ip}")
+            except Exception as e:
+                print(f"⚠️ No se pudieron obtener perfiles para exportación: {e}")
+        
+        # Crear datos específicos del test
+        test_data = {
+            "test_info": {
+                "test_type": "onvif_example",
+                "timestamp": datetime.now().isoformat(),
+                "target_ip": test_ip,
+                "duration_seconds": results.get('duration', 0),
+                "success_rate": results.get('success_rate', 0)
+            },
+            "test_results": results.get('tests', {}),
+            "config": results.get('config', {}),
+            "onvif_profiles": onvif_profiles,
+            "export_timestamp": datetime.now().isoformat()
         }
         
-        # Exportar a JSON
-        print("📄 Exportando a JSON...")
-        export_path = await data_service.export_data(
+        # Guardar archivo directamente
+        export_path = Path("exports") / filename
+        export_path.parent.mkdir(exist_ok=True)
+        
+        import json
+        with open(export_path, 'w', encoding='utf-8') as f:
+            json.dump(test_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Resultados exportados: {export_path}")
+        
+        # También exportar datos de la base de datos
+        print("📄 Exportando datos de base de datos...")
+        db_export_path = await data_service.export_data(
             format=ExportFormat.JSON,
             filter_params={"test_type": "onvif"}
         )
         
-        if export_path:
-            print(f"✅ Resultados exportados: {export_path}")
-        else:
-            print("⚠️ No se pudieron exportar los resultados")
+        if db_export_path:
+            print(f"✅ Datos de BD exportados: {db_export_path}")
         
         return True
         
@@ -421,7 +541,7 @@ async def main():
         
         # Test 2: Conexión ONVIF completa
         if discovery_success:
-            connection_success = await test_onvif_connection(protocol_service, config)
+            connection_success = await test_onvif_connection(protocol_service, data_service, config)
             test_results.append(("Conexión ONVIF", connection_success))
             results["tests"]["connection"] = connection_success
         else:
@@ -435,7 +555,7 @@ async def main():
         results["tests"]["error_handling"] = error_handling_success
         
         # Test 4: Exportación de resultados
-        export_success = await export_results(data_service, results)
+        export_success = await export_results(data_service, protocol_service, results)
         test_results.append(("Exportación", export_success))
         results["tests"]["export"] = export_success
         

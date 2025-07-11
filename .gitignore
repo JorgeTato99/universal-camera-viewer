@@ -77,6 +77,11 @@ examples/logs/*.log
 examples/logs/**/*.log
 *.log
 
+# Logs generales del proyecto
+logs/
+logs/*.log
+logs/**/*.log
+
 # Archivos temporales
 temp/
 tmp/
@@ -247,6 +252,18 @@ debug_*.txt
 debug_*.json
 
 # ==========================================
+# EXPORTS Y RESULTADOS DE TESTS
+# ==========================================
+# Archivos de exportación de tests y resultados
+exports/
+exports/*.json
+exports/*.csv
+exports/*.txt
+exports/**/*.json
+exports/**/*.csv
+exports/**/*.txt
+
+# ==========================================
 # ARCHIVOS DE RESPALDO
 # ==========================================
 *.bak
@@ -281,5 +298,7 @@ src_old/
 # requirements.txt - Dependencias del proyecto
 # .cursor/rules/*.mdc - Reglas de desarrollo
 # examples/logs/.gitkeep - Para mantener la estructura de carpetas
+# logs/.gitkeep - Para mantener la estructura de carpetas
+# exports/.gitkeep - Para mantener la estructura de carpetas
 # .vscode/settings.json - Configuración específica del proyecto 
 !CURRENT_STATUS.md

@@ -921,10 +921,22 @@ class ProtocolService:
         Returns:
             Manejador de protocolo creado
         """
-        if protocol not in self._protocol_handlers:
+        # Buscar protocolo por valor en lugar de por identidad de objeto
+        matching_protocol = None
+        for available_protocol in self._protocol_handlers.keys():
+            if available_protocol.value == protocol.value:
+                matching_protocol = available_protocol
+                break
+        
+        if matching_protocol is None:
             raise ValueError(f"Protocol {protocol.value} not supported")
         
-        handler_class = self._protocol_handlers[protocol]()
+        # Usar el protocolo encontrado en el diccionario
+        protocol = matching_protocol
+        
+        # Obtener la función que devuelve la clase del handler
+        handler_factory = self._protocol_handlers[protocol]
+        handler_class = handler_factory()
         return handler_class(config, streaming_config)
 
     async def disconnect_camera(self, camera_id: str) -> bool:
@@ -1006,6 +1018,72 @@ class ProtocolService:
             
         except Exception as e:
             self.logger.error(f"Error getting device info for {camera_id}: {e}")
+            return None
+
+    async def get_onvif_profiles(self, camera_id: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Obtiene perfiles ONVIF detallados.
+        
+        Args:
+            camera_id: Identificador de la cámara
+            
+        Returns:
+            Lista de perfiles ONVIF o None si no está disponible
+        """
+        handler = self.get_handler(camera_id)
+        if not handler or not hasattr(handler, '_profiles'):
+            self.logger.warning(f"No ONVIF profiles available for {camera_id}")
+            return None
+        
+        try:
+            # Verificar que es un handler ONVIF
+            if not hasattr(handler, '_get_profile_token'):
+                self.logger.warning(f"Handler is not ONVIF for {camera_id}")
+                return None
+            
+            profiles = []
+            for profile in handler._profiles:  # type: ignore
+                profile_data = {
+                    'token': handler._get_profile_token(profile),  # type: ignore
+                    'name': getattr(profile, 'Name', 'Unknown'),
+                    'fixed': getattr(profile, 'fixed', False)
+                }
+                
+                # Información de video
+                if hasattr(profile, 'VideoEncoderConfiguration'):
+                    venc = profile.VideoEncoderConfiguration
+                    profile_data['video'] = {
+                        'encoding': getattr(venc, 'Encoding', 'Unknown'),
+                        'resolution': {
+                            'width': getattr(venc.Resolution, 'Width', 0) if hasattr(venc, 'Resolution') else 0,
+                            'height': getattr(venc.Resolution, 'Height', 0) if hasattr(venc, 'Resolution') else 0
+                        } if hasattr(venc, 'Resolution') else None,
+                        'quality': getattr(venc, 'Quality', 0),
+                        'framerate': getattr(venc.RateControl, 'FrameRateLimit', 0) if hasattr(venc, 'RateControl') else 0,
+                        'bitrate': getattr(venc.RateControl, 'BitrateLimit', 0) if hasattr(venc, 'RateControl') else 0
+                    }
+                
+                # Información de audio
+                if hasattr(profile, 'AudioEncoderConfiguration'):
+                    aenc = profile.AudioEncoderConfiguration
+                    profile_data['audio'] = {
+                        'encoding': getattr(aenc, 'Encoding', 'Unknown'),
+                        'bitrate': getattr(aenc, 'Bitrate', 0),
+                        'samplerate': getattr(aenc, 'SampleRate', 0)
+                    }
+                
+                # URLs de stream y snapshot
+                if hasattr(handler, '_stream_uri') and getattr(handler, '_stream_uri', None):
+                    profile_data['stream_uri'] = str(getattr(handler, '_stream_uri'))
+                if hasattr(handler, '_snapshot_uri') and getattr(handler, '_snapshot_uri', None):
+                    profile_data['snapshot_uri'] = str(getattr(handler, '_snapshot_uri'))
+                
+                profiles.append(profile_data)
+            
+            return profiles
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo perfiles ONVIF: {e}")
             return None
 
     def create_test_connection(self, ip: str, protocol: str, credentials: dict) -> Optional[BaseProtocolHandler]:

@@ -1,6 +1,6 @@
 {
   "config_version": "1.0",
-  "last_saved": "2025-07-10T23:04:26.970930",
+  "last_saved": "2025-07-10T23:37:50.726105",
   "active_profile_id": null,
   "config_items": [
     {
@@ -221,12 +221,12 @@
       "required": false,
       "validation_rules": {},
       "is_sensitive": false,
-      "last_modified": "2025-07-10T23:04:26.970256",
+      "last_modified": "2025-07-10T23:10:02.141728",
       "modified_by": "user"
     },
     {
       "key": "Dahua.password",
-      "value": "Z0FBQUFBQm9jSnRhOHdFd2ZFUjIxY2k3WFZLd0pubURnQWp3OV9UeXZha180bmhkZjJWSU1pY3I0NzdPcTJpYUR6RGhMNFRWbGhaSTJfNkx2enBERGJXR1phekU2TWpISWhvOW1ZM3ZQaGZsMDF6UVdiSGJyOTQ9",
+      "value": "3gfwb3ToWfeWNqm22223DGbzcH-4si",
       "type": "password",
       "category": "camera",
       "description": "Contrase\u00f1a para c\u00e1maras Dahua",
@@ -234,7 +234,59 @@
       "required": false,
       "validation_rules": {},
       "is_sensitive": true,
-      "last_modified": "2025-07-10T23:04:26.970924",
+      "last_modified": "2025-07-10T23:10:02.142381",
+      "modified_by": "user"
+    },
+    {
+      "key": "dagua.username",
+      "value": "admin",
+      "type": "string",
+      "category": "camera",
+      "description": "Usuario para c\u00e1maras dagua",
+      "default_value": "admin",
+      "required": false,
+      "validation_rules": {},
+      "is_sensitive": false,
+      "last_modified": "2025-07-10T23:07:25.475324",
+      "modified_by": "user"
+    },
+    {
+      "key": "dagua.password",
+      "value": "3gfwb3ToWfeWNqm22223DGbzcH-4si",
+      "type": "password",
+      "category": "camera",
+      "description": "Contrase\u00f1a para c\u00e1maras dagua",
+      "default_value": "3gfwb3ToWfeWNqm22223DGbzcH-4si",
+      "required": false,
+      "validation_rules": {},
+      "is_sensitive": true,
+      "last_modified": "2025-07-10T23:07:25.475946",
+      "modified_by": "user"
+    },
+    {
+      "key": "DAHUA.username",
+      "value": "admin",
+      "type": "string",
+      "category": "camera",
+      "description": "Usuario para c\u00e1maras DAHUA",
+      "default_value": "admin",
+      "required": false,
+      "validation_rules": {},
+      "is_sensitive": false,
+      "last_modified": "2025-07-10T23:37:50.725398",
+      "modified_by": "user"
+    },
+    {
+      "key": "DAHUA.password",
+      "value": "Z0FBQUFBQm9jS011eFV6clhpdkpkYk9MN0RVQWZlc0pscmdTUG83SHBFZEN3djI4b0ZmbzZBbXNGTVN1U2R5UGNVQy1IaEZWSnkyMWNPUExwQi1sdWtBNmk1ak9oRklnTGZkSDU2QWpxMUJCa3dEdW8zRXA4RGs9",
+      "type": "password",
+      "category": "camera",
+      "description": "Contrase\u00f1a para c\u00e1maras DAHUA",
+      "default_value": "3gfwb3ToWfeWNqm22223DGbzcH-4si",
+      "required": false,
+      "validation_rules": {},
+      "is_sensitive": true,
+      "last_modified": "2025-07-10T23:37:50.726101",
       "modified_by": "user"
     }
   ]
