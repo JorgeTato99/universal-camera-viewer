@@ -7,6 +7,38 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.7.4] - 2025-07-11
+
+### ✨ Added - Timeout Management
+
+- **Timeout agresivo** en conexiones ONVIF para evitar bloqueos
+- **Timeouts escalonados** en operaciones de protocolo (3-5 segundos)
+- **Manejo de TimeoutError** específico en ONVIFProtocolHandler
+- **Cleanup automático** de conexiones residuales en ProtocolService
+
+### 🔄 Changed - Error Handling
+
+- **Método cleanup()** del ProtocolService para cierre ordenado de conexiones
+- **Bloques finally** en test_error_handling para limpieza garantizada
+- **Timeout configuration** en test_connection y connect methods
+- **Resource management** mejorado con context managers async
+
+### 🛠️ Fixed - Connection Issues
+
+- **Error de timeout residual** en IP 192.168.1.100 durante garbage collection
+- **Conexiones colgadas** que causaban delays al finalizar scripts
+- **ProtocolService cleanup** incompleto que dejaba conexiones activas
+- **Timeout None** en librería onvif-zeep que causaba bloqueos indefinidos
+
+### 📊 Enhanced - Example Stability
+
+- **onvif_example.py** con cierre limpio de servicios y conexiones
+- **Error handling robusto** en pruebas de conexión con IPs inválidas
+- **Logging mejorado** para debugging de timeouts y conexiones
+- **Export functionality** estable sin errores de conexión residual
+
+---
+
 ## [0.7.3] - 2025-07-10
 
 ### ✨ Added - Migración Completa a MVP Architecture
