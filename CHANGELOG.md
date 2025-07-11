@@ -7,7 +7,55 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
-## [0.7.2] - 2025-01-20
+## [0.7.3] - 2025-07-10
+
+### ✨ Added - Migración Completa a MVP Architecture
+
+- **ProtocolService** completamente migrado a async/await con APIs modernas
+- **ONVIF Protocol Handler** refactorizado con soporte completo para perfiles detallados
+- **RTSP Protocol Handler** optimizado con detección automática de streams
+- **Amcrest Protocol Handler** implementado con soporte para múltiples modelos
+- **Base Protocol Handler** con abstracciones comunes y error handling robusto
+
+### 🔄 Changed - Legacy API Migration
+
+- **Eliminación completa** de APIs síncronas legacy (ConnectionFactory, get_protocol_service)
+- **Migración de ejemplos** a nueva arquitectura MVP (camera_detector.py, network_analyzer.py)
+- **Refactorización de imports** con fallbacks para compatibilidad
+- **Actualización de dependencias** y eliminación de referencias obsoletas
+
+### 🛠️ Fixed - Integration Issues
+
+- **Import errors** corregidos en scan_service.py con fallbacks absolutos
+- **Dependencies missing** resueltas (cv2, requests) con instalación automática
+- **Residual references** eliminadas de get_protocol_service en todo el codebase
+- **Logging inconsistencies** corregidas con niveles apropiados y mensajes detallados
+
+### 📊 Enhanced - Testing & Diagnostics
+
+- **camera_detector.py** completamente migrado a servicios MVP con logging detallado
+- **network_analyzer.py** refactorizado para usar ScanService, ProtocolService, ConfigService
+- **onvif_example.py** actualizado con input interactivo y exportación de perfiles detallados
+- **Logging mejorado** con información de timing, performance y detalles técnicos
+
+### 🎯 Technical Improvements
+
+- **Async/await consistency** en todos los protocol handlers
+- **Error handling** robusto con excepciones específicas del dominio
+- **Type hints** completos en todos los servicios y handlers
+- **Resource management** optimizado con context managers async
+- **Export functionality** mejorada con datos estructurados y timestamps
+
+### 📁 Project Structure
+
+- **Gitignore actualizado** para ignorar archivos generados en `/exports` y `/logs`
+- **Archivos .gitkeep** creados para mantener estructuras de carpetas
+- **Código legacy** completamente eliminado (src_old/, camera_detector_simple.py)
+- **Documentación** actualizada con ejemplos de uso de nueva API
+
+---
+
+## [0.7.2] - 2025-07-10
 
 ### ✨ Added - Sistema de Temas Completo
 
@@ -43,7 +91,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
-## [0.7.1] - 2025-01-20
+## [0.7.1] - 2025-07-10
 
 ### ✨ Added - Sistema de Componentes Completo
 
