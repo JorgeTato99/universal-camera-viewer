@@ -13,7 +13,7 @@ from .connection_service import ConnectionService, ConnectionServiceConfig, get_
 from .scan_service import ScanService, ScanServiceConfig, get_scan_service
 from .data_service import DataService, DataServiceConfig, get_data_service
 from .config_service import ConfigService, ConfigServiceConfig, get_config_service
-from .protocol_service import ProtocolService, get_protocol_service
+from .protocol_service import ProtocolService
 
 __all__ = [
     # Connection Service
@@ -38,5 +38,4 @@ __all__ = [
     
     # Protocol Service
     "ProtocolService",
-    "get_protocol_service",
 ] 

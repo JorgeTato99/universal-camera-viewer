@@ -25,8 +25,8 @@ from ..services import (
     get_scan_service, 
     get_data_service, 
     get_config_service,
-    get_protocol_service
 )
+from services.protocol_service import ProtocolService
 
 
 class MainPresenter(BasePresenter):
@@ -50,7 +50,7 @@ class MainPresenter(BasePresenter):
         self._scan_service = get_scan_service()
         self._data_service = get_data_service()
         self._config_service = get_config_service()
-        self._protocol_service = get_protocol_service()
+        self._protocol_service = ProtocolService()
         
         # Sub-presenters
         self._camera_presenters: Dict[str, CameraPresenter] = {}

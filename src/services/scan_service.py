@@ -29,9 +29,18 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Callable, Any, Tuple
 
-from ..models.scan_model import ScanModel, ScanStatus, ScanMethod, ScanRange, ScanResult, ProtocolDetectionResult
-from ..models.camera_model import ProtocolType
-from ..utils.config import ConfigurationManager
+try:
+    from ..models.scan_model import ScanModel, ScanStatus, ScanMethod, ScanRange, ScanResult, ProtocolDetectionResult
+    from ..models.camera_model import ProtocolType
+    from ..utils.config import ConfigurationManager
+except ImportError:
+    # Fallback para ejecución directa
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent))
+    from models.scan_model import ScanModel, ScanStatus, ScanMethod, ScanRange, ScanResult, ProtocolDetectionResult
+    from models.camera_model import ProtocolType
+    from utils.config import ConfigurationManager
 
 
 class ScanServiceStatus(Enum):

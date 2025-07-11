@@ -2,7 +2,7 @@
 # Instalar con: pip install -r requirements.txt
 
 # Procesamiento de video e imágenes
-opencv-python>=4.8.0          # Captura y procesamiento de video
+opencv-python>=4.12.0          # Captura y procesamiento de video
 Pillow>=10.0.0                 # Manipulación de imágenes
 numpy>=1.24.0                  # Operaciones numéricas para imágenes
 

@@ -211,6 +211,51 @@ class BaseProtocolHandler(ABC):
         """
         pass
     
+    async def get_device_info(self) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene información del dispositivo.
+        
+        Returns:
+            Información del dispositivo o None si no está disponible
+        """
+        # Implementación por defecto - información básica
+        return {
+            'ip': self.config.ip,
+            'protocol': self.__class__.__name__,
+            'status': self.state.value,
+            'connected': self.is_connected
+        }
+    
+    async def ptz_control(self, action: str, speed: int = 3) -> bool:
+        """
+        Controla movimientos PTZ de la cámara.
+        
+        Args:
+            action: Acción PTZ ('up', 'down', 'left', 'right', 'zoom_in', 'zoom_out', 'stop')
+            speed: Velocidad del movimiento (1-8)
+            
+        Returns:
+            True si el comando fue enviado exitosamente
+        """
+        # Implementación por defecto - no soportado
+        self.logger.warning(f"PTZ control not supported by {self.__class__.__name__}")
+        return False
+    
+    def get_mjpeg_stream_url(self, channel: int = 0, subtype: int = 0) -> Optional[str]:
+        """
+        Obtiene URL de stream MJPEG.
+        
+        Args:
+            channel: Canal de la cámara
+            subtype: Subtipo de stream
+            
+        Returns:
+            URL del stream MJPEG o None
+        """
+        # Implementación por defecto - no soportado
+        self.logger.warning(f"MJPEG streaming not supported by {self.__class__.__name__}")
+        return None
+    
     def add_frame_callback(self, callback: Callable[[Any], None]):
         """Agrega callback para frames recibidos."""
         self._frame_callbacks.append(callback)
@@ -506,7 +551,6 @@ class ONVIFProtocolHandler(BaseProtocolHandler):
                 self._stream_handle = None
             
             self._set_state(ConnectionState.CONNECTED)
-            self.logger.info("Streaming ONVIF detenido")
             return True
             
         except Exception as e:
@@ -765,150 +809,361 @@ class RTSPProtocolHandler(BaseProtocolHandler):
 
 class ProtocolService:
     """
-    Servicio principal de gestión de protocolos de cámara.
+    Servicio principal para gestión de protocolos de conexión de cámaras.
     
-    Coordina diferentes manejadores de protocolo y proporciona
-    una interfaz unificada para conexiones de cámaras.
+    Proporciona una interfaz unificada para:
+    - Crear conexiones con diferentes protocolos
+    - Detectar protocolos soportados
+    - Gestionar conexiones activas
+    - Obtener información de dispositivos
+    - Testing y diagnóstico
     """
     
     def __init__(self):
         """Inicializa el servicio de protocolos."""
-        self.logger = logging.getLogger("ProtocolService")
+        self.logger = logging.getLogger(self.__class__.__name__)
         
-        # Registro de manejadores de protocolo
-        self._protocol_handlers: Dict[ProtocolType, type] = {
-            ProtocolType.ONVIF: ONVIFProtocolHandler,
-            ProtocolType.RTSP: RTSPProtocolHandler,
-            # TODO: Agregar más protocolos según se implementen
+        # Manejadores de protocolos disponibles
+        self._protocol_handlers = {
+            ProtocolType.ONVIF: self._get_onvif_handler,
+            ProtocolType.RTSP: self._get_rtsp_handler,
+            ProtocolType.AMCREST: self._get_amcrest_handler,
         }
         
-        # Instancias activas
-        self._active_handlers: Dict[str, BaseProtocolHandler] = {}
+        # Conexiones activas
+        self._active_connections: Dict[str, BaseProtocolHandler] = {}
         
+        # Cache para información de dispositivos
+        self._device_info_cache: Dict[str, Dict[str, Any]] = {}
+        
+        self.logger.info("ProtocolService initialized")
+
     def get_supported_protocols(self) -> List[ProtocolType]:
         """Obtiene lista de protocolos soportados."""
-        supported = []
-        
-        for protocol in self._protocol_handlers:
-            if protocol == ProtocolType.ONVIF and not ONVIF_AVAILABLE:
-                continue
-            supported.append(protocol)
-        
-        return supported
-    
+        return list(self._protocol_handlers.keys())
+
     async def detect_protocols(self, config: ConnectionConfig) -> List[ProtocolType]:
         """
-        Detecta protocolos soportados por una cámara.
+        Detecta automáticamente protocolos soportados por una cámara.
         
         Args:
             config: Configuración de conexión
             
         Returns:
-            Lista de protocolos detectados
+            Lista de protocolos soportados
         """
-        detected = []
+        supported_protocols = []
         
-        for protocol in self.get_supported_protocols():
+        for protocol in self._protocol_handlers.keys():
             try:
                 handler = self._create_handler(protocol, config)
                 if await handler.test_connection():
-                    detected.append(protocol)
-                    self.logger.info(f"Protocolo detectado: {protocol.value}")
+                    supported_protocols.append(protocol)
+                    self.logger.info(f"Protocol {protocol.value} detected for {config.ip}")
             except Exception as e:
-                self.logger.debug(f"Error probando {protocol.value}: {str(e)}")
+                self.logger.debug(f"Protocol {protocol.value} not supported: {e}")
         
-        return detected
-    
+        return supported_protocols
+
     async def create_connection(self, camera_id: str, protocol: ProtocolType, 
                               config: ConnectionConfig, 
                               streaming_config: Optional[StreamingConfig] = None) -> Optional[BaseProtocolHandler]:
         """
-        Crea una conexión usando el protocolo especificado.
+        Crea una conexión con la cámara usando el protocolo especificado.
         
         Args:
-            camera_id: ID único de la cámara
+            camera_id: Identificador único de la cámara
             protocol: Protocolo a usar
             config: Configuración de conexión
-            streaming_config: Configuración de streaming
+            streaming_config: Configuración de streaming opcional
             
         Returns:
             Manejador de protocolo conectado o None si falla
         """
-        if protocol not in self._protocol_handlers:
-            self.logger.error(f"Protocolo no soportado: {protocol}")
-            return None
-        
         try:
+            # Verificar si ya existe una conexión activa
+            if camera_id in self._active_connections:
+                existing_handler = self._active_connections[camera_id]
+                if existing_handler.is_connected:
+                    self.logger.info(f"Connection already active for {camera_id}")
+                    return existing_handler
+                else:
+                    # Limpiar conexión anterior
+                    await existing_handler.disconnect()
+                    del self._active_connections[camera_id]
+            
+            # Crear nuevo manejador
             handler = self._create_handler(protocol, config, streaming_config)
             
+            # Intentar conectar
             if await handler.connect():
-                self._active_handlers[camera_id] = handler
-                self.logger.info(f"Conexión {protocol.value} establecida para {camera_id}")
+                self._active_connections[camera_id] = handler
+                self.logger.info(f"Connection established for {camera_id} using {protocol.value}")
                 return handler
             else:
-                self.logger.error(f"Falló conexión {protocol.value} para {camera_id}")
+                self.logger.error(f"Failed to connect {camera_id} using {protocol.value}")
                 return None
                 
         except Exception as e:
-            self.logger.error(f"Error creando conexión {protocol.value}: {str(e)}")
+            self.logger.error(f"Error creating connection for {camera_id}: {e}")
             return None
-    
+
     def _create_handler(self, protocol: ProtocolType, config: ConnectionConfig, 
                        streaming_config: Optional[StreamingConfig] = None) -> BaseProtocolHandler:
-        """Crea instancia de manejador de protocolo."""
-        handler_class = self._protocol_handlers[protocol]
+        """
+        Crea un manejador de protocolo específico.
+        
+        Args:
+            protocol: Protocolo a usar
+            config: Configuración de conexión
+            streaming_config: Configuración de streaming opcional
+            
+        Returns:
+            Manejador de protocolo creado
+        """
+        if protocol not in self._protocol_handlers:
+            raise ValueError(f"Protocol {protocol.value} not supported")
+        
+        handler_class = self._protocol_handlers[protocol]()
         return handler_class(config, streaming_config)
-    
+
     async def disconnect_camera(self, camera_id: str) -> bool:
         """
         Desconecta una cámara específica.
         
         Args:
-            camera_id: ID de la cámara
+            camera_id: Identificador de la cámara
             
         Returns:
-            True si se desconectó exitosamente
+            True si se desconectó correctamente
         """
-        if camera_id not in self._active_handlers:
-            return True
-        
-        try:
-            handler = self._active_handlers[camera_id]
-            success = await handler.disconnect()
-            
-            if success:
-                del self._active_handlers[camera_id]
-                self.logger.info(f"Cámara {camera_id} desconectada")
-            
-            return success
-            
-        except Exception as e:
-            self.logger.error(f"Error desconectando {camera_id}: {str(e)}")
-            return False
-    
+        if camera_id in self._active_connections:
+            handler = self._active_connections[camera_id]
+            try:
+                success = await handler.disconnect()
+                if success:
+                    del self._active_connections[camera_id]
+                    self.logger.info(f"Camera {camera_id} disconnected")
+                return success
+            except Exception as e:
+                self.logger.error(f"Error disconnecting {camera_id}: {e}")
+                return False
+        return True
+
     def get_handler(self, camera_id: str) -> Optional[BaseProtocolHandler]:
-        """Obtiene el manejador activo para una cámara."""
-        return self._active_handlers.get(camera_id)
-    
+        """Obtiene el manejador de una cámara específica."""
+        return self._active_connections.get(camera_id)
+
     def get_active_connections(self) -> Dict[str, BaseProtocolHandler]:
         """Obtiene todas las conexiones activas."""
-        return self._active_handlers.copy()
-    
+        return self._active_connections.copy()
+
     async def cleanup(self):
         """Limpia todas las conexiones activas."""
-        for camera_id in list(self._active_handlers.keys()):
+        for camera_id in list(self._active_connections.keys()):
             await self.disconnect_camera(camera_id)
+        self._device_info_cache.clear()
+
+    # ==========================================
+    # MÉTODOS NUEVOS PARA COMPATIBILIDAD COMPLETA
+    # ==========================================
+
+    async def get_device_info(self, camera_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene información detallada del dispositivo.
         
-        self.logger.info("ProtocolService limpio")
+        Args:
+            camera_id: Identificador de la cámara
+            
+        Returns:
+            Información del dispositivo o None si no está disponible
+        """
+        # Verificar cache primero
+        if camera_id in self._device_info_cache:
+            return self._device_info_cache[camera_id].copy()
+        
+        handler = self.get_handler(camera_id)
+        if not handler:
+            self.logger.warning(f"No active handler for {camera_id}")
+            return None
+        
+        try:
+            # Intentar obtener información del dispositivo
+            if hasattr(handler, 'get_device_info'):
+                device_info = await handler.get_device_info()
+                if device_info:
+                    # Cache para futuras consultas
+                    self._device_info_cache[camera_id] = device_info.copy()
+                    return device_info
+            
+            # Fallback: información básica de conexión
+            return {
+                'ip': handler.config.ip,
+                'protocol': handler.__class__.__name__,
+                'status': handler.state.value,
+                'connected': handler.is_connected
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error getting device info for {camera_id}: {e}")
+            return None
 
+    def create_test_connection(self, ip: str, protocol: str, credentials: dict) -> Optional[BaseProtocolHandler]:
+        """
+        Método de conveniencia para testing rápido.
+        
+        Args:
+            ip: Dirección IP de la cámara
+            protocol: Protocolo a usar ('onvif', 'rtsp', 'amcrest')
+            credentials: Credenciales {'username': 'admin', 'password': 'password'}
+            
+        Returns:
+            Manejador de protocolo o None si falla
+        """
+        try:
+            # Convertir string a ProtocolType
+            protocol_type = ProtocolType(protocol.lower())
+            
+            # Crear configuración
+            config = ConnectionConfig(
+                ip=ip,
+                username=credentials.get('username', 'admin'),
+                password=credentials.get('password', '')
+            )
+            
+            # Crear handler sin conectar
+            handler = self._create_handler(protocol_type, config)
+            
+            self.logger.info(f"Test connection created for {ip} using {protocol}")
+            return handler
+            
+        except Exception as e:
+            self.logger.error(f"Error creating test connection for {ip}: {e}")
+            return None
 
-# Factory function singleton
-_protocol_service_instance: Optional[ProtocolService] = None
+    async def test_connection_async(self, ip: str, protocol: str, credentials: dict) -> bool:
+        """
+        Prueba conexión de forma asíncrona.
+        
+        Args:
+            ip: Dirección IP de la cámara
+            protocol: Protocolo a usar
+            credentials: Credenciales
+            
+        Returns:
+            True si la conexión es posible
+        """
+        try:
+            handler = self.create_test_connection(ip, protocol, credentials)
+            if handler:
+                return await handler.test_connection()
+            return False
+        except Exception as e:
+            self.logger.error(f"Error testing connection for {ip}: {e}")
+            return False
 
+    async def get_device_info_async(self, ip: str, protocol: str, credentials: dict) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene información del dispositivo de forma asíncrona.
+        
+        Args:
+            ip: Dirección IP de la cámara
+            protocol: Protocolo a usar
+            credentials: Credenciales
+            
+        Returns:
+            Información del dispositivo o None
+        """
+        try:
+            handler = self.create_test_connection(ip, protocol, credentials)
+            if handler and await handler.connect():
+                device_info = await handler.get_device_info()
+                await handler.disconnect()
+                return device_info
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting device info for {ip}: {e}")
+            return None
 
-def get_protocol_service() -> ProtocolService:
-    """Obtiene la instancia singleton del ProtocolService."""
-    global _protocol_service_instance
-    if _protocol_service_instance is None:
-        _protocol_service_instance = ProtocolService()
-    return _protocol_service_instance 
+    async def ptz_control(self, camera_id: str, action: str, speed: int = 3) -> bool:
+        """
+        Controla movimientos PTZ de la cámara.
+        
+        Args:
+            camera_id: Identificador de la cámara
+            action: Acción PTZ ('up', 'down', 'left', 'right', 'zoom_in', 'zoom_out', 'stop')
+            speed: Velocidad del movimiento (1-8)
+            
+        Returns:
+            True si el comando fue enviado exitosamente
+        """
+        handler = self.get_handler(camera_id)
+        if not handler:
+            self.logger.warning(f"No active handler for {camera_id}")
+            return False
+        
+        try:
+            if hasattr(handler, 'ptz_control'):
+                return await handler.ptz_control(action, speed)
+            else:
+                self.logger.warning(f"PTZ control not supported for {camera_id}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error in PTZ control for {camera_id}: {e}")
+            return False
+
+    def get_mjpeg_stream_url(self, camera_id: str, channel: int = 0, subtype: int = 0) -> Optional[str]:
+        """
+        Obtiene URL de stream MJPEG.
+        
+        Args:
+            camera_id: Identificador de la cámara
+            channel: Canal de la cámara
+            subtype: Subtipo de stream
+            
+        Returns:
+            URL del stream MJPEG o None
+        """
+        handler = self.get_handler(camera_id)
+        if not handler:
+            self.logger.warning(f"No active handler for {camera_id}")
+            return None
+        
+        try:
+            if hasattr(handler, 'get_mjpeg_stream_url'):
+                return handler.get_mjpeg_stream_url(channel, subtype)
+            else:
+                self.logger.warning(f"MJPEG streaming not supported for {camera_id}")
+                return None
+        except Exception as e:
+            self.logger.error(f"Error getting MJPEG URL for {camera_id}: {e}")
+            return None
+
+    def _detect_brand_from_ip(self, ip: str) -> str:
+        """
+        Detecta marca de cámara basado en IP o configuración.
+        
+        Args:
+            ip: Dirección IP de la cámara
+            
+        Returns:
+            Marca detectada ('dahua', 'tplink', 'steren', 'generic')
+        """
+        # Lógica simple de detección - se puede mejorar
+        # Por ahora retornar 'dahua' como default
+        return "dahua"
+
+    def _get_onvif_handler(self):
+        """Obtiene manejador ONVIF."""
+        from .protocol_handlers.onvif_handler import ONVIFHandler
+        return ONVIFHandler
+
+    def _get_rtsp_handler(self):
+        """Obtiene manejador RTSP."""
+        from .protocol_handlers.rtsp_handler import RTSPHandler
+        return RTSPHandler
+
+    def _get_amcrest_handler(self):
+        """Obtiene manejador Amcrest."""
+        from .protocol_handlers.amcrest_handler import AmcrestHandler
+        return AmcrestHandler 

@@ -17,13 +17,24 @@ import threading
 import time
 import logging
 import ipaddress
+import asyncio
+from typing import Optional
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Agregar el directorio src al path
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
 
-from utils.config import get_config
+# Imports con manejo de errores
+try:
+    from utils.config import get_config
+    from services.protocol_service import ProtocolService
+except ImportError as e:
+    print(f"❌ Error importando módulos: {e}")
+    print("💡 Asegúrate de ejecutar desde el directorio raíz del proyecto")
+    print("   cd universal-camera-viewer")
+    print("   python examples/diagnostics/camera_detector.py")
+    sys.exit(1)
 
 
 def setup_logging():
@@ -42,7 +53,7 @@ def setup_logging():
     
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler(log_file, encoding='utf-8')
@@ -51,6 +62,8 @@ def setup_logging():
     )
     
     print(f"📝 Logs guardándose en: {log_file}")
+    print(f"📊 Nivel de logging: INFO")
+    print(f"🔄 Formato: timestamp - módulo - nivel - mensaje")
 
 
 def scan_port(ip: str, port: int, timeout: float = 2.0) -> bool:
@@ -65,13 +78,23 @@ def scan_port(ip: str, port: int, timeout: float = 2.0) -> bool:
     Returns:
         True si el puerto está abierto
     """
+    logger = logging.getLogger(__name__)
+    
     try:
+        start_time = time.time()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout)
         result = sock.connect_ex((ip, port))
         sock.close()
-        return result == 0
-    except:
+        
+        response_time = (time.time() - start_time) * 1000  # en milisegundos
+        is_open = result == 0
+        
+        logger.debug(f"Puerto {port} en {ip}: {'ABIERTO' if is_open else 'CERRADO'} (response: {response_time:.1f}ms)")
+        
+        return is_open
+    except Exception as e:
+        logger.debug(f"Error escaneando puerto {port} en {ip}: {e}")
         return False
 
 
@@ -86,6 +109,8 @@ def scan_host(ip: str, ports: list) -> dict:
     Returns:
         Diccionario con resultados del escaneo
     """
+    logger = logging.getLogger(__name__)
+    
     result = {
         'ip': ip,
         'open_ports': [],
@@ -93,9 +118,24 @@ def scan_host(ip: str, ports: list) -> dict:
         'protocols': []
     }
     
+    start_time = time.time()
+    logger.info(f"🔍 Iniciando escaneo de IP {ip} - Puertos a verificar: {ports}")
+    print(f"🔍 Escaneando IP {ip} - Puertos: {ports}")
+    
     for port in ports:
+        logger.info(f"   Probando puerto {port} en {ip}...")
         if scan_port(ip, port, timeout=1.5):
             result['open_ports'].append(port)
+            logger.info(f"   ✅ Puerto {port} ABIERTO en {ip}")
+            print(f"   ✅ Puerto {port} ABIERTO")
+        else:
+            logger.info(f"   ❌ Puerto {port} CERRADO en {ip}")
+    
+    scan_duration = (time.time() - start_time) * 1000  # en milisegundos
+    logger.info(f"Resultado escaneo {ip}: {len(result['open_ports'])} puertos abiertos de {len(ports)} escaneados (duración: {scan_duration:.1f}ms)")
+    print(f"📊 Resultado: {len(result['open_ports'])} puertos abiertos de {len(ports)} escaneados")
+    logger.info(f"Puertos abiertos en {ip}: {result['open_ports']}")
+    logger.info(f"Puertos cerrados en {ip}: {[p for p in ports if p not in result['open_ports']]}")
     
     # Analizar puertos para determinar si es una cámara
     camera_indicators = []
@@ -104,22 +144,33 @@ def scan_host(ip: str, ports: list) -> dict:
         camera_indicators.append('HTTP/ONVIF')
         result['protocols'].append('ONVIF')
         result['protocols'].append('HTTP')
+        logger.info(f"Puerto 80 detectado en {ip} - Protocolos: HTTP/ONVIF")
     
     if 554 in result['open_ports']:
         camera_indicators.append('RTSP')
         result['protocols'].append('RTSP')
+        logger.info(f"Puerto 554 detectado en {ip} - Protocolo: RTSP")
     
     if 37777 in result['open_ports']:
         camera_indicators.append('Dahua SDK')
         result['protocols'].append('SDK')
+        logger.info(f"Puerto 37777 detectado en {ip} - Protocolo: Dahua SDK")
     
     if 8000 in result['open_ports']:
         camera_indicators.append('HTTP Alt')
+        logger.info(f"Puerto 8000 detectado en {ip} - Protocolo: HTTP Alt")
+    
+    if 443 in result['open_ports']:
+        logger.info(f"Puerto 443 detectado en {ip} - Protocolo: HTTPS")
     
     # Considerar dispositivo como cámara si tiene múltiples puertos típicos
     if len(result['open_ports']) >= 2 and any(p in result['open_ports'] for p in [80, 554, 37777]):
         result['likely_camera'] = True
+        logger.info(f"Dispositivo en {ip} clasificado como CÁMARA - Indicadores: {camera_indicators}")
+    else:
+        logger.info(f"Dispositivo en {ip} NO clasificado como cámara - Puertos insuficientes")
     
+    logger.info(f"Análisis de protocolos para {ip}: {result['protocols']}")
     return result
 
 
@@ -137,11 +188,14 @@ def scan_network_range(network: str, ports: list, max_workers: int = 50) -> list
     """
     logger = logging.getLogger(__name__)
     
+    start_time = time.time()
     print(f"🔍 Escaneando red {network}...")
-    print(f"   Puertos: {ports}")
-    print(f"   Hilos: {max_workers}")
+    print(f"   Puertos a escanear: {ports}")
+    print(f"   Hilos concurrentes: {max_workers}")
     
     logger.info(f"Iniciando escaneo de red {network} con puertos {ports} usando {max_workers} hilos")
+    logger.info(f"Puertos específicos a verificar: {ports}")
+    logger.info(f"Configuración de escaneo: timeout=1.5s por puerto, max_workers={max_workers}")
     
     try:
         network_obj = ipaddress.IPv4Network(network, strict=False)
@@ -149,13 +203,17 @@ def scan_network_range(network: str, ports: list, max_workers: int = 50) -> list
         
         if len(hosts) > 254:
             print(f"⚠️ Red muy grande ({len(hosts)} hosts), limitando a /24")
+            logger.warning(f"Red muy grande ({len(hosts)} hosts), limitando a /24")
             # Limitar a subnet /24 de la IP actual
             base_ip = str(hosts[0]).rsplit('.', 1)[0]
             network = f"{base_ip}.0/24"
             network_obj = ipaddress.IPv4Network(network, strict=False)
             hosts = list(network_obj.hosts())
+            logger.info(f"Red limitada a: {network} ({len(hosts)} hosts)")
         
         print(f"   Escaneando {len(hosts)} hosts...")
+        logger.info(f"Rango de escaneo: {len(hosts)} hosts en {network}")
+        logger.info(f"Primera IP: {hosts[0]}, Última IP: {hosts[-1]}")
         
         devices = []
         completed = 0
@@ -177,17 +235,27 @@ def scan_network_range(network: str, ports: list, max_workers: int = 50) -> list
                 
                 if result['open_ports']:
                     devices.append(result)
-                    logger.info(f"Dispositivo encontrado: {result['ip']} - Puertos: {result['open_ports']}")
+                    logger.info(f"Dispositivo encontrado: {result['ip']} - Puertos: {result['open_ports']} - Protocolos: {result.get('protocols', [])}")
         
+        scan_duration = (time.time() - start_time) * 1000  # en milisegundos
         logger.info(f"Escaneo de red completado: {len(devices)} dispositivos encontrados de {len(hosts)} hosts escaneados")
+        logger.info(f"Duración total del escaneo: {scan_duration:.1f}ms ({scan_duration/1000:.1f}s)")
+        logger.info(f"Tiempo promedio por host: {scan_duration/len(hosts):.1f}ms")
+        
+        if devices:
+            logger.info(f"Dispositivos encontrados: {[d['ip'] for d in devices]}")
+            cameras = [d for d in devices if d.get('likely_camera', False)]
+            logger.info(f"Cámaras detectadas: {len(cameras)} de {len(devices)} dispositivos")
+        
         return devices
         
     except Exception as e:
         print(f"❌ Error escaneando red: {e}")
+        logger.error(f"Error durante escaneo de red {network}: {e}", exc_info=True)
         return []
 
 
-def test_camera_protocols(ip: str, credentials: dict = None) -> dict:
+def test_camera_protocols(ip: str, credentials: Optional[dict] = None) -> dict:
     """
     Prueba qué protocolos soporta una cámara específica.
     
@@ -198,7 +266,10 @@ def test_camera_protocols(ip: str, credentials: dict = None) -> dict:
     Returns:
         Diccionario con protocolos soportados
     """
+    logger = logging.getLogger(__name__)
+    
     print(f"\n🧪 Probando protocolos en {ip}...")
+    logger.info(f"Iniciando tests de protocolos para {ip}")
     
     result = {
         'ip': ip,
@@ -211,71 +282,102 @@ def test_camera_protocols(ip: str, credentials: dict = None) -> dict:
     
     if not credentials:
         credentials = {'username': 'admin', 'password': 'admin'}
+        logger.info(f"Usando credenciales por defecto para {ip}: admin/admin")
+    else:
+        logger.info(f"Usando credenciales personalizadas para {ip}: {credentials['username']}")
     
     try:
-        from connections import ConnectionFactory
+        # Usar nueva API de ProtocolService
+        protocol_service = ProtocolService()
         
         # Test ONVIF
         try:
             print("   Probando ONVIF...")
-            onvif_conn = ConnectionFactory.create_connection(
-                "onvif", ip, credentials
-            )
-            if onvif_conn.connect():
+            logger.info(f"Test ONVIF iniciado para {ip}")
+            start_time = time.time()
+            
+            success = asyncio.run(protocol_service.test_connection_async(ip, "onvif", credentials))
+            onvif_duration = (time.time() - start_time) * 1000
+            
+            if success:
                 result['onvif'] = True
                 result['details']['onvif'] = "Funcional"
                 print("   ✅ ONVIF: Funcional")
-                onvif_conn.disconnect()
+                logger.info(f"ONVIF exitoso en {ip} (duración: {onvif_duration:.1f}ms)")
+                
+                # Obtener información del dispositivo
+                logger.info(f"Obteniendo información ONVIF de {ip}")
+                device_info = asyncio.run(protocol_service.get_device_info_async(ip, "onvif", credentials))
+                if device_info:
+                    result['details']['onvif_info'] = device_info
+                    logger.info(f"Información ONVIF obtenida de {ip}: {len(device_info)} campos")
             else:
                 result['details']['onvif'] = "Conexión falló"
                 print("   ❌ ONVIF: Conexión falló")
+                logger.warning(f"ONVIF falló en {ip} (duración: {onvif_duration:.1f}ms)")
         except Exception as e:
             result['details']['onvif'] = f"Error: {str(e)[:50]}"
             print(f"   ❌ ONVIF: Error - {str(e)[:50]}")
+            logger.error(f"Error en test ONVIF para {ip}: {e}")
         
         # Test RTSP
         try:
             print("   Probando RTSP...")
-            rtsp_conn = ConnectionFactory.create_connection(
-                "rtsp", ip, credentials
-            )
-            if rtsp_conn.connect():
+            logger.info(f"Test RTSP iniciado para {ip}")
+            start_time = time.time()
+            
+            success = asyncio.run(protocol_service.test_connection_async(ip, "rtsp", credentials))
+            rtsp_duration = (time.time() - start_time) * 1000
+            
+            if success:
                 result['rtsp'] = True
                 result['details']['rtsp'] = "Funcional"
                 print("   ✅ RTSP: Funcional")
-                rtsp_conn.disconnect()
+                logger.info(f"RTSP exitoso en {ip} (duración: {rtsp_duration:.1f}ms)")
             else:
                 result['details']['rtsp'] = "Conexión falló (puede necesitar DMSS)"
                 print("   ⚠️ RTSP: Falló (puede necesitar workflow DMSS)")
+                logger.warning(f"RTSP falló en {ip} (duración: {rtsp_duration:.1f}ms) - puede necesitar workflow DMSS")
         except Exception as e:
             result['details']['rtsp'] = f"Error: {str(e)[:50]}"
             print(f"   ❌ RTSP: Error - {str(e)[:50]}")
+            logger.error(f"Error en test RTSP para {ip}: {e}")
         
         # Test HTTP/Amcrest
         try:
             print("   Probando HTTP/Amcrest...")
-            http_conn = ConnectionFactory.create_connection(
-                "amcrest", ip, credentials
-            )
-            if http_conn.connect():
+            logger.info(f"Test HTTP/Amcrest iniciado para {ip}")
+            start_time = time.time()
+            
+            success = asyncio.run(protocol_service.test_connection_async(ip, "amcrest", credentials))
+            http_duration = (time.time() - start_time) * 1000
+            
+            if success:
                 result['http'] = True
                 result['details']['http'] = "Funcional"
                 print("   ✅ HTTP: Funcional")
-                http_conn.disconnect()
+                logger.info(f"HTTP/Amcrest exitoso en {ip} (duración: {http_duration:.1f}ms)")
             else:
                 result['details']['http'] = "No compatible (esperado para Hero-K51H)"
                 print("   ⚠️ HTTP: No compatible (esperado)")
+                logger.info(f"HTTP/Amcrest no compatible en {ip} (duración: {http_duration:.1f}ms) - esperado para Hero-K51H")
         except Exception as e:
             result['details']['http'] = f"No compatible: {str(e)[:50]}"
             print(f"   ❌ HTTP: No compatible - {str(e)[:50]}")
+            logger.error(f"Error en test HTTP/Amcrest para {ip}: {e}")
         
     except ImportError:
         print("   ⚠️ Módulos de conexión no disponibles para test completo")
+        logger.warning(f"Módulos de conexión no disponibles para tests completos en {ip}")
+    
+    # Resumen de tests
+    successful_protocols = [p for p, v in result.items() if p in ['onvif', 'rtsp', 'http'] and v]
+    logger.info(f"Tests de protocolos completados para {ip}: {len(successful_protocols)}/{3} exitosos - {successful_protocols}")
     
     return result
 
 
-def detect_camera_model(ip: str, credentials: dict = None) -> dict:
+def detect_camera_model(ip: str, credentials: Optional[dict] = None) -> dict:
     """
     Intenta detectar el modelo específico de la cámara.
     
@@ -286,7 +388,10 @@ def detect_camera_model(ip: str, credentials: dict = None) -> dict:
     Returns:
         Información del modelo detectado
     """
+    logger = logging.getLogger(__name__)
+    
     print(f"\n🔎 Detectando modelo de cámara en {ip}...")
+    logger.info(f"Iniciando detección de modelo para {ip}")
     
     result = {
         'ip': ip,
@@ -298,42 +403,54 @@ def detect_camera_model(ip: str, credentials: dict = None) -> dict:
     
     if not credentials:
         credentials = {'username': 'admin', 'password': 'admin'}
+        logger.info(f"Usando credenciales por defecto para detección de modelo en {ip}")
     
     try:
-        from connections import ONVIFConnection
+        # Usar nueva API de ProtocolService
+        protocol_service = ProtocolService()
         
-        conn = ONVIFConnection(ip, credentials)
-        if conn.connect():
-            device_info = conn.get_device_info()
+        # Intentar obtener información vía ONVIF primero
+        logger.info(f"Obteniendo información de dispositivo ONVIF de {ip}")
+        device_info = asyncio.run(protocol_service.get_device_info_async(ip, "onvif", credentials))
+        
+        if device_info:
+            logger.info(f"Información ONVIF obtenida de {ip}: {len(device_info)} campos")
+            logger.debug(f"Campos ONVIF disponibles: {list(device_info.keys())}")
             
-            if device_info:
-                # Extraer información del dispositivo
-                for key, value in device_info.items():
-                    key_lower = key.lower()
-                    value_str = str(value).lower()
-                    
-                    if 'model' in key_lower or 'device' in key_lower:
-                        result['model'] = str(value)
-                        if 'hero-k51h' in value_str or 'hero_k51h' in value_str:
-                            result['hero_k51h'] = True
-                    
-                    elif 'manufacturer' in key_lower or 'vendor' in key_lower:
-                        result['manufacturer'] = str(value)
-                    
-                    elif 'firmware' in key_lower or 'version' in key_lower:
-                        result['firmware'] = str(value)
+            # Extraer información del dispositivo
+            for key, value in device_info.items():
+                key_lower = key.lower()
+                value_str = str(value).lower()
                 
-                print(f"   Modelo: {result['model']}")
-                print(f"   Fabricante: {result['manufacturer']}")
-                print(f"   Firmware: {result['firmware']}")
+                if 'model' in key_lower or 'device' in key_lower:
+                    result['model'] = str(value)
+                    logger.info(f"Modelo detectado en {ip}: {value}")
+                    if 'hero-k51h' in value_str or 'hero_k51h' in value_str:
+                        result['hero_k51h'] = True
+                        logger.info(f"🎯 Hero-K51H confirmado en {ip}")
                 
-                if result['hero_k51h']:
-                    print("   🎯 ¡Dahua Hero-K51H detectado!")
+                elif 'manufacturer' in key_lower or 'vendor' in key_lower:
+                    result['manufacturer'] = str(value)
+                    logger.info(f"Fabricante detectado en {ip}: {value}")
                 
-            conn.disconnect()
+                elif 'firmware' in key_lower or 'version' in key_lower:
+                    result['firmware'] = str(value)
+                    logger.info(f"Firmware detectado en {ip}: {value}")
+            
+            print(f"   Modelo: {result['model']}")
+            print(f"   Fabricante: {result['manufacturer']}")
+            print(f"   Firmware: {result['firmware']}")
+            
+            if result['hero_k51h']:
+                print("   🎯 ¡Dahua Hero-K51H detectado!")
+            
+            logger.info(f"Detección de modelo completada para {ip}: {result['model']} ({result['manufacturer']})")
+        else:
+            logger.warning(f"No se pudo obtener información ONVIF de {ip}")
             
     except Exception as e:
         print(f"   ❌ Error detectando modelo: {str(e)}")
+        logger.error(f"Error detectando modelo en {ip}: {e}")
     
     return result
 
@@ -431,6 +548,8 @@ def main():
     setup_logging()
     logger = logging.getLogger(__name__)
     
+    start_time = time.time()
+    
     print("🕵️ DETECTOR Y DIAGNÓSTICO DE CÁMARAS DAHUA")
     print("="*60)
     print("Herramienta de diagnóstico para detectar y analizar cámaras en red")
@@ -439,26 +558,40 @@ def main():
     # Log de inicio
     logger.info("=== INICIANDO DETECTOR DE CÁMARAS DAHUA ===")
     logger.info("Herramienta de diagnóstico para detectar y analizar cámaras en red")
+    logger.info(f"Versión del detector: 2.0 - Logging mejorado")
+    logger.info(f"Directorio de trabajo: {Path.cwd()}")
+    logger.info(f"Python version: {sys.version}")
     
     # Obtener configuración actual
     try:
         config = get_config()
-        current_ip = config.camera_ip
-        credentials = {
-            'username': config.camera_user,
-            'password': config.camera_password
-        }
-        print(f"📍 Configuración actual:")
-        print(f"   IP configurada: {current_ip}")
-        print(f"   Usuario: {config.camera_user}")
+        cameras_config = config.get_cameras_config()
         
-        # Log configuración
-        logger.info(f"Configuración cargada - IP: {current_ip}, Usuario: {config.camera_user}")
-    except:
+        if cameras_config:
+            # Usar la primera cámara configurada
+            first_camera = cameras_config[0]
+            current_ip = first_camera['ip']
+            credentials = {
+                'username': first_camera['username'],
+                'password': first_camera['password']
+            }
+            print(f"📍 Configuración actual:")
+            print(f"   IP configurada: {current_ip}")
+            print(f"   Usuario: {first_camera['username']}")
+            print(f"   Marca: {first_camera['brand']}")
+            
+            # Log configuración
+            logger.info(f"Configuración cargada - IP: {current_ip}, Usuario: {first_camera['username']}")
+        else:
+            current_ip = None
+            credentials = {'username': 'admin', 'password': 'admin'}
+            print("⚠️ No hay cámaras configuradas, usando credenciales por defecto")
+            logger.warning("No hay cámaras configuradas, usando credenciales por defecto")
+    except Exception as e:
         current_ip = None
         credentials = {'username': 'admin', 'password': 'admin'}
-        print("⚠️ No hay configuración válida, usando credenciales por defecto")
-        logger.warning("No hay configuración válida, usando credenciales por defecto")
+        print(f"⚠️ Error cargando configuración: {e}, usando credenciales por defecto")
+        logger.warning(f"Error cargando configuración: {e}, usando credenciales por defecto")
     
     # Opciones de escaneo
     print(f"\n🔍 OPCIONES DE DIAGNÓSTICO:")
@@ -506,6 +639,11 @@ def main():
                 logger.info(f"Analizando IP específica: {ip}")
                 # Escaneo de puertos
                 ports = [80, 554, 37777, 8000, 443]
+                logger.info(f"Puertos a escanear en {ip}: {ports}")
+                print(f"\n🔍 ESCANEO DE PUERTOS EN {ip}")
+                print(f"Puertos a verificar: {ports}")
+                print(f"Puertos típicos de cámaras: 80 (HTTP/ONVIF), 554 (RTSP), 37777 (Dahua SDK), 8000 (HTTP Alt), 443 (HTTPS)")
+                
                 device = scan_host(ip, ports)
                 
                 if device['open_ports']:
@@ -523,6 +661,7 @@ def main():
                 else:
                     print(f"❌ No hay puertos abiertos en {ip}")
                     logger.warning(f"No hay puertos abiertos en {ip}")
+                    logger.info(f"Todos los puertos escaneados en {ip} están cerrados: {ports}")
         
         elif choice == "3" and current_ip:
             # Analizar IP configurada
@@ -530,6 +669,10 @@ def main():
             
             # Escaneo de puertos
             ports = [80, 554, 37777, 8000, 443]
+            logger.info(f"Analizando IP configurada {current_ip} - Puertos a escanear: {ports}")
+            print(f"Puertos a verificar: {ports}")
+            print(f"Puertos típicos de cámaras: 80 (HTTP/ONVIF), 554 (RTSP), 37777 (Dahua SDK), 8000 (HTTP Alt), 443 (HTTPS)")
+            
             device = scan_host(current_ip, ports)
             
             if device['open_ports']:
@@ -569,12 +712,17 @@ def main():
         print(f"\n❌ Error durante diagnóstico: {e}")
         logger.error(f"Error durante diagnóstico: {e}")
     
+    total_duration = time.time() - start_time
+    
     print("\n✅ Diagnóstico completado")
+    print(f"⏱️ Duración total: {total_duration:.1f} segundos")
     print("📝 Logs guardados en: examples/logs/camera_detector.log")
     print("="*60)
     
     logger.info("=== DIAGNÓSTICO COMPLETADO ===")
+    logger.info(f"Duración total del diagnóstico: {total_duration:.1f}s")
     logger.info("Logs guardados en: examples/logs/camera_detector.log")
+    logger.info("=== FIN DEL DETECTOR ===")
 
 
 if __name__ == "__main__":
