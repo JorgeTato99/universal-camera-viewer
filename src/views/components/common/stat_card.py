@@ -13,6 +13,15 @@ Componente para mostrar métricas y estadísticas de forma visual:
 
 import flet as ft
 from typing import Optional, Union
+from ...design_system import (
+    MaterialColors as MD3,
+    MaterialElevation,
+    create_semantic_color_scheme,
+    create_text,
+    BorderRadius,
+    Spacing,
+    Elevation
+)
 
 
 class StatCard(ft.Container):
@@ -58,55 +67,17 @@ class StatCard(ft.Container):
         
         # Configurar propiedades del container
         self.width = width or 280
-        self.padding = ft.padding.all(20)
-        self.bgcolor = ft.Colors.SURFACE
-        self.border_radius = 16
-        self.border = ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
+        self.padding = ft.padding.all(Spacing.EXTRA_LARGE)
+        self.bgcolor = MD3.SURFACE
+        self.border_radius = BorderRadius.LARGE
+        self.border = ft.border.all(1, MD3.OUTLINE_VARIANT)
         
         # Sombra Material 3
-        self.shadow = ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=6,
-            color=ft.Colors.with_opacity(0.10, ft.Colors.SHADOW),
-            offset=ft.Offset(0, 2)
-        )
+        self.shadow = MaterialElevation.create_shadow(Elevation.LEVEL_1)
     
     def _get_color_scheme(self) -> dict:
         """Obtiene colores según el esquema especificado."""
-        schemes = {
-            "primary": {
-                "main": ft.Colors.PRIMARY,
-                "container": ft.Colors.PRIMARY_CONTAINER,
-                "on_container": ft.Colors.ON_PRIMARY_CONTAINER
-            },
-            "secondary": {
-                "main": ft.Colors.SECONDARY,
-                "container": ft.Colors.SECONDARY_CONTAINER,
-                "on_container": ft.Colors.ON_SECONDARY_CONTAINER
-            },
-            "tertiary": {
-                "main": ft.Colors.TERTIARY,
-                "container": ft.Colors.TERTIARY_CONTAINER,
-                "on_container": ft.Colors.ON_TERTIARY_CONTAINER
-            },
-            "success": {
-                "main": ft.Colors.GREEN_600,
-                "container": ft.Colors.GREEN_100,
-                "on_container": ft.Colors.GREEN_800
-            },
-            "warning": {
-                "main": ft.Colors.ORANGE_600,
-                "container": ft.Colors.ORANGE_100,
-                "on_container": ft.Colors.ORANGE_800
-            },
-            "error": {
-                "main": ft.Colors.RED_600,
-                "container": ft.Colors.RED_100,
-                "on_container": ft.Colors.RED_800
-            }
-        }
-        
-        return schemes.get(self.color_scheme, schemes["primary"])
+        return create_semantic_color_scheme(self.color_scheme)
     
     def _build_card_content(self, colors: dict) -> ft.Column:
         """Construye el contenido interno del card."""
@@ -120,51 +91,44 @@ class StatCard(ft.Container):
                     size=24
                 ),
                 bgcolor=colors["container"],
-                border_radius=12,
-                padding=ft.padding.all(12),
-                shadow=ft.BoxShadow(
-                    spread_radius=0,
-                    blur_radius=2,
-                    color=ft.Colors.with_opacity(0.15, colors["main"]),
-                    offset=ft.Offset(0, 1)
-                )
+                border_radius=BorderRadius.MEDIUM,
+                padding=ft.padding.all(Spacing.MEDIUM),
+                shadow=MaterialElevation.create_shadow(Elevation.LEVEL_1)
             ),
             ft.Container(expand=True)  # Spacer para alinear icono a la izquierda
         ])
         
         # Valor principal - prominente
-        value_text = ft.Text(
+        value_text = create_text(
             self.value,
-            size=32,
-            weight=ft.FontWeight.W_700,
-            color=ft.Colors.ON_SURFACE
+            "display_small",
+            MD3.ON_SURFACE
         )
         
         # Título de la estadística
-        title_text = ft.Text(
+        title_text = create_text(
             self.title,
-            size=16,
-            weight=ft.FontWeight.W_500,
-            color=ft.Colors.ON_SURFACE_VARIANT
+            "title_medium",
+            MD3.ON_SURFACE_VARIANT
         )
         
         # Descripción opcional
         content_items = [
             header,
-            ft.Container(height=16),  # Spacing
+            ft.Container(height=Spacing.LARGE),  # Spacing
             value_text,
-            ft.Container(height=4),   # Spacing menor
+            ft.Container(height=Spacing.EXTRA_SMALL),   # Spacing menor
             title_text
         ]
         
         if self.description:
-            description_text = ft.Text(
+            description_text = create_text(
                 self.description,
-                size=12,
-                color=ft.Colors.ON_SURFACE_VARIANT
+                "body_small",
+                MD3.ON_SURFACE_VARIANT
             )
             content_items.extend([
-                ft.Container(height=8),  # Spacing
+                ft.Container(height=Spacing.SMALL),  # Spacing
                 description_text
             ])
         
@@ -215,45 +179,17 @@ class StatCardMini(ft.Container):
         
         # Configurar propiedades del container
         self.width = 140
-        self.padding = ft.padding.all(12)
-        self.bgcolor = ft.Colors.SURFACE
-        self.border_radius = 12
-        self.border = ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
+        self.padding = ft.padding.all(Spacing.MEDIUM)
+        self.bgcolor = MD3.SURFACE
+        self.border_radius = BorderRadius.MEDIUM
+        self.border = ft.border.all(1, MD3.OUTLINE_VARIANT)
         
         # Sombra más sutil
-        self.shadow = ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=3,
-            color=ft.Colors.with_opacity(0.08, ft.Colors.SHADOW),
-            offset=ft.Offset(0, 1)
-        )
+        self.shadow = MaterialElevation.create_shadow(Elevation.LEVEL_1)
     
     def _get_color_scheme(self) -> dict:
         """Obtiene colores según el esquema especificado."""
-        schemes = {
-            "primary": {
-                "main": ft.Colors.PRIMARY,
-                "container": ft.Colors.PRIMARY_CONTAINER,
-                "on_container": ft.Colors.ON_PRIMARY_CONTAINER
-            },
-            "secondary": {
-                "main": ft.Colors.SECONDARY,
-                "container": ft.Colors.SECONDARY_CONTAINER,
-                "on_container": ft.Colors.ON_SECONDARY_CONTAINER
-            },
-            "success": {
-                "main": ft.Colors.GREEN_600,
-                "container": ft.Colors.GREEN_100,
-                "on_container": ft.Colors.GREEN_800
-            },
-            "error": {
-                "main": ft.Colors.RED_600,
-                "container": ft.Colors.RED_100,
-                "on_container": ft.Colors.RED_800
-            }
-        }
-        
-        return schemes.get(self.color_scheme, schemes["primary"])
+        return create_semantic_color_scheme(self.color_scheme)
     
     def _build_mini_content(self, colors: dict) -> ft.Column:
         """Construye contenido compacto del card."""
@@ -269,26 +205,24 @@ class StatCardMini(ft.Container):
         ])
         
         # Valor con menor prominencia
-        value_text = ft.Text(
+        value_text = create_text(
             self.value,
-            size=20,
-            weight=ft.FontWeight.W_600,
-            color=ft.Colors.ON_SURFACE
+            "title_large",
+            MD3.ON_SURFACE
         )
         
         # Título más pequeño
-        title_text = ft.Text(
+        title_text = create_text(
             self.title,
-            size=12,
-            weight=ft.FontWeight.W_400,
-            color=ft.Colors.ON_SURFACE_VARIANT
+            "body_small",
+            MD3.ON_SURFACE_VARIANT
         )
         
         return ft.Column([
             header,
-            ft.Container(height=8),
+            ft.Container(height=Spacing.SMALL),
             value_text,
-            ft.Container(height=2),
+            ft.Container(height=Spacing.EXTRA_SMALL),
             title_text
         ],
         spacing=0,

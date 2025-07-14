@@ -12,6 +12,14 @@ Implementación de botones consistentes con el sistema de diseño:
 
 import flet as ft
 from typing import Optional, Callable
+from ...design_system import (
+    MaterialColors as MD3,
+    MaterialElevation,
+    create_semantic_color_scheme,
+    BorderRadius,
+    Spacing,
+    Elevation
+)
 
 
 class ModernButton(ft.Container):
@@ -60,34 +68,7 @@ class ModernButton(ft.Container):
     
     def _get_color_scheme(self) -> dict:
         """Obtiene colores según el esquema de color especificado."""
-        schemes = {
-            "primary": {
-                "main": ft.Colors.PRIMARY,
-                "on_main": ft.Colors.ON_PRIMARY,
-                "container": ft.Colors.PRIMARY_CONTAINER,
-                "on_container": ft.Colors.ON_PRIMARY_CONTAINER
-            },
-            "secondary": {
-                "main": ft.Colors.SECONDARY,
-                "on_main": ft.Colors.ON_SECONDARY,
-                "container": ft.Colors.SECONDARY_CONTAINER,
-                "on_container": ft.Colors.ON_SECONDARY_CONTAINER
-            },
-            "tertiary": {
-                "main": ft.Colors.TERTIARY,
-                "on_main": ft.Colors.ON_TERTIARY,
-                "container": ft.Colors.TERTIARY_CONTAINER,
-                "on_container": ft.Colors.ON_TERTIARY_CONTAINER
-            },
-            "error": {
-                "main": ft.Colors.ERROR,
-                "on_main": ft.Colors.ON_ERROR,
-                "container": ft.Colors.ERROR_CONTAINER,
-                "on_container": ft.Colors.ON_ERROR_CONTAINER
-            }
-        }
-        
-        return schemes.get(self.color_scheme, schemes["primary"])
+        return create_semantic_color_scheme(self.color_scheme)
     
     def _build_filled_button(self, colors: dict) -> ft.FilledButton:
         """Construye botón filled (principal)."""
@@ -115,8 +96,8 @@ class ModernButton(ft.Container):
                     ft.ControlState.DISABLED: 0
                 },
                 shadow_color=colors["main"],
-                shape=ft.RoundedRectangleBorder(radius=12),
-                padding=ft.padding.symmetric(horizontal=24, vertical=12)
+                shape=ft.RoundedRectangleBorder(radius=BorderRadius.MEDIUM),
+                padding=ft.padding.symmetric(horizontal=Spacing.XXL, vertical=Spacing.MEDIUM)
             )
         )
     
@@ -145,8 +126,8 @@ class ModernButton(ft.Container):
                     ft.ControlState.HOVERED: ft.Colors.with_opacity(0.08, colors["main"]),
                     ft.ControlState.PRESSED: ft.Colors.with_opacity(0.12, colors["main"])
                 },
-                shape=ft.RoundedRectangleBorder(radius=12),
-                padding=ft.padding.symmetric(horizontal=24, vertical=12)
+                shape=ft.RoundedRectangleBorder(radius=BorderRadius.MEDIUM),
+                padding=ft.padding.symmetric(horizontal=Spacing.XXL, vertical=Spacing.MEDIUM)
             )
         )
     
@@ -167,8 +148,8 @@ class ModernButton(ft.Container):
                     ft.ControlState.HOVERED: ft.Colors.with_opacity(0.08, colors["main"]),
                     ft.ControlState.PRESSED: ft.Colors.with_opacity(0.12, colors["main"])
                 },
-                shape=ft.RoundedRectangleBorder(radius=12),
-                padding=ft.padding.symmetric(horizontal=16, vertical=8)
+                shape=ft.RoundedRectangleBorder(radius=BorderRadius.MEDIUM),
+                padding=ft.padding.symmetric(horizontal=Spacing.LARGE, vertical=Spacing.SMALL)
             )
         )
 
@@ -212,25 +193,7 @@ class ModernIconButton(ft.Container):
     
     def _get_color_scheme(self) -> dict:
         """Obtiene colores según el esquema especificado."""
-        schemes = {
-            "primary": {
-                "main": ft.Colors.PRIMARY,
-                "container": ft.Colors.PRIMARY_CONTAINER,
-                "on_container": ft.Colors.ON_PRIMARY_CONTAINER
-            },
-            "secondary": {
-                "main": ft.Colors.SECONDARY,
-                "container": ft.Colors.SECONDARY_CONTAINER,
-                "on_container": ft.Colors.ON_SECONDARY_CONTAINER
-            },
-            "surface": {
-                "main": ft.Colors.ON_SURFACE_VARIANT,
-                "container": ft.Colors.GREY_100,
-                "on_container": ft.Colors.ON_SURFACE
-            }
-        }
-        
-        return schemes.get(self.color_scheme, schemes["primary"])
+        return create_semantic_color_scheme(self.color_scheme)
     
     def _build_standard_icon_button(self, colors: dict) -> ft.IconButton:
         """Construye botón de icono estándar."""
@@ -273,13 +236,8 @@ class ModernIconButton(ft.Container):
                 )
             ),
             bgcolor=colors["container"],
-            border_radius=20,
-            shadow=ft.BoxShadow(
-                spread_radius=0,
-                blur_radius=2,
-                color=ft.Colors.with_opacity(0.15, colors["main"]),
-                offset=ft.Offset(0, 1)
-            )
+            border_radius=BorderRadius.EXTRA_LARGE,
+            shadow=MaterialElevation.create_shadow(Elevation.LEVEL_1)
         )
     
     def _build_outlined_icon_button(self, colors: dict) -> ft.Container:
@@ -305,5 +263,5 @@ class ModernIconButton(ft.Container):
                 )
             ),
             border=ft.border.all(1, colors["main"]),
-            border_radius=20
+            border_radius=BorderRadius.EXTRA_LARGE
         ) 
