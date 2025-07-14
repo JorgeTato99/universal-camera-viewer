@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 Important: Project Structure Changed in v0.8.0
+
+As of version 0.8.0, the project structure has been reorganized:
+- **Python code**: Now in `src-python/` directory
+- **React/TypeScript**: Now in `src/` directory
+- **Migration**: From Flet to Tauri for native performance
+
+When referencing files, use the correct paths:
+- ❌ `src/models/camera_model.py`
+- ✅ `src-python/models/camera_model.py`
+
 ## 📋 Cursor Rules Reference
 
 This project uses structured Cursor rules located in `.cursor/rules/`. Key rules to follow:
@@ -32,77 +43,97 @@ The project follows strict development rules defined in `.cursor/rules/`:
 
 ## Common Development Commands
 
+### Prerequisites (Windows)
+```bash
+# Install Rust with MSVC toolchain
+# Download from: https://www.rust-lang.org/tools/install
+# IMPORTANT: Select stable-x86_64-pc-windows-msvc
+
+# Install Yarn (required due to npm bug)
+npm install -g yarn
+```
+
 ### Running the Application
 ```bash
-# Main Flet application with Material Design 3 UI
-python src/main.py
+# Main Tauri application (recommended)
+yarn tauri-dev         # Full app: React + Rust + Python sidecar
 
-# Legacy Tkinter viewer (if needed for compatibility)
-python examples/gui/viewer_example.py
+# Frontend only development
+yarn dev               # React at http://localhost:5173
 
-# Port discovery tools with optimized UX
-python examples/gui/discovery_demo.py
+# Python backend (legacy Flet)
+python run_python.py   # Or: make run
+
+# Build for production
+yarn tauri-build       # Creates .exe/.msi installer
 ```
 
 ### Development Workflow
 ```bash
-# Install all dependencies (production + dev)
-make install-dev
+# Install dependencies
+yarn install         # Frontend (MUST use yarn, not npm)
+make install-dev     # Python backend
 
-# Run linting and formatting
-make format      # Format code with black and isort
-make lint        # Run flake8 checks
-make type-check  # Run mypy type checking
-
-# Run all quality checks
-make check-all
+# Python quality checks
+make format          # Format code with black and isort
+make lint            # Run flake8 checks
+make type-check      # Run mypy type checking
+make check-all       # All Python checks
 
 # Run tests
-make test        # Basic test run
-make test-cov    # Tests with coverage report
+make test            # Basic test run
+make test-cov        # Tests with coverage report
 ```
 
-### Building and Packaging
+### Project Structure Commands
 ```bash
-# Build distribution packages
-make build
+# Check environment
+make status          # Show project status
+make rust-check      # Verify Rust/MSVC installation
 
-# Build standalone Flet application
-make build-app
-
-# Clean build artifacts
-make clean
+# Clean builds
+make clean           # Python artifacts
+make tauri-clean     # Tauri/frontend builds
 ```
 
 ## High-Level Architecture
 
-This project implements **Model-View-Presenter (MVP)** pattern with strict separation of concerns:
+This project implements **Model-View-Presenter (MVP)** pattern with strict separation of concerns. Currently migrating from **Flet** to **Tauri** (React + Python) for native performance.
+
+### Project Structure (v0.8.0+)
+
+```
+src/              # React/TypeScript frontend (Tauri)
+src-python/       # Python backend (MVP architecture)
+src-tauri/        # Rust/Tauri application wrapper
+scripts/          # Helper scripts (Python sidecar)
+```
 
 ### Core Architecture Layers
 
-1. **Model Layer** (`src/models/`) - ✅ Complete
+1. **Model Layer** (`src-python/models/`) - ✅ Complete
    - Domain entities and state management
    - `CameraModel`: Camera configurations and status
    - `ConnectionModel`: Active connection states
    - `ScanModel`: Network scan results
+   - `StreamModel`: Video streaming state
 
-2. **View Layer** (`src/views/`) - ✅ 95% Complete
-   - Flet UI components with Material Design 3
-   - `MainView`: Primary application interface with navigation
-   - `CameraView`: Camera management interface
-   - Component hierarchy uses modern Material 3 patterns
+2. **View Layer** - 🚧 Migrating
+   - **Legacy**: `src-python/views/` - Flet UI (reference only)
+   - **New**: `src/` - React + Material-UI components
+   - Frontend communicates via Tauri IPC
 
-3. **Presenter Layer** (`src/presenters/`) - 🚧 20% Complete
+3. **Presenter Layer** (`src-python/presenters/`) - 🚧 20% Complete
    - Business logic coordination between View and Model
-   - Currently migrating from direct service calls to MVP pattern
-   - Priority: Complete presenter implementations for proper MVP
+   - Adapted for Tauri event emission
+   - Priority: Complete presenter implementations
 
-4. **Services Layer** (`src/services/`) - ✅ Complete
+4. **Services Layer** (`src-python/services/`) - ✅ Complete
    - `ProtocolService`: ONVIF, RTSP, HTTP/CGI protocol handling
    - `ConnectionService`: Camera connection management
    - `ScanService`: Network scanning and discovery
+   - `VideoStreamService`: Video streaming (Singleton)
    - `ConfigService`: Configuration persistence
-   - `DataService`: Database operations
 
 ### Key Architectural Principles
 
@@ -120,25 +151,31 @@ This project implements **Model-View-Presenter (MVP)** pattern with strict separ
 
 ### Critical Implementation Notes
 
-1. **MVP Migration**: Currently migrating from mixed architecture to pure MVP. When implementing new features, always use Presenter pattern.
+1. **Tauri Migration**: Migrating from Flet to Tauri (v0.8.0+). Backend remains Python, frontend is React/TypeScript.
 
-2. **Flet UI State**: Never modify UI directly from services. All UI updates must flow through presenters.
+2. **Frontend-Backend Communication**: 
+   - Use Tauri Command API for React → Python
+   - Python sidecar emits events via stdout JSON
+   - Video frames sent as base64 encoded strings
 
-3. **Connection Handling**: Each camera brand has specific connection requirements. Always check `protocol_handlers/` for brand-specific implementations.
+3. **Yarn Required**: NPM has a bug with Windows native dependencies. Always use `yarn install`, never `npm install`.
 
-4. **Performance Targets**: 
+4. **Connection Handling**: Each camera brand has specific connection requirements. Always check `protocol_handlers/` for brand-specific implementations.
+
+5. **Performance Targets**: 
    - FPS: 13-20+ depending on camera
    - Memory: < 200MB for 4 cameras
    - CPU: < 15% during active streaming
 
-5. **Testing**: When adding new features, ensure they're testable in isolation. Services should not depend on UI, and presenters should be mockable.
+6. **Testing**: When adding new features, ensure they're testable in isolation. Services should not depend on UI, and presenters should be mockable.
 
-### Current Development Priorities
+### Current Development Priorities (v0.8.0)
 
 1. Complete Presenter layer implementation (80% remaining)
-2. Add DuckDB integration for analytics
-3. Implement comprehensive test suite
-4. Package as native executable with Flet
+2. Implement React UI following Material Design from Flet
+3. Configure Python sidecar for Tauri IPC
+4. Add video streaming to React frontend
+5. Package as native executable with Tauri
 
 ### Code Style Requirements
 

@@ -7,6 +7,66 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.8.0] - 2025-07-14
+
+### 🚀 Major Change - Migración de Flet a Tauri
+
+Esta versión marca el inicio de la migración de Flet a Tauri para lograr una aplicación nativa con mejor rendimiento.
+
+### ✨ Added - Nueva Arquitectura
+
+- **Tauri Framework** integrado con React + TypeScript para el frontend
+- **Estructura de proyecto reorganizada**:
+  - `src/` - Frontend React/TypeScript
+  - `src-python/` - Backend Python (movido desde `src/`)
+  - `src-tauri/` - Aplicación Rust/Tauri
+  - `scripts/` - Scripts auxiliares para comunicación Python-Tauri
+- **VideoStreamService** (Singleton) para gestión centralizada de streams
+- **StreamManager** con patrón Factory y Template Method
+- **FrameConverter** con patrón Strategy para conversión de frames a base64
+- **Python Sidecar** script para comunicación IPC con Tauri
+- **Yarn** como gestor de paquetes (requerido por bug de npm en Windows)
+
+### 🔄 Changed - Infraestructura
+
+- **Frontend migrado** de Flet a React + Material-UI v7
+- **Comunicación** cambiada a Tauri IPC en lugar de Flet events
+- **VideoStreamPresenter** adaptado para emitir eventos Tauri
+- **CameraPresenter** actualizado para integrar streaming de video
+- **Puerto unificado** Vite configurado en 5173 (alineado con Tauri)
+- **Makefile** actualizado con comandos para Yarn y Tauri
+- **Documentación** actualizada para reflejar nueva estructura
+
+### 🛠️ Fixed - Windows Development
+
+- **Bug de npm** que no instala dependencias opcionales nativas:
+  - `@tauri-apps/cli-win32-x64-msvc`
+  - `@rollup/rollup-win32-x64-msvc`
+- **Solución**: Migración obligatoria a Yarn que sí respeta opcionales
+- **Rust toolchain** documentado: debe ser `stable-x86_64-pc-windows-msvc`
+
+### 📚 Documentation
+
+- **CLAUDE.md** actualizado con nueva estructura y comandos
+- **PROJECT_STRUCTURE.md** creado con detalles de organización
+- **WINDOWS_SETUP.md** creado con guía específica para Windows
+- **README.md** actualizado con comandos de Yarn y requisitos
+
+### ⚠️ Breaking Changes
+
+- Comandos cambiados de `npm` a `yarn` (obligatorio)
+- Python ahora en `src-python/` en lugar de `src/`
+- Flet UI ya no es la interfaz principal (referencia solamente)
+
+### 🔮 Next Steps
+
+- Completar implementación de presentadores (80% restante)
+- Implementar UI React siguiendo diseño Material de Flet
+- Configurar sidecar Python en Tauri
+- Implementar streaming de video en frontend React
+
+---
+
 ## [0.7.4] - 2025-07-11
 
 ### ✨ Added - Timeout Management
