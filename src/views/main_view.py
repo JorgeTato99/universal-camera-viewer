@@ -81,39 +81,40 @@ class MainView:
             self._build_toolbar(),
             
             # === CONTENIDO PRINCIPAL ===
-            ft.Container(
-                content=ft.Row([
-                    # === PANEL LATERAL IZQUIERDO ===
-                    ft.Container(
-                        content=self._build_side_panel(),
-                        width=300,
-                        padding=ft.padding.all(16),
-                        bgcolor=ft.Colors.GREY_50,
-                        border_radius=ft.border_radius.only(
-                            bottom_left=12,
-                            top_right=12,
-                            bottom_right=12
-                        ),
-                        shadow=ft.BoxShadow(
-                            spread_radius=0,
-                            blur_radius=8,
-                            color=ft.Colors.with_opacity(0.06, ft.Colors.SHADOW),
-                            offset=ft.Offset(2, 0)
-                        ),
-                        border=ft.border.only(
-                            right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
-                        )
+            ft.Row([
+                # === PANEL LATERAL IZQUIERDO ===
+                ft.Container(
+                    content=self._build_side_panel(),
+                    width=300,
+                    padding=ft.padding.all(16),
+                    bgcolor=ft.Colors.GREY_50,
+                    border_radius=ft.border_radius.only(
+                        bottom_left=12,
+                        top_right=12,
+                        bottom_right=12
                     ),
-                    
-                    # === ÁREA PRINCIPAL DE CÁMARAS ===
-                    ft.Container(
-                        content=self._build_camera_area(),
-                        expand=True,
-                        padding=ft.padding.all(20),
-                        bgcolor=ft.Colors.WHITE
+                    shadow=ft.BoxShadow(
+                        spread_radius=0,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.06, ft.Colors.SHADOW),
+                        offset=ft.Offset(2, 0)
+                    ),
+                    border=ft.border.only(
+                        right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
                     )
-                ], spacing=0),
-                expand=True
+                    # REMOVIDO expand=True porque está en Row
+                ),
+                
+                # === ÁREA PRINCIPAL DE CÁMARAS ===
+                ft.Container(
+                    content=self._build_camera_area(),
+                    expand=True,
+                    padding=ft.padding.all(20),
+                    bgcolor=ft.Colors.WHITE
+                )
+            ], 
+            spacing=0,
+            expand=True  # CORRECCIÓN: Row se expande verticalmente
             ),
             
             # === BARRA DE ESTADO MODERNA ===

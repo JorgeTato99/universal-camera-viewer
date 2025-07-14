@@ -86,6 +86,7 @@ class SidePanel(ft.Container):
         )
         self.width = width
         self.padding = ft.padding.all(16)
+        self.expand = True  # Hacer que el panel se expanda verticalmente
         
         # Construir contenido
         self.content = self._build_panel_content()
@@ -299,6 +300,7 @@ class CollapsibleSidePanel(ft.Container):
         )
         self.width = expanded_width if is_expanded else collapsed_width
         self.padding = ft.padding.all(16)
+        self.expand = True  # Hacer que el panel se expanda verticalmente
         # Animación removida por compatibilidad
         
         # Construir contenido
@@ -530,7 +532,7 @@ def create_camera_side_panel(
     # Crear estadísticas para el footer
     stats = ft.Column([
         StatCard(
-            title="Cámaras",
+            title="Activas",
             value=str(connected_cameras),
             icon=ft.Icons.VIDEOCAM,
             color_scheme="primary"
@@ -538,7 +540,7 @@ def create_camera_side_panel(
         ft.Container(height=8),
         StatCard(
             title="Estado",
-            value="En línea" if connected_cameras > 0 else "Desconectado",
+            value="Online" if connected_cameras > 0 else "Offline",
             icon=ft.Icons.SIGNAL_WIFI_4_BAR,
             color_scheme="success" if connected_cameras > 0 else "error"
         )

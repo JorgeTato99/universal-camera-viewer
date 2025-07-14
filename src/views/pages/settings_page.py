@@ -44,7 +44,7 @@ class SettingsPage(ft.Container):
             main_content
         ],
         spacing=0,
-        expand=True
+        expand=True  # Row se expande verticalmente
         )
     
     def _build_side_panel(self) -> ft.Container:
@@ -107,6 +107,7 @@ class SettingsPage(ft.Container):
             border=ft.border.only(
                 right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
             )
+            # REMOVIDO expand=True porque está en Row
         )
     
     def _build_main_content(self) -> ft.Container:

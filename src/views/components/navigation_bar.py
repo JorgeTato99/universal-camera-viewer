@@ -22,6 +22,15 @@ except ImportError:
     # Si no está disponible, theme_service será None
     theme_service = None
 
+# Importar design system
+try:
+    from ..design_system import Spacing, BorderRadius, MaterialElevation
+except ImportError:
+    # Fallback si no está disponible
+    Spacing = None
+    BorderRadius = None
+    MaterialElevation = None
+
 
 @dataclass
 class NavItem:
@@ -76,7 +85,10 @@ class ModernNavigationBar(ft.Container):
         # Configurar propiedades del container
         self.height = height
         self.bgcolor = ft.Colors.SURFACE
-        self.padding = ft.padding.symmetric(horizontal=16, vertical=8)
+        # Usar spacing del design system o fallback
+        horizontal_padding = Spacing.EXTRA_LARGE if Spacing else 20
+        vertical_padding = Spacing.MEDIUM if Spacing else 12
+        self.padding = ft.padding.symmetric(horizontal=horizontal_padding, vertical=vertical_padding)
         
         # Sombra inferior Material 3
         self.shadow = ft.BoxShadow(
@@ -160,9 +172,12 @@ class ModernNavigationBar(ft.Container):
                 text_align=ft.TextAlign.CENTER
             )
             
+            # Usar spacing del design system o fallback
+            icon_text_spacing = Spacing.SMALL if Spacing else 6
+            
             tab_content = ft.Column([
                 icon_widget,
-                ft.Container(height=4),  # Spacing
+                ft.Container(height=icon_text_spacing),
                 text_widget
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -174,10 +189,15 @@ class ModernNavigationBar(ft.Container):
             tab_content = icon_widget
         
         # Container del tab con estados interactivos
+        # Usar spacing del design system o fallback
+        tab_h_padding = Spacing.EXTRA_LARGE if Spacing else 20
+        tab_v_padding = Spacing.MEDIUM if Spacing else 12
+        tab_radius = BorderRadius.MEDIUM if BorderRadius else 12
+        
         return ft.Container(
             content=tab_content,
-            padding=ft.padding.symmetric(horizontal=16, vertical=8),
-            border_radius=12,
+            padding=ft.padding.symmetric(horizontal=tab_h_padding, vertical=tab_v_padding),
+            border_radius=tab_radius,
             bgcolor=bg_color,
             border=ft.border.all(2, border_color) if is_selected else None,
             tooltip=item.tooltip or item.label,
