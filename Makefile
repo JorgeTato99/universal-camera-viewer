@@ -78,6 +78,48 @@ run-legacy: ## Ejecutar versión legacy de Tkinter (si está disponible)
 
 dev: install-dev run ## Configuración rápida de desarrollo y ejecución
 
+##@ Frontend Tauri/React
+
+yarn-install: ## Instalar dependencias del frontend con Yarn
+	@echo "$(YELLOW)📦 Instalando dependencias del frontend con Yarn...$(RESET)"
+	yarn install
+	@echo "$(GREEN)✓ Dependencias del frontend instaladas$(RESET)"
+
+tauri-dev: yarn-install ## Ejecutar aplicación Tauri en modo desarrollo
+	@echo "$(BLUE)🚀 Iniciando aplicación Tauri...$(RESET)"
+	yarn tauri-dev
+
+tauri-build: yarn-install ## Construir aplicación Tauri para producción
+	@echo "$(YELLOW)📦 Construyendo aplicación Tauri...$(RESET)"
+	yarn tauri-build
+	@echo "$(GREEN)✓ Build completado en src-tauri/target/release$(RESET)"
+
+frontend-dev: ## Ejecutar solo el frontend React con Vite
+	@echo "$(BLUE)⚛️  Iniciando frontend React...$(RESET)"
+	yarn dev
+
+frontend-build: ## Construir frontend para producción
+	@echo "$(YELLOW)📦 Construyendo frontend...$(RESET)"
+	yarn build
+	@echo "$(GREEN)✓ Build completado en dist/$(RESET)"
+
+tauri-clean: ## Limpiar builds de Tauri
+	@echo "$(YELLOW)🧹 Limpiando builds de Tauri...$(RESET)"
+	@rm -rf src-tauri/target
+	@rm -rf dist
+	@echo "$(GREEN)✓ Limpieza de Tauri completada$(RESET)"
+
+rust-check: ## Verificar instalación de Rust y MSVC
+	@echo "$(YELLOW)🔍 Verificando instalación de Rust...$(RESET)"
+	@rustc --version || echo "$(RED)❌ Rust no está instalado$(RESET)"
+	@cargo --version || echo "$(RED)❌ Cargo no está instalado$(RESET)"
+	@echo "$(YELLOW)🔍 Verificando dependencias nativas de Windows...$(RESET)"
+	@if [ -d "node_modules/@tauri-apps/cli-win32-x64-msvc" ]; then \
+		echo "$(GREEN)✓ @tauri-apps/cli-win32-x64-msvc instalado$(RESET)"; \
+	else \
+		echo "$(RED)❌ Falta @tauri-apps/cli-win32-x64-msvc - usar yarn install$(RESET)"; \
+	fi
+
 ##@ Calidad de Código
 
 format: ## Formatear código con black e isort
@@ -234,20 +276,24 @@ fresh-start: clean-all install-dev install-pre-commit run ## Inicio fresco de de
 
 status: ## Mostrar estado del proyecto
 	@echo "$(CYAN)📊 Estado de Universal Camera Viewer$(RESET)"
-	@echo "$(YELLOW)Versión:$(RESET) 0.7.0"
+	@echo "$(YELLOW)Versión:$(RESET) 0.8.0"
 	@echo "$(YELLOW)Python:$(RESET) $$($(PYTHON) --version)"
-	@echo "$(YELLOW)Arquitectura:$(RESET) Patrón MVP (65% completo)"
-	@echo "$(YELLOW)Framework UI:$(RESET) Flet + Material Design 3"
+	@echo "$(YELLOW)Node.js:$(RESET) $$(node --version 2>/dev/null || echo 'No instalado')"
+	@echo "$(YELLOW)Yarn:$(RESET) $$(yarn --version 2>/dev/null || echo 'No instalado')"
+	@echo "$(YELLOW)Rust:$(RESET) $$(rustc --version 2>/dev/null || echo 'No instalado')"
+	@echo "$(YELLOW)Arquitectura:$(RESET) MVP (Backend 95%, Presenters 20%)"
+	@echo "$(YELLOW)Framework UI:$(RESET) Migrando de Flet a Tauri + React"
 	@echo "$(YELLOW)Marcas de Cámaras:$(RESET) Dahua, TP-Link, Steren, Genérica"
 	@echo "$(YELLOW)Protocolos:$(RESET) ONVIF, RTSP, HTTP/CGI"
 	@echo ""
 	@echo "$(GREEN)📁 Estructura del Proyecto:$(RESET)"
-	@echo "  src/          - Código fuente (arquitectura MVP)"
+	@echo "  src/          - Frontend React/TypeScript"
+	@echo "  src-python/   - Backend Python (arquitectura MVP)"
+	@echo "  src-tauri/    - Aplicación Rust/Tauri"
 	@echo "  tests/        - Suites de pruebas"
 	@echo "  examples/     - Scripts de ejemplo y diagnósticos"
-	@echo "  config/       - Archivos de configuración"
-	@echo "  data/         - Base de datos y caché"
+	@echo "  scripts/      - Scripts auxiliares (sidecar Python)"
 
 version: ## Mostrar información de versión
-	@echo "$(CYAN)Universal Camera Viewer v0.7.0$(RESET)"
-	@echo "$(BLUE)Visor de cámaras multi-marca con UI moderna en Flet$(RESET)" 
+	@echo "$(CYAN)Universal Camera Viewer v0.8.0$(RESET)"
+	@echo "$(BLUE)Visor de cámaras multi-marca - Migrando a Tauri + React$(RESET)" 

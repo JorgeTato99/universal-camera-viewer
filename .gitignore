@@ -4,6 +4,31 @@
 # cspell:disable
 
 # ==========================================
+# NODE.JS / YARN / TAURI
+# ==========================================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
+# Tauri
+src-tauri/target/
+src-tauri/WixTools/
+
+# Logs
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
 # ARCHIVOS DE CONFIGURACIÓN SENSIBLES
 # ==========================================
 # Archivo de configuración con credenciales

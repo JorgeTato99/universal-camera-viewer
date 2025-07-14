@@ -1,92 +1,49 @@
-[build-system]
-requires = ["setuptools>=45", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "universal-camera-viewer"
-version = "0.7.0"
-description = "Sistema de videovigilancia profesional moderno con soporte multi-marca y UI Flutter nativa"
-authors = [{name = "JorgeTato99", email = "jorgetato99@example.com"}]
-license = {text = "MIT"}
+version = "0.8.0"
+description = "Visor universal de cámaras IP multi-marca con arquitectura MVP"
+authors = ["Universal Camera Viewer Team"]
 readme = "README.md"
-requires-python = ">=3.9"
-keywords = ["camera", "surveillance", "flet", "onvif", "rtsp", "dahua", "tplink", "steren", "material-design"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Multimedia :: Video :: Display",
-    "Topic :: System :: Monitoring",
-    "Topic :: Desktop Environment",
-    "Operating System :: OS Independent",
-]
+packages = [{include = "src-python"}]
 
-dependencies = [
-    "flet>=0.24.1",
-    "opencv-python>=4.8.0",
-    "onvif-zeep>=0.2.12",
-    "requests>=2.31.0",
-    "python-dotenv>=1.0.0",
-    "cryptography>=41.0.0",
-    "pandas>=2.0.0",
-]
+[tool.poetry.dependencies]
+python = "^3.8"
+flet = "^0.24.1"
+opencv-python = "^4.10.0.84"
+numpy = "^1.24.0"
+aiohttp = "^3.11.10"
+Pillow = "^11.0.0"
+requests = "^2.32.3"
+netifaces = "^0.11.0"
+onvif-zeep-async = "^3.1.12"
+scapy = "^2.6.1"
 
-[project.urls]
-Homepage = "https://github.com/JorgeTato99/universal-camera-viewer"
-Repository = "https://github.com/JorgeTato99/universal-camera-viewer"
-Issues = "https://github.com/JorgeTato99/universal-camera-viewer/issues"
-Discussions = "https://github.com/JorgeTato99/universal-camera-viewer/discussions"
-Documentation = "https://github.com/JorgeTato99/universal-camera-viewer#readme"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-asyncio = "^0.25.2"
+pytest-cov = "^6.0.0"
+black = "^24.10.0"
+flake8 = "^7.1.1"
+mypy = "^1.14.1"
+isort = "^5.13.2"
+pre-commit = "^4.0.1"
+bandit = "^1.8.0"
 
-[project.scripts]
-universal-camera-viewer = "src.main:main"
-ucv = "src.main:main"
-
-[project.optional-dependencies]
-dev = [
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "pre-commit>=3.0.0",
-    "mypy>=1.0.0",
-    "isort>=5.12.0",
-]
-analytics = [
-    "duckdb>=0.9.0",
-    "plotly>=5.17.0",
-    "dash>=2.14.0",
-]
-packaging = [
-    "pyinstaller>=6.0.0",
-    "auto-py-to-exe>=2.40.0",
-]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["*"]
-
-[tool.setuptools.package-data]
-"*" = ["*.json", "*.wsdl", "*.xsd"]
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
-target-version = ['py39']
+target-version = ['py38']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
+  # directorios
+  \.git
   | \.mypy_cache
-  | \.tox
-  | \.venv
+  | \.pytest_cache
+  | __pycache__
   | build
   | dist
   | src_old
@@ -95,53 +52,26 @@ extend-exclude = '''
 
 [tool.isort]
 profile = "black"
-multi_line_output = 3
 line_length = 88
-known_first_party = ["src"]
-
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503", "E501"]
-exclude = [".git", "__pycache__", "build", "dist", ".venv", "src_old"]
+known_first_party = ["models", "views", "presenters", "services", "utils", "protocol_handlers"]
+src_paths = ["src-python", "tests"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-exclude = ["src_old/", "examples/"]
+ignore_missing_imports = true
+mypy_path = "src-python"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "--strict-markers",
-    "--strict-config",
-    "--verbose",
-    "--cov=src",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "hardware: marks tests that require actual camera hardware",
-]
+pythonpath = ["src-python"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
 
-[tool.coverage.run]
-source = ["src"]
-omit = ["*/tests/*", "src_old/*", "examples/*"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == .__main__.:",
-] 
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", ".venv", "src_old"]
+max-complexity = 10

@@ -1,70 +1,56 @@
 {
-  "cSpell.words": [
-    "activador",
-    "amcrest",
-    "Amcrest",
-    "autocompletado",
-    "bitrate",
-    "bloqueante",
-    "camaras",
-    "códec",
-    "conexion",
-    "configurables",
-    "containerización",
-    "dahua",
-    "Dahua",
-    "desconexión",
-    "distutils",
-    "DMSS",
-    "dotenv",
-    "Escalabilidad",
-    "etnicidad",
-    "extensibilidad",
-    "getenv",
-    "HIGHLEVEL",
-    "imshow",
-    "levelname",
-    "Liskov",
-    "Mantenibilidad",
-    "mjpeg",
-    "MJPEG",
-    "mjpg",
-    "ndarray",
-    "numpy",
-    "onvif",
-    "opencv",
-    "padx",
-    "pady",
-    "Parsear",
-    "Precarga",
-    "precargan",
-    "preconfigurados",
-    "psutil",
-    "pytest",
-    "realmonitor",
-    "reconexión",
-    "Reconexión",
-    "Redimensionado",
-    "rediseñada",
-    "repórtelas",
-    "reutilizable",
-    "reutilizables",
-    "rtsp",
-    "RTSP",
-    "scrollbars",
-    "Scrollbars",
-    "steren",
-    "Steren",
-    "testeador",
-    "Testeador",
-    "testeadores",
-    "tkinter",
-    "tplink",
-    "venv",
-    "videovigilancia",
-    "zeep"
-  ],
-  "conventionalCommits.scopes": [
-    "Main"
-  ]
+    "python.defaultInterpreterPath": "python",
+    "python.analysis.extraPaths": [
+        "./src-python"
+    ],
+    "python.autoComplete.extraPaths": [
+        "./src-python"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "--line-length=88"
+    ],
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        }
+    },
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact",
+        "typescript",
+        "typescriptreact"
+    ],
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/.pytest_cache": true,
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/build": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/build": true,
+        "**/__pycache__": true
+    }
 }

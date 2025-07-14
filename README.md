@@ -14,18 +14,19 @@
 
 ## 🎯 **¿Qué es este proyecto?**
 
-**Visor Universal de Cámaras** es una aplicación desktop moderna que conecta, visualiza y controla cámaras IP de múltiples marcas desde una interfaz profesional **Flet + Material Design 3**. Migración en progreso hacia **arquitectura MVP** con UI Flutter nativa y distribución como ejecutable auto-contenido.
+**Visor Universal de Cámaras** es una aplicación desktop moderna que conecta, visualiza y controla cámaras IP de múltiples marcas. Actualmente en migración de **Flet** a **Tauri** (React + Python) para una experiencia nativa superior con **arquitectura MVP**.
 
-### **🏆 Estado Actual: UI Moderna + MVP en Progreso**
+### **🏆 Estado Actual: Migración a Tauri + MVP**
 
-- ✅ **UI Moderna**: **Flet + Material Design 3** implementado completamente
+- ✅ **Backend Python**: **95% Completo** con arquitectura MVP
 - ✅ **Funcionalidad**: 100% Operacional con todas las marcas de cámaras
-- ✅ **Arquitectura**: **SOLID + MVP parcial** (65% completado)
+- ✅ **Arquitectura**: **SOLID + MVP** (Backend 95%, Presenters 20%)
 - ✅ **Protocolos**: 4 protocolos implementados (ONVIF principal)
 - ✅ **Hardware**: Probado con 4 marcas diferentes en producción
 - ✅ **Performance**: 13-20+ FPS según marca, < 200MB RAM, < 15% CPU
-- 🔄 **MVP Migration**: View Layer completo, Presenter Layer pendiente
-- 🎯 **Objetivo**: Ejecutable nativo multiplataforma (.exe, .app, .deb)
+- 🚧 **Frontend**: Migrando de Flet a **Tauri + React + Material-UI**
+- 🚧 **Estructura**: Python en `src-python/`, React en `src/`
+- 🎯 **Objetivo**: App nativa con Tauri (.exe, .app, .dmg, .deb)
 
 ---
 
@@ -98,6 +99,17 @@
 
 ## 🚀 **Inicio Rápido (5 minutos)**
 
+### **0. Requisitos Previos (Windows)**
+
+```bash
+# Instalar Rust con MSVC toolchain
+# Descargar desde: https://www.rust-lang.org/tools/install
+# IMPORTANTE: Seleccionar stable-x86_64-pc-windows-msvc
+
+# Instalar Yarn globalmente (requerido por bug de npm)
+npm install -g yarn
+```
+
 ### **1. Instalación**
 
 ```bash
@@ -105,12 +117,12 @@
 git clone https://github.com/JorgeTato99/universal-camera-viewer.git
 cd universal-camera-viewer
 
-# Entorno virtual
-python -m venv .venv
-.\.venv\Scripts\activate          # Windows
-source .venv/bin/activate         # Linux/MacOS
+# Frontend (React/Tauri) - USAR YARN
+yarn install              # NO usar npm install
 
-# Dependencias
+# Backend (Python)
+python -m venv .venv
+.\.venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
@@ -138,14 +150,20 @@ cp .env.example .env
 # GENERIC_PASSWORD=tu_password
 ```
 
-### **3. Ejecutar - Aplicación Flet Moderna**
+### **3. Ejecutar Aplicación**
 
 ```bash
-# 🎯 APLICACIÓN PRINCIPAL - UI Moderna Flet + Material Design 3
-python src/main.py
+# 🎯 APLICACIÓN TAURI (Recomendado)
+yarn tauri-dev            # React + Rust + Python sidecar
 
-# 🔍 HERRAMIENTAS DE DESCUBRIMIENTO - UX optimizada (Tkinter)
-python examples/gui/discovery_demo.py
+# 🔧 SOLO FRONTEND (desarrollo)
+yarn dev                  # Solo React en http://localhost:5173
+
+# 📦 BUILD PRODUCCIÓN
+yarn tauri-build          # Genera .exe/.msi para Windows
+
+# 🐍 BACKEND PYTHON (legacy Flet)
+python run_python.py      # O: make run
 
 # ⚡ PRUEBA RÁPIDA DE CONEXIÓN
 python examples/protocols/onvif_example.py
