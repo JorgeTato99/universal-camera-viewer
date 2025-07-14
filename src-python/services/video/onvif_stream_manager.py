@@ -8,9 +8,9 @@ primero la URL RTSP del stream y luego delegando a RTSP.
 import asyncio
 from typing import Optional
 
-from .rtsp_stream_manager import RTSPStreamManager
-from ..protocol_handlers.onvif_handler import ONVIFHandler
-from ...models.streaming import StreamStatus
+from services.video.rtsp_stream_manager import RTSPStreamManager
+from services.protocol_handlers.onvif_handler import ONVIFHandler
+from models.streaming import StreamStatus
 
 
 class ONVIFStreamManager(RTSPStreamManager):

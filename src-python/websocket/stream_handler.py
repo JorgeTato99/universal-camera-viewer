@@ -15,8 +15,8 @@ from fastapi import WebSocket
 from .connection_manager import manager, WebSocketConnection
 # Importaciones para streaming real
 from presenters.streaming.video_stream_presenter import VideoStreamPresenter
-from models.connection_model import ConnectionConfig
-from models.streaming.stream_model import StreamProtocol
+from models import ConnectionConfig
+from models.streaming import StreamProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,16 @@ class StreamHandler:
         self.use_real_stream = True  # Activar streaming real para cámara Dahua
         self.real_camera_config = None
         
+        # Control de reintentos
+        self.max_retries = 3
+        self.retry_delay = 1.0  # Segundos
+        self.connection_timeout = 10.0  # Timeout para conexión inicial
+        
+        # Estado de conexión
+        self.is_connected = False
+        self.last_error = None
+        self.retry_count = 0
+        
     async def handle_message(self, message: dict) -> None:
         """
         Procesar mensaje recibido del cliente.
@@ -90,6 +100,12 @@ class StreamHandler:
         
         logger.info(f"[{self.camera_id}] Acción: {action}, Params: {params}")
         
+        # Manejar mensajes de tipo ping
+        if message.get("type") == "ping":
+            # Responder con pong
+            await self.send_status("pong")
+            return
+            
         if action == "start_stream":
             await self.start_stream(params)
         elif action == "stop_stream":
@@ -98,6 +114,9 @@ class StreamHandler:
             await self.update_quality(params.get("quality", "medium"))
         elif action == "update_fps":
             await self.update_fps(params.get("fps", 30))
+        elif action is None:
+            # Ignorar mensajes sin acción (como ping ya manejado arriba)
+            logger.debug(f"[{self.camera_id}] Mensaje sin acción, ignorando")
         else:
             await self.send_error(f"Acción desconocida: {action}")
     
@@ -303,66 +322,279 @@ class StreamHandler:
         
         await self.connection.send_json(message)
     
+    async def send_status(self, status: str, data: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Enviar estado al cliente.
+        
+        Args:
+            status: Estado del stream
+            data: Datos adicionales opcionales
+        """
+        message = {
+            "type": "status",
+            "camera_id": self.camera_id,
+            "status": status,
+            "data": data or {},
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+        await self.connection.send_json(message)
+    
+    async def _check_camera_connectivity(self) -> bool:
+        """
+        Verificar si la cámara es accesible en la red.
+        
+        Returns:
+            True si la cámara responde, False en caso contrario
+        """
+        import socket
+        import subprocess
+        import platform
+        
+        ip = "192.168.1.172"
+        port = 554  # Puerto RTSP
+        
+        try:
+            # Método 1: Verificar con socket TCP
+            logger.info(f"🔍 Verificando conectividad con {ip}:{port}")
+            
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(3.0)  # Timeout de 3 segundos
+            
+            result = sock.connect_ex((ip, port))
+            sock.close()
+            
+            if result == 0:
+                logger.info(f"✅ Puerto {port} accesible en {ip}")
+                return True
+            else:
+                logger.warning(f"⚠️ Puerto {port} no accesible en {ip}")
+                
+                # Método 2: Intentar ping
+                logger.info(f"🏓 Intentando ping a {ip}...")
+                
+                # Comando ping según el sistema operativo
+                param = '-n' if platform.system().lower() == 'windows' else '-c'
+                command = ['ping', param, '1', '-w', '1000', ip] if platform.system().lower() == 'windows' else ['ping', param, '1', '-W', '1', ip]
+                
+                result = subprocess.run(command, capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    logger.info(f"✅ Ping exitoso a {ip}")
+                    logger.warning(f"⚠️ Pero puerto RTSP {port} cerrado. Verificar configuración de la cámara.")
+                    return True  # La cámara responde, pero puede necesitar configuración
+                else:
+                    logger.error(f"❌ No hay respuesta de ping desde {ip}")
+                    return False
+                    
+        except socket.timeout:
+            logger.error(f"⏱️ Timeout verificando conectividad con {ip}:{port}")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Error verificando conectividad: {e}")
+            return False
+    
     async def _try_real_stream(self) -> bool:
         """
-        Intentar streaming real desde la cámara.
+        Intentar streaming real desde la cámara con reintentos y mejor manejo de errores.
         
         Returns:
             True si el streaming real funciona, False si hay que usar mock
         """
-        try:
-            logger.info(f"Intentando streaming real para {self.camera_id}")
-            
-            # Configuración para cámara Dahua
-            config = ConnectionConfig(
-                ip="192.168.1.172",
-                username="admin",
-                password="3gfwb3ToWfeWNqm22223DGbzcH-4si",  # Password del config
-                protocol=StreamProtocol.RTSP,
-                port=554,
-                channel=1,
-                subtype=0
-            )
-            
-            logger.info(f"Configuración RTSP: {config.ip}:{config.port} - Usuario: {config.username}")
-            
-            # Crear presenter
-            self.presenter = VideoStreamPresenter()
-            
-            # Callback para frames
-            async def on_frame(frame_data: bytes):
-                # Convertir a base64
-                frame_base64 = base64.b64encode(frame_data).decode('utf-8')
-                await self.send_frame(frame_base64)
-                self.frame_count += 1
-            
-            # Configurar callback
-            self.presenter.on_frame_update = on_frame
-            
-            # Conectar
-            success = await self.presenter.connect_camera(config)
-            if not success:
-                logger.error("No se pudo conectar a la cámara real")
-                return False
-            
-            # Iniciar streaming
-            await self.presenter.start_streaming()
-            
-            logger.info("Streaming real iniciado exitosamente")
-            
-            # Mantener el stream activo
-            while self.is_streaming and self.connection:
-                await asyncio.sleep(0.1)
-            
-            # Detener al finalizar
-            await self.presenter.stop_streaming()
-            await self.presenter.disconnect_camera()
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error en streaming real: {e}", exc_info=True)
+        logger.info(f"🎥 Iniciando conexión real para cámara {self.camera_id}")
+        
+        # Validar conectividad primero
+        if not await self._check_camera_connectivity():
+            logger.error(f"❌ Cámara {self.camera_id} no accesible en la red")
             return False
+        
+        # Intentar conexión con reintentos
+        for attempt in range(self.max_retries):
+            try:
+                self.retry_count = attempt
+                if attempt > 0:
+                    delay = self.retry_delay * (2 ** (attempt - 1))  # Backoff exponencial
+                    logger.info(f"🔄 Reintento {attempt + 1}/{self.max_retries} después de {delay}s")
+                    await asyncio.sleep(delay)
+                
+                logger.info(f"📡 Intento {attempt + 1}: Conectando a cámara Dahua en 192.168.1.172")
+                
+                # Configuración para cámara Dahua
+                config = ConnectionConfig(
+                    ip="192.168.1.172",
+                    username="admin",
+                    password="3gfwb3ToWfeWNqm22223DGbzcH-4si",
+                    rtsp_port=554,
+                    onvif_port=80,
+                    http_port=80,
+                    timeout=10,
+                    max_retries=3
+                )
+                
+                # Agregar información adicional necesaria para el presenter
+                # El presenter espera estos atributos adicionales
+                config.protocol = StreamProtocol.RTSP  # type: ignore
+                config.channel = 1  # type: ignore
+                config.subtype = 0  # type: ignore
+                config.port = 554  # type: ignore - Alias para rtsp_port
+                config.brand = "dahua"  # type: ignore
+                config.rtsp_path = "/cam/realmonitor?channel=1&subtype=0"  # type: ignore
+                
+                # Log detallado de configuración (sin password)
+                logger.info(f"📋 Configuración RTSP:")
+                logger.info(f"  - IP: {config.ip}")
+                logger.info(f"  - Puerto RTSP: {config.rtsp_port}")
+                logger.info(f"  - Usuario: {config.username}")
+                logger.info(f"  - Protocolo: RTSP")
+                logger.info(f"  - Canal: 1")
+                logger.info(f"  - Subtipo: 0")
+                logger.info(f"  - Timeout: {config.timeout}s")
+                logger.info(f"  - Reintentos máximos: {config.max_retries}")
+            
+                # Crear presenter con emitter personalizado
+                logger.info("🔧 Creando VideoStreamPresenter...")
+                self.presenter = VideoStreamPresenter()
+                
+                # Crear una función de callback que se ejecute cuando lleguen frames
+                async def on_frame_callback(camera_id: str, frame_data: str):
+                    try:
+                        # Verificar que el WebSocket sigue conectado antes de enviar
+                        if not self.connection or self.websocket.client_state.value != 1:
+                            logger.debug("WebSocket desconectado, ignorando frame")
+                            return
+                            
+                        # frame_data ya viene en base64 desde el VideoStreamService
+                        await self.send_frame(frame_data)
+                        self.frame_count += 1
+                        
+                        # Log cada 30 frames para no saturar
+                        if self.frame_count % 30 == 0:
+                            logger.info(f"🎬 Frames enviados: {self.frame_count}")
+                            
+                        # Log el primer frame para confirmar recepción
+                        if self.frame_count == 1:
+                            logger.info(f"✅ Primer frame recibido! Tamaño: {len(frame_data)} bytes")
+                    except Exception as e:
+                        # Si el error es por WebSocket cerrado, detener el stream
+                        if "WebSocket" in str(e) or "Cannot call" in str(e):
+                            logger.info("WebSocket cerrado, deteniendo stream")
+                            self.is_streaming = False
+                        else:
+                            logger.error(f"❌ Error procesando frame: {e}", exc_info=True)
+                
+                # Convertir callback async a sync ya que el servicio lo llama de forma síncrona
+                def sync_frame_callback(camera_id: str, frame_data: str):
+                    asyncio.create_task(on_frame_callback(camera_id, frame_data))
+                
+                # Configurar emitter para logs detallados
+                event_emitter = WebSocketEventEmitter(
+                    frame_callback=on_frame_callback
+                )
+                self.presenter._event_emitter = event_emitter
+                
+                # Intentar conectar con timeout
+                logger.info("🔌 Conectando a la cámara...")
+                try:
+                    async with asyncio.timeout(self.connection_timeout):
+                        # El presenter acepta el callback como parámetro
+                        success = await self.presenter.start_camera_stream(
+                            camera_id=f"cam_{config.ip.replace('.', '_')}",
+                            connection_config=config,
+                            protocol=StreamProtocol.RTSP,
+                            options={
+                                'targetFps': self.fps,
+                                'bufferSize': 5
+                            },
+                            on_frame_callback=sync_frame_callback
+                        )
+                        
+                    if not success:
+                        error_msg = "Conexión rechazada por la cámara"
+                        logger.error(f"❌ {error_msg}")
+                        self.last_error = error_msg
+                        if attempt < self.max_retries - 1:
+                            continue  # Reintentar
+                        return False
+                        
+                except asyncio.TimeoutError:
+                    error_msg = f"Timeout de conexión ({self.connection_timeout}s)"
+                    logger.error(f"⏱️ {error_msg}")
+                    self.last_error = error_msg
+                    if attempt < self.max_retries - 1:
+                        continue  # Reintentar
+                    return False
+            
+                # Conexión exitosa
+                logger.info("✅ Conexión establecida con éxito")
+                self.is_connected = True
+                self.retry_count = 0
+                
+                logger.info("🎆 ¡Streaming real iniciado exitosamente!")
+                await self.send_status("connected", {
+                    "message": "Streaming real activo",
+                    "camera_id": self.camera_id,
+                    "protocol": "RTSP"
+                })
+                
+                # Mantener el stream activo con monitoreo
+                last_health_check = asyncio.get_event_loop().time()
+                health_check_interval = 5.0  # Verificar salud cada 5 segundos
+                
+                while self.is_streaming and self.connection:
+                    current_time = asyncio.get_event_loop().time()
+                    
+                    # Verificar salud del stream periódicamente
+                    if current_time - last_health_check > health_check_interval:
+                        # Verificar si sigue recibiendo frames
+                        if self.frame_count == 0:
+                            logger.warning("⚠️ No se están recibiendo frames")
+                        else:
+                            logger.debug(f"✅ Stream saludable: {self.frame_count} frames recibidos")
+                        last_health_check = current_time
+                    
+                    await asyncio.sleep(0.1)
+                
+                # Stream terminado normalmente
+                return True
+                
+            except asyncio.CancelledError:
+                logger.info("🚫 Streaming cancelado por el usuario")
+                raise
+                
+            except Exception as e:
+                error_msg = f"Error durante streaming: {str(e)}"
+                logger.error(f"💥 {error_msg}", exc_info=True)
+                self.last_error = error_msg
+                
+                # Enviar error al cliente
+                await self.send_error(error_msg)
+                
+                if attempt < self.max_retries - 1:
+                    logger.info("🔄 Intentando reconectar...")
+                    continue
+                    
+                return False
+                
+            finally:
+                # Limpieza siempre
+                if self.presenter and self.is_connected:
+                    try:
+                        logger.info("🧹 Limpiando recursos...")
+                        # Detener streaming primero
+                        self.is_streaming = False
+                        # Detener el stream de la cámara específica
+                        camera_id = f"cam_{config.ip.replace('.', '_')}"
+                        await self.presenter.stop_camera_stream(camera_id)
+                    except Exception as e:
+                        logger.error(f"Error durante limpieza: {e}")
+                    finally:
+                        self.presenter = None
+                        self.is_connected = False
+        
+        # Si llegamos aquí, todos los reintentos fallaron
+        logger.error(f"🚫 Imposible conectar después de {self.max_retries} intentos")
+        await self.send_error(f"No se pudo conectar a la cámara después de {self.max_retries} intentos")
+        return False
     
     def calculate_metrics(self) -> Dict[str, Any]:
         """

@@ -11,12 +11,12 @@ from typing import Dict, Optional, Callable, List, Any
 from datetime import datetime
 import uuid
 
-from ..base_service import BaseService
-from ...models.streaming import StreamModel, StreamStatus, StreamProtocol
-from ...models.connection_model import ConnectionConfig
-from ...utils.video import FrameConverter, Base64JPEGStrategy
-from ...utils.video.performance_monitor import StreamPerformanceMonitor
-from .stream_manager import StreamManagerFactory, StreamManager
+from services.base_service import BaseService
+from models.streaming import StreamModel, StreamStatus, StreamProtocol
+from models import ConnectionConfig
+from utils.video import FrameConverter, Base64JPEGStrategy
+from utils.video.performance_monitor import StreamPerformanceMonitor
+from services.video.stream_manager import StreamManagerFactory, StreamManager
 
 
 class VideoStreamService(BaseService):

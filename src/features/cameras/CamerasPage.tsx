@@ -8,6 +8,7 @@ import { Box, Typography } from "@mui/material";
 import { CameraToolbar, CameraGrid } from "./components";
 import { useCameraStore } from "../../stores";
 import { cameraService } from "../../services/python/cameraService";
+import { streamingService } from "../../services/python/streamingService";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { Camera, ConnectionStatus, ProtocolType } from "../../types/camera.types";
 import type { CameraInfo } from "../../types/service.types";
@@ -237,6 +238,13 @@ const CamerasPage: React.FC = () => {
 
   const handleCameraDisconnect = async (cameraId: string) => {
     try {
+      // Primero detener el streaming WebSocket si está activo
+      if (streamingService.isConnected() && streamingService.cameraId === cameraId) {
+        await streamingService.stopStream();
+        streamingService.disconnect();
+      }
+      
+      // Luego desconectar en el backend
       await cameraService.disconnectCamera(cameraId);
       
       const camera = cameras.get(cameraId);

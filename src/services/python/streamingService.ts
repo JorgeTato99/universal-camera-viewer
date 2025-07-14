@@ -138,8 +138,14 @@ export class StreamingService {
           this.stopHeartbeat();
           this.emitStatus('disconnected');
           
+          // Reconectar si no fue cierre intencional
           if (this.shouldReconnect && event.code !== 1000) {
+            console.log('Conexión perdida, intentando reconectar...');
             this.scheduleReconnect();
+          } else if (event.code === 1000) {
+            console.log('Desconexión intencional, no se reconectará');
+          } else {
+            console.warn('WebSocket cerrado inesperadamente:', event.code, event.reason);
           }
         };
         
@@ -326,9 +332,14 @@ export class StreamingService {
   private startHeartbeat(): void {
     this.stopHeartbeat();
     
+    // Ping cada 30 segundos para mantener la conexión viva
     this.heartbeatInterval = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.send({ type: 'ping' });
+        console.log('[Heartbeat] Ping enviado');
+      } else {
+        console.warn('[Heartbeat] WebSocket no está abierto, deteniendo heartbeat');
+        this.stopHeartbeat();
       }
     }, 30000); // 30 segundos
   }

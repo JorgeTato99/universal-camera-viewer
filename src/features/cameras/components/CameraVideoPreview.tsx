@@ -21,7 +21,7 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
   cameraId,
   isConnected,
   aspectRatio = "16:9",
-  height = "180px",
+  height = "100%",
   onError,
 }) => {
   const [showVideo, setShowVideo] = useState(false);
@@ -49,8 +49,7 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
       <Box
         sx={{
           width: "100%",
-          aspectRatio,
-          maxHeight: height,
+          height: "100%",
           backgroundColor: (theme) =>
             theme.palette.mode === "dark"
               ? colorTokens.background.dark
@@ -87,8 +86,7 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
       <Box
         sx={{
           width: "100%",
-          aspectRatio,
-          maxHeight: height,
+          height: "100%",
           backgroundColor: "#000",
           borderRadius: "6px",
           display: "flex",
@@ -107,8 +105,7 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
       <Box
         sx={{
           width: "100%",
-          aspectRatio,
-          maxHeight: height,
+          height: "100%",
           borderRadius: "6px",
           overflow: "hidden",
           border: (theme) => `1px solid ${theme.palette.divider}`,

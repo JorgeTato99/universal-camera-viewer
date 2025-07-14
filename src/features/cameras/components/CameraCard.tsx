@@ -257,28 +257,47 @@ export const CameraCard: React.FC<CameraCardProps> = ({
           </Box>
         </Box>
 
-        {/* Área de video con componente VideoPlayer para streaming real */}
-        {isConnected ? (
-          <VideoPlayer
-            cameraId={cameraId}
-            height="200px"
-            autoPlay={true} // Volver a true para que se active cuando la cámara esté conectada
-            showControls={false}
-            onError={(error) =>
-              console.error(`Error en cámara ${cameraId}:`, error)
-            }
-          />
-        ) : (
-          <CameraVideoPreview
-            cameraId={cameraId}
-            isConnected={false}
-            aspectRatio={aspectRatio}
-            height="200px"
-            onError={(error) =>
-              console.error(`Error en cámara ${cameraId}:`, error)
-            }
-          />
-        )}
+        {/* Área de video con componente VideoPlayer para streaming real - Relación 4:3 */}
+        <Box
+          sx={{
+            position: "relative",
+            width: "100%",
+            // Mantener relación de aspecto 16:9
+            aspectRatio: "16/9",
+            backgroundColor: "#000",
+            borderRadius: "6px",
+            overflow: "hidden",
+            mb: 1,
+            // Flex para que ocupe el espacio disponible
+            flex: "1 1 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {isConnected ? (
+            <VideoPlayer
+              cameraId={cameraId}
+              width="100%"
+              height="100%"
+              autoPlay={true}
+              showControls={false}
+              onError={(error) =>
+                console.error(`Error en cámara ${cameraId}:`, error)
+              }
+            />
+          ) : (
+            <CameraVideoPreview
+              cameraId={cameraId}
+              isConnected={false}
+              aspectRatio="16/9"
+              height="100%"
+              onError={(error) =>
+                console.error(`Error en cámara ${cameraId}:`, error)
+              }
+            />
+          )}
+        </Box>
 
         {/* Botones de acción - REBALANCEADOS A 1/3 CADA UNO */}
         <Box

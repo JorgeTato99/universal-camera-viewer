@@ -9,10 +9,10 @@ import asyncio
 import json
 from typing import Dict, Any
 
-from .video_stream_presenter import VideoStreamPresenter
-from .tauri_event_emitter import TauriEventEmitter
-from ...models.connection_model import ConnectionConfig
-from ...models.streaming import StreamProtocol
+from presenters.streaming.video_stream_presenter import VideoStreamPresenter
+from presenters.streaming.tauri_event_emitter import TauriEventEmitter
+from models import ConnectionConfig
+from models.streaming import StreamProtocol
 
 
 class TauriIntegration:

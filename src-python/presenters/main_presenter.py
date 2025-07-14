@@ -15,12 +15,12 @@ import logging
 from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
 
-from .base_presenter import BasePresenter, PresenterState
-from .camera_presenter import CameraPresenter
-from .scan_presenter import ScanPresenter
-from .config_presenter import ConfigPresenter
-from ..models import CameraModel, ScanConfig
-from ..services import (
+from presenters.base_presenter import BasePresenter, PresenterState
+from presenters.camera_presenter import CameraPresenter
+from presenters.scan_presenter import ScanPresenter
+from presenters.config_presenter import ConfigPresenter
+from models import CameraModel, ScanConfig
+from services import (
     get_connection_service, 
     get_scan_service, 
     get_data_service, 
@@ -305,7 +305,7 @@ class MainPresenter(BasePresenter):
     async def _add_camera_from_data(self, camera_data: Dict[str, Any]) -> bool:
         """Agrega cámara desde datos de diccionario."""
         try:
-            from ..models import ConnectionConfig
+            from models import ConnectionConfig
             
             # Crear configuración de conexión
             connection_config = ConnectionConfig(

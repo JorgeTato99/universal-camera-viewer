@@ -16,9 +16,9 @@ from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 from pathlib import Path
 
-from .base_presenter import BasePresenter, PresenterState
-from ..services import get_config_service, get_data_service
-from ..services.config_service import ConfigProfile, ConfigItem, ConfigCategory, ConfigType
+from presenters.base_presenter import BasePresenter, PresenterState
+from services import get_config_service, get_data_service
+from services.config_service import ConfigProfile, ConfigItem, ConfigCategory, ConfigType
 
 
 class ConfigPresenter(BasePresenter):

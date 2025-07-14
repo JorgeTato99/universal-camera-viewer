@@ -14,9 +14,9 @@ import numpy as np
 import logging
 from datetime import datetime
 
-from ...models.streaming import StreamModel, StreamProtocol, StreamStatus
-from ...models.connection_model import ConnectionConfig
-from ...utils.video import FrameConverter
+from models.streaming import StreamModel, StreamProtocol, StreamStatus
+from models import ConnectionConfig
+from utils.video import FrameConverter
 
 
 class StreamManager(ABC):
@@ -57,7 +57,15 @@ class StreamManager(ABC):
         # Recursos específicos del protocolo
         self._connection: Any = None
         
-        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        # Guardar referencia al event loop principal
+        try:
+            self._main_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._main_loop = None
+            self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+            self.logger.warning("No se pudo obtener el event loop actual")
+        else:
+            self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
     
     def set_frame_callback(self, callback: Callable[[str, str], None]) -> None:
         """Establece el callback para notificar frames."""
@@ -164,14 +172,20 @@ class StreamManager(ABC):
                 if frame is not None:
                     # Intentar agregar a la cola (no bloqueante)
                     try:
-                        asyncio.run_coroutine_threadsafe(
-                            self._frame_queue.put(frame),
-                            asyncio.get_event_loop()
-                        )
-                        last_frame_time = current_time
-                    except:
-                        # Cola llena, descartar frame
+                        # Obtener el loop actual del hilo principal
+                        loop = self._main_loop
+                        if loop and not loop.is_closed():
+                            asyncio.run_coroutine_threadsafe(
+                                self._frame_queue.put(frame),
+                                loop
+                            )
+                            last_frame_time = current_time
+                        else:
+                            self.logger.warning("Event loop no disponible")
+                    except Exception as e:
+                        # Cola llena o error, descartar frame
                         self.stream_model.dropped_frames += 1
+                        self.logger.debug(f"Frame descartado: {e}")
                 
             except Exception as e:
                 self.logger.error(f"Error en captura de frame: {e}")
@@ -227,6 +241,9 @@ class StreamManager(ABC):
             # Notificar frame si hay callback
             if self._frame_callback:
                 self._frame_callback(self.stream_model.camera_id, frame_base64)
+                self.logger.debug(f"Frame enviado para {self.stream_model.camera_id}, tamaño: {len(frame_base64)} bytes")
+            else:
+                self.logger.warning(f"No hay callback configurado para notificar frames")
             
             # Actualizar métricas
             self.stream_model.metadata['last_processing_time_ms'] = processing_time

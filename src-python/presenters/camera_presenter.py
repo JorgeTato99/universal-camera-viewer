@@ -15,11 +15,11 @@ import logging
 from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 
-from .base_presenter import BasePresenter, PresenterState
-from ..models import CameraModel, ConnectionModel, ConnectionConfig, ProtocolType, ConnectionType
-from ..models.streaming import StreamModel, StreamProtocol
-from ..services import get_connection_service, get_data_service, get_config_service
-from .streaming import VideoStreamPresenter
+from presenters.base_presenter import BasePresenter, PresenterState
+from models import CameraModel, ConnectionModel, ConnectionConfig, ProtocolType, ConnectionType
+from models.streaming import StreamModel, StreamProtocol
+from services import get_connection_service, get_data_service, get_config_service
+from presenters.streaming import VideoStreamPresenter
 
 
 class CameraPresenter(BasePresenter):

@@ -17,9 +17,9 @@ from datetime import datetime, timedelta
 from ipaddress import IPv4Network, IPv4Address
 import ipaddress
 
-from .base_presenter import BasePresenter, PresenterState
-from ..models import ScanModel, CameraModel, ScanConfig, ScanResult, ScanRange, ScanStatus, ConnectionConfig
-from ..services import get_scan_service, get_data_service, get_config_service
+from presenters.base_presenter import BasePresenter, PresenterState
+from models import ScanModel, CameraModel, ScanConfig, ScanResult, ScanRange, ScanStatus, ConnectionConfig
+from services import get_scan_service, get_data_service, get_config_service
 
 
 class ScanPresenter(BasePresenter):

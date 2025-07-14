@@ -14,11 +14,11 @@ Presenters disponibles:
 - MainPresenter: Coordinador principal de la aplicación
 """
 
-from .base_presenter import BasePresenter, PresenterState
-from .camera_presenter import CameraPresenter
-from .scan_presenter import ScanPresenter  
-from .config_presenter import ConfigPresenter
-from .main_presenter import MainPresenter
+from presenters.base_presenter import BasePresenter, PresenterState
+from presenters.camera_presenter import CameraPresenter
+from presenters.scan_presenter import ScanPresenter  
+from presenters.config_presenter import ConfigPresenter
+from presenters.main_presenter import MainPresenter
 
 # Singleton instances para reutilización
 _main_presenter_instance = None

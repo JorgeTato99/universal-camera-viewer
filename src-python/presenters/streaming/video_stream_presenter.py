@@ -7,14 +7,14 @@ emitiendo eventos que el frontend JavaScript/TypeScript puede capturar.
 
 import asyncio
 import logging
-from typing import Dict, Optional, Set, Any
+from typing import Dict, Optional, Set, Any, Callable
 from datetime import datetime
 
-from ..base_presenter import BasePresenter
-from ...services.video import VideoStreamService
-from ...models.streaming import StreamModel, StreamStatus, StreamProtocol
-from ...models.connection_model import ConnectionConfig
-from .tauri_event_emitter import TauriEventEmitter, EventEmitter
+from presenters.base_presenter import BasePresenter
+from services.video import VideoStreamService
+from models.streaming import StreamModel, StreamStatus, StreamProtocol
+from models import ConnectionConfig
+from presenters.streaming.tauri_event_emitter import TauriEventEmitter, EventEmitter
 
 
 class VideoStreamPresenter(BasePresenter):
@@ -51,8 +51,8 @@ class VideoStreamPresenter(BasePresenter):
         self._metrics_interval = 1.0  # Enviar métricas cada segundo
         self._metrics_tasks: Dict[str, asyncio.Task] = {}
     
-    async def _initialize(self) -> None:
-        """Inicialización del presenter."""
+    async def _initialize_presenter(self) -> None:
+        """Inicialización específica del presenter."""
         self.logger.info("VideoStreamPresenter inicializado para Tauri")
         
         # Emitir evento de inicialización
@@ -65,8 +65,8 @@ class VideoStreamPresenter(BasePresenter):
             }
         })
     
-    async def _cleanup(self) -> None:
-        """Limpieza del presenter."""
+    async def _cleanup_presenter(self) -> None:
+        """Cleanup específico del presenter."""
         # Detener todos los streams
         await self.stop_all_streams()
         
@@ -117,7 +117,8 @@ class VideoStreamPresenter(BasePresenter):
         camera_id: str,
         connection_config: ConnectionConfig,
         protocol: StreamProtocol = StreamProtocol.RTSP,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        on_frame_callback: Optional[Callable[[str, str], None]] = None
     ) -> bool:
         """
         Inicia streaming para una cámara.
@@ -143,12 +144,15 @@ class VideoStreamPresenter(BasePresenter):
             target_fps = options.get('targetFps', 30) if options else 30
             buffer_size = options.get('bufferSize', 5) if options else 5
             
+            # Usar callback externo si se proporciona, sino usar el interno
+            frame_callback = on_frame_callback or self._on_frame_received
+            
             # Iniciar stream con callback
             stream_model = await self._video_service.start_stream(
                 camera_id=camera_id,
                 connection_config=connection_config,
                 protocol=protocol,
-                on_frame_callback=self._on_frame_received,
+                on_frame_callback=frame_callback,
                 target_fps=target_fps,
                 buffer_size=buffer_size
             )
@@ -377,12 +381,117 @@ class VideoStreamPresenter(BasePresenter):
         """Maneja errores en acciones."""
         self.logger.error(f"Error en acción {action}: {error}")
         
-        await self._event_emitter.emit('action-error', {
-            'action': action,
-            'params': params,
-            'error': str(error),
-            'timestamp': datetime.now().isoformat()
-        })
+        await self._event_emitter.emit_error(
+            params.get('cameraId', 'unknown'),
+            'action_error',
+            str(error)
+        )
+    
+    # === MÉTODOS DE COMPATIBILIDAD PARA STREAMHANDLER ===
+    
+    async def connect_camera(self, config: ConnectionConfig) -> bool:
+        """
+        Conecta a una cámara (wrapper para compatibilidad).
+        
+        Args:
+            config: Configuración de conexión
+            
+        Returns:
+            True si la conexión fue exitosa
+        """
+        try:
+            # Generar camera_id desde la IP
+            camera_id = f"cam_{config.ip.replace('.', '_')}"
+            
+            # Determinar protocolo
+            protocol = config.protocol if hasattr(config, 'protocol') else StreamProtocol.RTSP
+            
+            # Iniciar stream
+            success = await self.start_camera_stream(
+                camera_id=camera_id,
+                connection_config=config,
+                protocol=protocol,
+                options={
+                    'targetFps': 30,
+                    'bufferSize': 5
+                }
+            )
+            
+            # Guardar configuración para uso posterior
+            if success:
+                self._current_camera_id = camera_id
+                self._current_config = config
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"Error conectando cámara: {e}")
+            return False
+    
+    async def start_streaming(self) -> None:
+        """
+        Inicia el streaming (compatibilidad con StreamHandler).
+        El streaming ya se inicia en connect_camera, así que este método
+        solo verifica el estado.
+        """
+        if hasattr(self, '_current_camera_id') and self._current_camera_id:
+            stream = self._active_streams.get(self._current_camera_id)
+            if stream and stream.status == StreamStatus.STREAMING:
+                self.logger.info(f"Streaming ya activo para {self._current_camera_id}")
+            else:
+                self.logger.warning("Stream no está activo")
+        else:
+            raise RuntimeError("No hay cámara conectada")
+    
+    async def stop_streaming(self) -> None:
+        """
+        Detiene el streaming actual (compatibilidad).
+        """
+        if hasattr(self, '_current_camera_id') and self._current_camera_id:
+            await self.stop_camera_stream(self._current_camera_id)
+    
+    async def disconnect_camera(self) -> None:
+        """
+        Desconecta la cámara actual (compatibilidad).
+        """
+        if hasattr(self, '_current_camera_id') and self._current_camera_id:
+            # Detener stream si está activo
+            if self._current_camera_id in self._active_streams:
+                await self.stop_camera_stream(self._current_camera_id)
+            
+            # Limpiar referencias
+            self._current_camera_id = None
+            self._current_config = None
+    
+    @property
+    def on_frame_update(self):
+        """Getter para callback de frames."""
+        return getattr(self, '_on_frame_callback', None)
+    
+    @on_frame_update.setter
+    def on_frame_update(self, callback):
+        """
+        Setter para callback de frames (compatibilidad).
+        
+        Args:
+            callback: Función async que recibe bytes del frame
+        """
+        self._on_frame_callback = callback
+        
+        # Configurar el callback en el servicio
+        if hasattr(self, '_current_camera_id') and self._current_camera_id:
+            self._video_service.set_frame_callback(
+                self._current_camera_id,
+                callback
+            )
+    
+    @property
+    def is_streaming(self) -> bool:
+        """Verifica si hay streaming activo."""
+        if hasattr(self, '_current_camera_id') and self._current_camera_id:
+            stream = self._active_streams.get(self._current_camera_id)
+            return stream and stream.status == StreamStatus.STREAMING
+        return False
     
     # === MÉTODOS DE UTILIDAD ===
     

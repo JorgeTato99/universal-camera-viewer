@@ -5,9 +5,9 @@ Este módulo contiene los servicios necesarios para gestionar
 streams de video en tiempo real.
 """
 
-from .video_stream_service import VideoStreamService
-from .stream_manager import StreamManager, StreamManagerFactory
-from .frame_processor import FrameProcessor
+from services.video.video_stream_service import VideoStreamService
+from services.video.stream_manager import StreamManager, StreamManagerFactory
+from services.video.frame_processor import FrameProcessor
 
 __all__ = [
     'VideoStreamService',

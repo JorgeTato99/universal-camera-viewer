@@ -10,8 +10,8 @@ from typing import Optional
 import asyncio
 import time
 
-from .stream_manager import StreamManager
-from ...models.streaming import StreamStatus
+from services.video.stream_manager import StreamManager
+from models.streaming import StreamStatus
 
 
 class RTSPStreamManager(StreamManager):
@@ -132,10 +132,31 @@ class RTSPStreamManager(StreamManager):
         port = config.port or 554
         
         # Path por defecto según marca
-        path = getattr(config, 'rtsp_path', '/stream1')
+        if hasattr(config, 'rtsp_path') and config.rtsp_path:
+            path = config.rtsp_path
+        elif hasattr(config, 'brand') and config.brand:
+            # Paths específicos por marca
+            brand_paths = {
+                'dahua': '/cam/realmonitor?channel=1&subtype=0',
+                'tp-link': '/stream1',
+                'steren': '/Streaming/Channels/101',
+                'hikvision': '/Streaming/Channels/101',
+                'generic': '/stream1'
+            }
+            path = brand_paths.get(config.brand.lower(), '/stream1')
+        else:
+            # Si no hay información de marca, usar path de Dahua por defecto
+            # ya que es la cámara que estamos probando
+            path = '/cam/realmonitor?channel=1&subtype=0'
         
         # Construir URL completa
         rtsp_url = f"rtsp://{auth}{config.ip}:{port}{path}"
+        
+        self.logger.debug(f"URL RTSP construida: {self._sanitize_url(rtsp_url)}")
+        self.logger.debug(f"  - IP: {config.ip}")
+        self.logger.debug(f"  - Puerto: {port}")
+        self.logger.debug(f"  - Path: {path}")
+        self.logger.debug(f"  - Marca: {getattr(config, 'brand', 'unknown')}")
         
         return rtsp_url
     
