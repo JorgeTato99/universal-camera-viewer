@@ -15,7 +15,8 @@ MYPY := mypy
 BANDIT := bandit
 
 # Directorios del proyecto
-SRC_DIR := src
+SRC_DIR := src-python
+FRONTEND_DIR := src
 TEST_DIR := tests
 EXAMPLES_DIR := examples
 CONFIG_DIR := config

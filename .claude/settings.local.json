@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(mv:*)",
+      "Bash(move src-pythonmain.tsx srcmain.tsx)",
+      "Bash(powershell:*)"
     ],
     "deny": []
   }

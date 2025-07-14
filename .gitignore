@@ -302,3 +302,9 @@ src_old/
 # exports/.gitkeep - Para mantener la estructura de carpetas
 # .vscode/settings.json - Configuración específica del proyecto 
 !CURRENT_STATUS.md
+
+# ==========================================
+# ARCHIVOS DE NODE
+# ==========================================
+node_modules/
+node_modules
