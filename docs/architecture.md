@@ -1,315 +1,216 @@
-# 🏛️ Arquitectura MVP
+# 🏗️ Arquitectura Técnica
 
-## 📋 Visión General
+## Arquitectura MVP (Model-View-Presenter)
 
-**Universal Camera Viewer** implementa el patrón **Model-View-Presenter (MVP)** para lograr separación de responsabilidades y facilitar el testing y mantenimiento.
+El proyecto implementa una arquitectura MVP estricta con las siguientes capas:
 
-```mermaid
-graph TB
-    V[📱 View Layer<br/>Flet UI] 
-    P[🔗 Presenter Layer<br/>Business Logic]
-    M[🗃️ Model Layer<br/>Data & State]
-    S[⚙️ Services Layer<br/>External APIs]
-    
-    V <--> P
-    P <--> M
-    P <--> S
-    
-    style V fill:#e1f5fe
-    style P fill:#fff3e0
-    style M fill:#f3e5f5
-    style S fill:#e8f5e8
+### Model Layer (100% Completo)
+```
+src-python/models/
+├── camera_model.py      # Entidad de cámara
+├── connection_model.py  # Estado de conexión
+├── scan_model.py        # Resultados de escaneo
+└── streaming/
+    ├── stream_model.py  # Estado del stream
+    └── frame_model.py   # Datos del frame
 ```
 
-## 🔄 Patrón MVP
+### View Layer (Migrando a React)
+- **Legacy**: `src-python/views/` - Flet UI (referencia)
+- **Nuevo**: `src/` - React + TypeScript + Material-UI
 
-### **Model (🗃️ Modelo)**
+### Presenter Layer (20% Completo)
+```
+src-python/presenters/
+├── camera_presenter.py     # Gestión de cámaras
+├── streaming/
+│   └── video_stream_presenter.py  # Streaming adaptado para Tauri
+└── [pendientes...]         # 80% por implementar
+```
 
-- **Responsabilidad:** Estado de la aplicación y datos
-- **Ubicación:** `src/models/`
-- **Estado:** ✅ **100% Completo**
+### Service Layer (100% Completo)
+```
+src-python/services/
+├── connection_service.py   # Gestión de conexiones
+├── protocol_service.py     # Protocolos ONVIF/RTSP
+├── scan_service.py         # Descubrimiento de red
+├── config_service.py       # Configuración
+└── video/
+    └── video_stream_service.py  # Singleton para streaming
+```
 
+## Patrones de Diseño Implementados
+
+### Singleton Pattern
 ```python
-# camera_model.py
-class CameraModel:
-    """Estado y datos de cámaras conectadas"""
+class VideoStreamService:
+    _instance = None
     
-# connection_model.py  
-class ConnectionModel:
-    """Estado de conexiones activas"""
-    
-# scan_model.py
-class ScanModel:
-    """Estado de escaneos de red"""
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 ```
 
-### **View (📱 Vista)**
-
-- **Responsabilidad:** Interfaz de usuario y eventos
-- **Ubicación:** `src/views/`
-- **Estado:** ✅ **95% Completo** (Flet + Material Design 3)
-
+### Factory Pattern
 ```python
-# main_view.py
-class MainView:
-    """Vista principal con navegación y layout"""
-    
-# camera_view.py
-class CameraView:
-    """Vista de gestión de cámaras"""
+class StreamManagerFactory:
+    @staticmethod
+    def create_manager(protocol: StreamProtocol) -> StreamManager:
+        if protocol == StreamProtocol.RTSP:
+            return RTSPStreamManager()
+        elif protocol == StreamProtocol.ONVIF:
+            return ONVIFStreamManager()
 ```
 
-### **Presenter (🔗 Presentador)**
-
-- **Responsabilidad:** Lógica de negocio y coordinación
-- **Ubicación:** `src/presenters/`
-- **Estado:** 🚧 **20% Completo** (EN DESARROLLO)
-
+### Strategy Pattern
 ```python
-# main_presenter.py
-class MainPresenter:
-    """Coordinación general de la aplicación"""
+class FrameConverter:
+    def __init__(self, strategy: ConversionStrategy):
+        self._strategy = strategy
     
-# camera_presenter.py
-class CameraPresenter:
-    """Lógica de gestión de cámaras"""
-    
-# scan_presenter.py  
-class ScanPresenter:
-    """Lógica de escaneo de red"""
+    def convert(self, frame: np.ndarray) -> str:
+        return self._strategy.convert(frame)
 ```
 
-## 🔧 Services Layer
-
-### **Servicios de Negocio**
-
-- **Ubicación:** `src/services/`
-- **Estado:** ✅ **100% Completo**
-
+### Template Method Pattern
 ```python
-# protocol_service.py
-class ProtocolService:
-    """Gestión de protocolos ONVIF, RTSP, HTTP/CGI"""
-    
-# scan_service.py
-class ScanService:
-    """Escaneo de red y descubrimiento de cámaras"""
-    
-# connection_service.py
-class ConnectionService:
-    """Gestión de conexiones a cámaras"""
-    
-# config_service.py
-class ConfigService:
-    """Gestión de configuración"""
-    
-# data_service.py
-class DataService:
-    """Persistencia de datos"""
+class StreamManager(ABC):
+    def start_stream(self):
+        self._initialize()      # Hook
+        self._connect()         # Abstract
+        self._configure()       # Hook
+        self._begin_capture()   # Template
 ```
 
-## 📊 Estado Actual del MVP
+## Comunicación Frontend-Backend (Tauri)
 
-| Capa | Progreso | Archivos | Estado |
-|------|----------|----------|--------|
-| **Model** | 100% | 3/3 | ✅ Completo |
-| **View** | 95% | 2/2 | ✅ Flet implementado |
-| **Presenter** | 20% | 1/5 | 🚧 En desarrollo |
-| **Services** | 100% | 5/5 | ✅ Completo |
-
-## 🎯 Flujo de Datos
-
-### **Escaneo de Red (Ejemplo)**
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant V as MainView
-    participant P as ScanPresenter
-    participant S as ScanService
-    participant M as ScanModel
-    
-    U->>V: Click "Escanear Red"
-    V->>P: scan_network()
-    P->>S: perform_network_scan()
-    S->>P: discovered_cameras[]
-    P->>M: update_scan_results()
-    M->>P: state_changed
-    P->>V: update_ui()
-    V->>U: Show results
+### Arquitectura de Comunicación
+```
+React Frontend <-> Tauri Core <-> Python Sidecar
+     JSON            IPC           stdin/stdout
 ```
 
-### **Conexión a Cámara (Ejemplo)**
+### Flujo de Datos
+1. **Comandos**: React → Tauri Command → Python
+2. **Eventos**: Python → stdout JSON → Tauri → React
+3. **Video**: OpenCV → Base64 → Tauri Event → React Image
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant V as CameraView
-    participant P as CameraPresenter
-    participant CS as ConnectionService
-    participant PS as ProtocolService
-    participant M as CameraModel
-    
-    U->>V: Select camera + Connect
-    V->>P: connect_camera(ip, brand)
-    P->>CS: establish_connection()
-    CS->>PS: detect_protocol()
-    PS->>CS: protocol_info
-    CS->>P: connection_result
-    P->>M: update_camera_state()
-    M->>P: state_changed
-    P->>V: update_connection_status()
-    V->>U: Show camera stream
-```
+### Ejemplo de Comunicación
+```typescript
+// Frontend (React)
+const stream = await invoke('start_camera_stream', { 
+    cameraId: 'cam1' 
+});
 
-## 🏗️ Estructura de Carpetas
-
-```bash
-src/
-├── 📱 views/              # UI Layer (Flet)
-│   ├── main_view.py      # ✅ Vista principal
-│   └── camera_view.py    # ✅ Vista de cámaras
-│
-├── 🔗 presenters/         # Business Logic
-│   ├── base_presenter.py # ✅ Clase base
-│   ├── main_presenter.py # 🚧 20% implementado
-│   ├── camera_presenter.py # ❌ Pendiente
-│   ├── scan_presenter.py # ❌ Pendiente
-│   └── config_presenter.py # ❌ Pendiente
-│
-├── 🗃️ models/             # Data & State
-│   ├── camera_model.py   # ✅ Modelo de cámaras
-│   ├── connection_model.py # ✅ Modelo de conexiones
-│   └── scan_model.py     # ✅ Modelo de escaneos
-│
-├── ⚙️ services/           # External APIs
-│   ├── protocol_service.py # ✅ Protocolos de cámara
-│   ├── scan_service.py   # ✅ Escaneo de red
-│   ├── connection_service.py # ✅ Gestión conexiones
-│   ├── config_service.py # ✅ Configuración
-│   └── data_service.py   # ✅ Persistencia
-│
-└── 🛠️ utils/             # Utilities
-    ├── config.py         # ✅ Configuración global
-    └── brand_manager.py  # ✅ Gestión marcas
-```
-
-## 🎨 Arquitectura de UI
-
-### **Material Design 3 Implementation**
-
-```python
-# Color Scheme
-color_scheme = ft.ColorScheme.from_seed(ft.Colors.BLUE_700)
-
-# Component Hierarchy
-AppBar
-├── NavigationBar (Material 3)
-├── Body Container
-│   ├── Side Panel (Cards + TextFields)
-│   └── Main Content Area
-│       ├── Camera Grid
-│       └── Status Bar
-└── FloatingActionButton
-```
-
-### **Responsive Design**
-
-```python
-BREAKPOINTS = {
-    'mobile': 600,
-    'tablet': 900, 
-    'desktop': 1200
+// Python Sidecar recibe
+{
+    "action": "start_stream",
+    "params": { "camera_id": "cam1" }
 }
 
-def adaptive_layout(width: int) -> str:
-    if width < 600: return 'mobile'
-    elif width < 900: return 'tablet'
-    else: return 'desktop'
+// Python emite frames
+{
+    "event": "video_frame",
+    "data": {
+        "camera_id": "cam1",
+        "frame": "base64_encoded_jpeg..."
+    }
+}
 ```
 
-## 🔌 Protocolos Soportados
+## Protocolos de Cámara
 
-### **Por Marca de Cámara**
-
-| Marca | Protocolo Principal | Protocolo Secundario | Puerto |
-|-------|-------------------|---------------------|--------|
-| **Dahua** | ONVIF | HTTP/CGI | 80, 554 |
-| **TP-Link** | ONVIF | RTSP | 554, 8080 |
-| **Steren** | HTTP/CGI | ONVIF | 80, 8080 |
-| **Generic** | ONVIF | RTSP | 554, 80 |
-
-### **Architecture per Protocol**
-
+### ONVIF Implementation
 ```python
-# protocol_service.py
-class ProtocolService:
-    def detect_protocol(self, ip: str, brand: str) -> str:
-        """Auto-detecta el mejor protocolo"""
-        
-    def connect_onvif(self, ip: str, credentials: dict) -> bool:
-        """Conexión ONVIF estándar"""
-        
-    def connect_rtsp(self, ip: str, stream_url: str) -> bool:
-        """Conexión RTSP directa"""
-        
-    def connect_http_cgi(self, ip: str, api_endpoint: str) -> bool:
-        """Conexión HTTP/CGI para marcas específicas"""
+# Descubrimiento WS-Discovery
+# Autenticación WS-UsernameToken
+# Servicios: Media, Device, PTZ
+# Perfiles dinámicos por cámara
 ```
 
-## 📈 Performance Architecture
-
-### **Multithreading Strategy**
-
+### RTSP Implementation
 ```python
-# Concurrent operations
-- Network scanning: ThreadPoolExecutor
-- Camera connections: AsyncIO
-- Stream processing: Background threads
-- UI updates: Main thread only
+# URLs patterns (16+ soportados)
+# Autenticación Basic/Digest
+# Decodificación con OpenCV
+# Reconnect automático
 ```
 
-### **Memory Management**
-
+### Configuración por Marca
 ```python
-# Efficient resource usage
-- Stream buffers: Ring buffer pattern
-- Connection pooling: Max 10 concurrent
-- Cache management: LRU eviction
-- Memory monitoring: psutil integration
+BRAND_CONFIGS = {
+    'dahua': {
+        'onvif_port': 80,
+        'rtsp_port': 554,
+        'auth': 'digest'
+    },
+    'tplink': {
+        'onvif_port': 2020,
+        'rtsp_port': 554,
+        'auth': 'basic'
+    },
+    'steren': {
+        'onvif_port': 8000,
+        'rtsp_port': 5543,
+        'dual_stream': True
+    }
+}
 ```
 
-## 🚀 Próximas Fases
+## Performance y Optimización
 
-### **Fase 1: Completar MVP (Sprint Actual)**
+### Gestión de Memoria
+- Pool de conexiones reutilizables
+- Liberación automática de recursos OpenCV
+- Garbage collection optimizado
+- Límites de buffer configurables
 
-1. ✅ ~~Model Layer completo~~
-2. ✅ ~~View Layer con Flet~~
-3. 🚧 **Presenter Layer** (80% pendiente)
-4. ✅ ~~Services Layer completo~~
+### Threading y Async
+- AsyncIO para todas las operaciones I/O
+- ThreadPoolExecutor para decodificación
+- Queues para comunicación inter-thread
+- Backpressure handling
 
-### **Fase 2: Analytics & Testing**
+### Métricas de Performance
+```python
+# Target metrics
+FPS: 15-30 (configurable)
+Latencia: < 200ms
+CPU: < 5% por cámara
+RAM: < 50MB por stream
+```
 
-1. 📊 Integración DuckDB para analytics
-2. 🧪 Test suite completo (unit + integration)
-3. 📈 Performance monitoring
-4. 🔒 Security hardening
+## Seguridad
 
-### **Fase 3: Distribution**
+### Gestión de Credenciales
+- No hardcoded credentials
+- Encriptación en .env (planeado)
+- Sesiones con timeout
+- Rate limiting en APIs
 
-1. 📱 Build nativo con Flet
-2. 🚀 CI/CD pipeline
-3. 📦 Packaging automatizado
-4. 📚 Documentación de usuario final
+### Validación de Entrada
+- IP address validation
+- Port range checking
+- Command injection prevention
+- Path traversal protection
 
-## 🎯 Próximos Pasos para Desarrolladores
+## Testing Strategy
 
-1. **[💻 Setup Desarrollo](development.md#setup-inicial)**
-2. **[📡 Entender Services](api-services.md)**
-3. **[🔗 Implementar Presenters](development.md#tareas-prioritarias)**
+### Unit Tests
+- Models: 100% coverage target
+- Services: 90% coverage target
+- Presenters: 85% coverage target
+- Utils: 95% coverage target
 
----
+### Integration Tests
+- Protocol handlers
+- Database operations
+- IPC communication
+- End-to-end flows
 
-**🏗️ Arquitectura:** MVP Pattern con separación clara de responsabilidades  
-**🎨 UI:** Flet + Material Design 3 para experiencia moderna  
-**⚡ Performance:** Multithreading + AsyncIO para operaciones concurrentes
+### Performance Tests
+- Load testing (4+ cámaras)
+- Memory leak detection
+- Network stress testing
+- UI responsiveness

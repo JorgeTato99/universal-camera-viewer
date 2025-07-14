@@ -30,7 +30,10 @@ interface CameraState {
   // UI Actions
   setGridColumns: (columns: number) => void;
   setViewMode: (mode: "grid" | "list") => void;
-  setSorting: (sortBy: string, direction: "asc" | "desc") => void;
+  setSorting: (
+    sortBy: "name" | "status" | "lastUpdated",
+    direction: "asc" | "desc"
+  ) => void;
   setFilter: (status: ConnectionStatus | "all") => void;
   setSearchQuery: (query: string) => void;
 

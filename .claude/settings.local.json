@@ -6,7 +6,8 @@
       "Bash(mv:*)",
       "Bash(move src-pythonmain.tsx srcmain.tsx)",
       "Bash(powershell:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

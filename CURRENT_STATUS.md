@@ -1,441 +1,335 @@
-# 📊 Estado Actual del Proyecto - Diciembre 2024
+# 📊 Estado Actual del Proyecto - v0.8.0 (Enero 2025)
 
-> **Documento técnico consolidado** - Estado actual completo, progreso de migración MVP, métricas de performance y roadmap detallado para futuros desarrollos.
+> **Documento técnico consolidado** - Estado actual de la migración a Tauri, arquitectura, componentes implementados y roadmap.
 
-![Estado Técnico](https://img.shields.io/badge/Estado-UI%20Moderna%20Flet%20Completada-brightgreen)
-![Progreso MVP](https://img.shields.io/badge/MVP%20Architecture-65%25%20Completado-blue)
-![Próximo](https://img.shields.io/badge/Próximo-Presenter%20Layer-orange)
-![Última Actualización](https://img.shields.io/badge/Actualización-Diciembre%202024-blue)
-
----
-
-## 🎯 **Resumen Ejecutivo del Estado Actual**
-
-### **📱 UI Moderna Completada - Flet + Material Design 3**
-
-**Logro Principal**: Transición exitosa desde UI básica → **Aplicación desktop moderna profesional**
-
-- ✅ **Flet Framework**: Python + Flutter rendering completamente funcional
-- ✅ **Material Design 3**: ColorScheme, tipografía, iconos, spacing perfecto
-- ✅ **Navegación moderna**: Barra de herramientas elevada, botones con estados
-- ✅ **Panel rediseñado**: Cards organizados, TextFields modernos, Progress avanzado
-- ✅ **UX profesional**: Estados hover, loading states, feedback visual completo
-
-### **🏗️ Progreso Arquitectura MVP - 65% Completado**
-
-| Layer | Estado | Completitud | Detalles |
-|-------|--------|-------------|----------|
-| **Model Layer** | ✅ **Completo** | 100% | Entities, services, utils organizados |
-| **View Layer** | ✅ **Moderno** | 95% | Flet + Material Design 3 implementado |
-| **Presenter Layer** | 🔄 **En progreso** | 20% | Base classes y page presenters pendientes |
-| **Infrastructure** | ✅ **Completo** | 100% | Config, logging, utilidades funcionando |
-
-### **📊 Estado Funcional**
-
-- **Core functionality**: 100% operativa (4 marcas, 4 protocolos)
-- **Performance**: Óptimo (13-20+ FPS, <200MB RAM, <15% CPU)
-- **UI/UX**: Profesional y moderna con Flet
-- **Testing**: Hardware real probado con 4 marcas diferentes
+![Estado](https://img.shields.io/badge/Estado-Migración%20Tauri%20Iniciada-orange)
+![Backend](https://img.shields.io/badge/Backend%20Python-95%25%20Completo-brightgreen)
+![Frontend](https://img.shields.io/badge/Frontend%20React-En%20Desarrollo-yellow)
+![Versión](https://img.shields.io/badge/Versión-0.8.0-blue)
 
 ---
 
-## 🔬 **Métricas de Performance Detalladas**
+## 🎯 **Resumen Ejecutivo**
 
-### **Hardware Real Testado**
+### **🚀 Migración Mayor: Flet → Tauri (v0.8.0)**
 
-| Marca | Modelo | IP | Protocolo | FPS | Resolución | Latencia | CPU % | Memoria MB |
-|-------|--------|----|-----------|----|------------|----------|-------|------------|
-| **Dahua** | Hero-K51H | 192.168.1.172 | ONVIF | 13.86 | 4K (2880x1620) | 89ms | 8.2% | 45MB |
-| **Dahua** | Hero-K51H | 192.168.1.172 | RTSP | 15.32 | 4K (2880x1620) | 125ms | 9.1% | 48MB |
-| **TP-Link** | Tapo C520WS | 192.168.1.77 | ONVIF | Variable | Multi-perfil | 178ms | 6.5% | 38MB |
-| **Steren** | CCTV-235 | 192.168.1.178 | ONVIF | 20.3 | 4MP + 360p dual | 95ms | 7.8% | 42MB |
-| **China Gen** | 8MP WiFi | 192.168.1.180 | Generic | 12.0 | 5.9MP (2304x2592) | 210ms | 10.1% | 52MB |
+**Cambio Fundamental**: Transición de Flet a **Tauri** para aplicación nativa con mejor rendimiento
 
-### **Benchmarks del Sistema**
+- 🔄 **Frontend**: De Flet (Python) → React + TypeScript + Material-UI
+- ✅ **Backend**: Python MVP mantenido → Comunicación vía Tauri IPC
+- 📁 **Estructura**: Reorganizada con `src-python/` y `src/`
+- 🧰 **Tooling**: Yarn obligatorio (bug npm), Rust MSVC requerido
 
-| Métrica | 1 Cámara | 2 Cámaras | 4 Cámaras | 4 Cámaras + Discovery |
-|---------|-----------|-----------|-----------|---------------------|
-| **RAM Total** | 85MB | 145MB | 185MB | 205MB |
-| **CPU Total** | 4.2% | 8.1% | 15.3% | 18.7% |
-| **Startup Time** | 1.8s | 2.1s | 2.7s | 3.2s |
-| **Reconnect Time** | 1.2s | 1.4s | 1.9s | 2.1s |
+### **📊 Estado de Componentes**
+
+| Componente | Estado | Completitud | Detalles |
+|------------|--------|-------------|----------|
+| **Backend Python** | ✅ Funcional | 95% | Falta 20% presenters |
+| **Arquitectura MVP** | ✅ Implementada | 95% | Services completos |
+| **Video Streaming** | ✅ Backend listo | 100% | VideoStreamService implementado |
+| **Frontend React** | 🚧 En desarrollo | 5% | Estructura inicial |
+| **Comunicación IPC** | 📝 Diseñada | 0% | Scripts creados, no integrados |
+| **UI Components** | 🔄 Migrando | 0% | De Flet a React |
 
 ---
 
-## 🔧 **Detalles de Implementación**
+## 📁 **Estructura del Proyecto (v0.8.0)**
 
-### **ONVIF Protocol Specifics**
-
-#### **Puertos y Endpoints por Marca**
-
-```python
-BRAND_CONFIGURATIONS = {
-    'dahua': {
-        'onvif_port': 80,
-        'rtsp_port': 554,
-        'stream_path': '/cam/realmonitor?channel=1&subtype=0',
-        'snapshot_endpoint': '/cgi-bin/snapshot.cgi'
-    },
-    'tplink': {
-        'onvif_port': 2020,
-        'rtsp_port': 554,
-        'stream_paths': ['/stream1', '/stream2'],
-        'auth_method': 'digest'
-    },
-    'steren': {
-        'onvif_port': 8000,
-        'rtsp_port': 5543,
-        'dual_stream': True,
-        'profiles': ['PROFILE_395207', 'PROFILE_395208']
-    }
-}
+```
+universal-camera-viewer/
+├── src/                    # Frontend React/TypeScript (NEW)
+│   ├── App.tsx            # Componente principal React
+│   ├── main.tsx           # Punto de entrada React
+│   └── [components...]    # Por implementar
+│
+├── src-python/            # Backend Python (MOVED from src/)
+│   ├── main.py           # Legacy Flet (referencia)
+│   ├── models/           # ✅ Modelos completos + StreamModel
+│   ├── views/            # Legacy Flet UI (referencia solamente)
+│   ├── presenters/       # 🚧 20% completo
+│   ├── services/         # ✅ Completo + VideoStreamService
+│   │   └── video/        # ✅ Streaming implementado
+│   ├── protocol_handlers/# ✅ ONVIF, RTSP funcionales
+│   └── utils/            # ✅ Utilidades + FrameConverter
+│
+├── src-tauri/            # Aplicación Rust/Tauri
+│   ├── tauri.conf.json   # Configurado puerto 5173
+│   └── Cargo.toml        # Dependencias Rust
+│
+├── scripts/              # Comunicación Python-Tauri
+│   ├── python_sidecar.py # IPC via stdin/stdout
+│   └── start_python_backend.py # Backend HTTP alternativo
+│
+└── docs/                 # Documentación actualizada
+    └── WINDOWS_SETUP.md  # Guía específica Windows
 ```
 
-#### **Discovered RTSP URLs Reales**
+---
+
+## 🏗️ **Arquitectura Actual**
+
+### **Frontend (React + Tauri) - EN DESARROLLO**
+
+- **Framework**: React 19 + TypeScript
+- **UI Library**: Material-UI v7
+- **State Management**: Zustand (planeado)
+- **Build Tool**: Vite (puerto 5173)
+- **Native Wrapper**: Tauri v2
+
+### **Backend (Python MVP) - 95% COMPLETO**
+
+- **Arquitectura**: Model-View-Presenter (MVP)
+- **Async**: asyncio para todas las operaciones I/O
+- **Protocolos**: ONVIF, RTSP, HTTP/CGI funcionales
+- **Video**: OpenCV + conversión base64
+- **Patrones Implementados**:
+  - ✅ Singleton: `VideoStreamService`
+  - ✅ Factory: `StreamManagerFactory`
+  - ✅ Strategy: `FrameConverter`
+  - ✅ Template Method: `StreamManager`
+  - 🚧 Observer: Presenters (20% completo)
+
+### **Comunicación Frontend-Backend**
+
+- **Diseño**: Tauri Command API + Python Sidecar
+- **Protocolo**: JSON via stdin/stdout
+- **Video**: Frames como base64 strings
+- **Estado**: Scripts creados, integración pendiente
+
+---
+
+## 🔧 **Componentes Implementados vs Faltantes**
+
+### ✅ **Implementado (Backend)**
+
+#### 1. **Conexiones a Cámaras**
+
+- `ConnectionService` - Gestión de conexiones
+- `ProtocolService` - ONVIF, RTSP, HTTP/CGI
+- Handlers específicos por marca funcionando
+
+#### 2. **Streaming de Video**
+
+```python
+# Nuevos componentes v0.8.0:
+src-python/
+├── services/video/
+│   ├── video_stream_service.py    # ✅ Singleton service
+│   └── stream_managers/
+│       ├── base_stream_manager.py  # ✅ Template method
+│       ├── rtsp_stream_manager.py  # ✅ RTSP implementation
+│       └── onvif_stream_manager.py # ✅ ONVIF implementation
+├── utils/video/
+│   └── frame_converter.py          # ✅ OpenCV → base64
+└── models/streaming/
+    ├── stream_model.py             # ✅ Estado del stream
+    └── frame_model.py              # ✅ Datos del frame
+```
+
+#### 3. **Presenters Adaptados**
+
+- `VideoStreamPresenter` - Emite eventos Tauri
+- `CameraPresenter` - Integra streaming (parcial)
+
+### ❌ **Faltante (Frontend + Integración)**
+
+#### 1. **UI React Components**
+
+```typescript
+// Por implementar:
+src/
+├── components/
+│   ├── Camera/
+│   │   ├── CameraView.tsx        // Widget de video
+│   │   ├── CameraGrid.tsx        // Grid de cámaras
+│   │   └── VideoPlayer.tsx       // Display de frames
+│   ├── Controls/
+│   │   └── ConnectionPanel.tsx   // Panel de control
+│   └── Layout/
+│       └── MainLayout.tsx        // Layout principal
+```
+
+#### 2. **Integración Tauri**
+
+- Configurar sidecar Python en `tauri.conf.json`
+- Implementar comandos Tauri en Rust
+- Conectar eventos bidireccionales
+- Sistema de actualización de frames
+
+#### 3. **Presenters Faltantes (80%)**
+
+```python
+# Por completar en src-python/presenters/:
+├── base/
+│   ├── base_presenter.py      # Clase base
+│   └── presenter_interface.py # Protocolo
+├── main_presenter.py          # Coordinador principal
+├── scan_presenter.py          # Discovery/escaneo
+└── settings_presenter.py      # Configuración
+```
+
+---
+
+## 🚀 **Comandos de Desarrollo**
+
+### **Requisitos Previos (Windows)**
 
 ```bash
-# Dahua Hero-K51H
-rtsp://admin:***@192.168.1.172:554/cam/realmonitor?channel=1&subtype=0
+# 1. Rust con MSVC (NO GNU)
+# Descargar: https://www.rust-lang.org/tools/install
+# Seleccionar: stable-x86_64-pc-windows-msvc
 
-# TP-Link Tapo C520WS  
-rtsp://admin:***@192.168.1.77:554/stream1
+# 2. Yarn (obligatorio por bug npm)
+npm install -g yarn
 
-# Steren CCTV-235
-rtsp://admin:***@192.168.1.178:5543/live/channel0
-
-# China Genérica 8MP
-rtsp://192.168.1.180:554/user=EightMPWiFiSCmr&password=***&channel=1&stream=0
+# 3. Python 3.8+
+python --version
 ```
 
-### **Generic Connection Patterns**
-
-#### **16+ Patrones RTSP Probados**
-
-```python
-GENERIC_URL_PATTERNS = [
-    '/stream1', '/stream2', '/live/stream1', '/live/stream2',
-    '/stream', '/live', '/h264', '/video',
-    '/cam/realmonitor?channel=1&subtype=0',  # Dahua-style
-    '/user={user}&password={pass}&channel=1&stream=0',  # Embedded auth
-    '/ISAPI/Streaming/channels/101/httpPreview',  # Hikvision-style
-    '/videostream.cgi?user={user}&pwd={pass}',  # CGI style
-    '/live/main', '/live/sub', '/main', '/sub',
-    '/ch0/main/av_stream', '/ch0/sub/av_stream'
-]
-```
-
----
-
-## 🧪 **Testing Results Detallados**
-
-### **ONVIF Discovery Success Rate**
-
-| Marca | Intentos | Éxitos | Success Rate | Tiempo Promedio |
-|-------|----------|--------|--------------|-----------------|
-| Dahua | 50 | 50 | 100% | 2.3s |
-| TP-Link | 50 | 48 | 96% | 3.7s |
-| Steren | 50 | 49 | 98% | 2.8s |
-| Generic | 50 | 35 | 70% | 8.2s |
-
-### **Port Discovery Performance**
-
-#### **Escaneo 192.168.1.0/24 - Puertos 80,554,2020,8000**
+### **Instalación**
 
 ```bash
-Target: 254 IPs × 4 puertos = 1,016 tests
-Results:
-- Tiempo total: 45.7s (modo rápido) / 127.3s (modo exhaustivo)
-- Puertos encontrados: 23 abiertos
-- Cámaras detectadas: 4 (100% identificadas correctamente)
-- False positives: 0
-- Memoria pico: 12MB adicional
+# Frontend - USAR YARN
+yarn install         # NO usar npm install
+
+# Backend Python
+cd src-python
+pip install -r ../requirements.txt
 ```
 
-### **UX Improvements Metrics v0.2.0**
-
-#### **Time-to-First-Camera (TTFC)**
-
-- **v1.x**: 8.5 minutos promedio (configuración manual)
-- **v0.2.0**: 3.2 minutos promedio (auto-configuración + validación)
-- **Mejora**: 62% reducción
-
-#### **Error Reduction**
+### **Ejecución**
 
 ```bash
-Errores comunes eliminados:
-- IP inválida: 95% reducción (validación tiempo real)
-- Puerto incorrecto: 87% reducción (auto-detección)
-- Credenciales incorrectas: 78% reducción (testing integrado)
-- Timeout manual: 90% reducción (configuración optimizada)
+# Desarrollo completo
+yarn tauri-dev      # Frontend + Rust + Python sidecar
+
+# Solo frontend
+yarn dev            # http://localhost:5173
+
+# Solo backend Python (legacy Flet)
+python run_python.py
+
+# Build producción
+yarn tauri-build    # Genera .exe/.msi
 ```
 
 ---
 
-## 📁 **Architecture Compliance Verification**
+## 📊 **Métricas y Performance**
 
-### **SOLID Principles Implementation**
+### **Backend Performance** (Sin cambios)
 
-#### **Single Responsibility - Verificado ✅**
+- **FPS**: 13-20+ según marca de cámara
+- **RAM**: < 200MB para 4 cámaras
+- **CPU**: < 15% streaming activo
+- **Latencia**: 89-210ms según protocolo
 
-```python
-# Ejemplo: cada clase tiene una responsabilidad
-BaseConnection      # Solo define interface común
-ONVIFConnection     # Solo maneja protocolo ONVIF  
-RTSPConnection      # Solo maneja protocolo RTSP
-ConnectionFactory   # Solo crea instancias
-ConfigurationManager # Solo gestiona configuración
-```
+### **Marcas Probadas**
 
-#### **Open/Closed - Verificado ✅**
-
-```python
-# Extensible sin modificar código existente
-# Agregar nueva marca = nuevo archivo + entrada JSON
-class NewBrandConnection(BaseConnection):  # Hereda, no modifica
-    def connect(self): # Implementa, no cambia base
-        pass
-```
-
-#### **Dependency Inversion - Verificado ✅**
-
-```python
-# Alto nivel depende de abstracciones
-class RealTimeViewer:
-    def __init__(self, connection: BaseConnection):  # Abstracción
-        self.connection = connection  # No implementación concreta
-```
-
-### **Design Pattern Usage**
-
-| Pattern | Implementación | Archivo | Status |
-|---------|----------------|---------|--------|
-| **Factory** | ConnectionFactory | connections/**init**.py | ✅ |
-| **Template Method** | BaseConnection | base_connection.py | ✅ |
-| **Singleton** | ConfigurationManager | utils/config.py | ✅ |
-| **Observer** | Event system | viewer/control_panel.py | ✅ |
-| **Adapter** | ONVIF→RTSP bridge | onvif_connection.py | ✅ |
+| Marca | Modelo | Protocolo | Estado |
+|-------|--------|-----------|--------|
+| Dahua | Hero-K51H | ONVIF/RTSP | ✅ Funcional |
+| TP-Link | Tapo C520WS | ONVIF | ✅ Funcional |
+| Steren | CCTV-235 | ONVIF | ✅ Funcional |
+| Generic | 8MP WiFi | RTSP | ✅ Funcional |
 
 ---
 
-## 🔍 **Known Issues & Workarounds**
+## 🎯 **Roadmap de Desarrollo**
 
-### **Hardware-Specific Limitations**
+### **Fase 1: Completar Migración Base** (En progreso)
 
-#### **Dahua Hero-K51H**
+- [x] Reorganizar estructura del proyecto
+- [x] Implementar servicios de streaming
+- [x] Adaptar presenters para Tauri
+- [ ] Configurar Python sidecar
+- [ ] Crear componentes React básicos
+- [ ] Implementar comunicación IPC
 
-- ❌ **HTTP/CGI no soportado**: Modelo específico sin endpoints CGI
-- ✅ **Workaround**: Usar ONVIF como protocolo principal
-- ⚠️ **RTSP requiere DMSS**: Workflow previo necesario para activar stream
+### **Fase 2: UI Funcional**
 
-#### **TP-Link Tapo Series**
+- [ ] Migrar diseño Material de Flet a React
+- [ ] Implementar grid de cámaras
+- [ ] Sistema de visualización de video
+- [ ] Panel de control y configuración
 
-- ⚠️ **ONVIF discovery intermitente**: ~4% fail rate en discovery
-- ✅ **Workaround**: Retry automático implementado
-- ✅ **Multi-profile support**: Variable FPS según perfil seleccionado
+### **Fase 3: Features Avanzadas**
 
-#### **China Generic Cameras**
+- [ ] Completar presenters (80% restante)
+- [ ] Analytics con DuckDB
+- [ ] Sistema de grabación
+- [ ] Detección de movimiento
 
-- 🔍 **Patrón discovery**: 30% requieren patterns no estándar
-- ✅ **Solution**: 16+ patterns implementados con auto-detection
-- ⚠️ **Credenciales embebidas**: Algunos requieren auth en URL
+### **Fase 4: Producción**
 
-### **Performance Considerations**
-
-#### **Memory Leaks - Monitoreados**
-
-```python
-# Periodic cleanup implementado
-def cleanup_opencv_resources(self):
-    if self.cap and self.cap.isOpened():
-        self.cap.release()
-    cv2.destroyAllWindows()
-    
-# Memory monitoring cada 30s
-threading.Timer(30.0, self.monitor_memory).start()
-```
-
-#### **Threading Bottlenecks**
-
-- **Issue**: Concurrent camera connections pueden saturar
-- **Mitigation**: ThreadPoolExecutor con max_workers=4
-- **Monitoring**: CPU usage alertas > 25%
+- [ ] Suite de testing completa
+- [ ] Optimización de performance
+- [ ] Empaquetado multiplataforma
+- [ ] Sistema de actualizaciones
 
 ---
 
-## 📊 **Code Quality Metrics**
+## ⚠️ **Consideraciones Importantes**
 
-### **Static Analysis Results**
+### **Bug de NPM en Windows**
 
 ```bash
-# Complexity Analysis
-Cyclomatic Complexity: 2.3 avg (target: <5)
-Lines of Code: 3,247 total
-Comment Ratio: 23.7% (target: >20%)
-SOLID Compliance: 100% verified
+# NPM NO instala estas dependencias:
+@tauri-apps/cli-win32-x64-msvc
+@rollup/rollup-win32-x64-msvc
 
-# Security Analysis  
-No hardcoded credentials: ✅
-Input validation: ✅
-SQL injection safe: ✅ (no SQL direct)
-Path traversal safe: ✅
+# SOLUCIÓN: Usar Yarn siempre
+yarn install  # ✅ Correcto
+npm install   # ❌ Fallará
 ```
 
-### **Test Coverage**
+### **Paths Actualizados**
 
-| Module | Lines | Covered | Coverage |
-|--------|-------|---------|----------|
-| connections/ | 1,247 | 1,089 | 87.3% |
-| viewer/ | 892 | 753 | 84.4% |
-| gui/ | 1,108 | 831 | 75.0% |
-| utils/ | 156 | 148 | 94.9% |
-| **Total** | **3,403** | **2,821** | **82.9%** |
+```python
+# Viejo (pre v0.8.0)
+from src.models.camera_model import CameraModel  # ❌
 
----
+# Nuevo (v0.8.0+)
+from models.camera_model import CameraModel      # ✅
+# O con path completo:
+sys.path.append('src-python')
+```
 
-## 🎯 **Migration Readiness Assessment**
+### **Estado de Componentes Legacy**
 
-### **Reusable Assets (90%+ del código)**
-
-#### **Core Logic - 100% reutilizable**
-
-- `src/connections/` - Toda la lógica de protocolos intacta
-- `src/utils/` - Configuración y gestión de marcas  
-- Business logic completa sin cambios
-
-#### **UI Logic - 80% reutilizable**
-
-- Event handling y state management
-- Layout algorithms y camera management
-- Solo cambiar rendering layer (Tkinter → Flet)
-
-#### **Data & Config - 100% reutilizable**
-
-- `.env` configurations
-- `camera_brands.json`
-- All testing configurations
-
-### **Migration Complexity Estimate**
-
-| Component | Complexity | Time Estimate | Risk Level |
-|-----------|------------|---------------|------------|
-| Database Layer | Medium | 2 weeks | Low |
-| Flet UI Base | Medium | 2 weeks | Low |  
-| Video Integration | High | 2 weeks | Medium |
-| Advanced Features | Low | 1 week | Low |
-| Testing & Polish | Medium | 3 weeks | Low |
-| Packaging | Medium | 2 weeks | Medium |
-
-**Total Estimate**: 8-12 semanas | **Overall Risk**: Bajo
+- `src-python/views/` - Solo referencia, no usar
+- `src-python/main.py` - Flet app, solo para testing
+- Toda la lógica de negocio es reutilizable
 
 ---
 
-## 🎯 **Próximos Pasos Críticos**
+## 📝 **Para el Siguiente Desarrollador**
 
-### **Prioridad 1: Completar Arquitectura MVP** 🏗️
+### **Prioridades Inmediatas**
 
-**Objetivo**: Implementar Presenter Layer completo para separación total de business logic
+1. **Configurar Python sidecar** en Tauri
+2. **Crear VideoPlayer.tsx** que reciba frames base64
+3. **Implementar comando Tauri** para start_stream
+4. **Conectar** VideoStreamPresenter con frontend
 
-**Tareas Específicas**:
+### **Archivos Clave para Revisar**
 
-1. **Crear base presenter classes**:
+```
+src-python/services/video/video_stream_service.py  # Lógica streaming
+src-python/presenters/streaming/                   # Presenters adaptados
+scripts/python_sidecar.py                         # Comunicación IPC
+src-tauri/tauri.conf.json                        # Configuración
+```
 
-   ```python
-   src/presenters/base/
-   ├── base_presenter.py      # Abstract base class
-   ├── presenter_interface.py # Protocol definitions  
-   └── event_handler.py       # Common event handling
-   ```
+### **Decisiones Técnicas Tomadas**
 
-2. **Implementar page presenters**:
-
-   ```python
-   src/presenters/pages/
-   ├── main_presenter.py      # Dashboard logic
-   ├── camera_presenter.py    # Camera management
-   └── scan_presenter.py      # Discovery logic
-   ```
-
-3. **Refactorizar Views**: Extraer business logic, implementar event delegation
-
-**Timeline**: 2-3 sesiones | **Risk**: Bajo
-
-### **Prioridad 2: DuckDB Analytics Integration** 💾
-
-**Objetivo**: Database layer para métricas avanzadas y analytics en tiempo real
-
-**Tareas**:
-
-- Crear `MetricsRepository` con DuckDB
-- Schema para camera performance metrics  
-- Real-time analytics dashboard page
-- Export/import functionality
-
-**Timeline**: 1-2 sesiones | **Risk**: Bajo
-
-### **Prioridad 3: Testing Suite** 🧪
-
-**Objetivo**: Suite completa de tests para asegurar calidad MVP
-
-**Tareas**:
-
-- Unit tests Model layer (target: >90% coverage)
-- Unit tests Presenter layer (target: >85% coverage)
-- Integration tests MVP communication
-- UI automation tests critical paths
-
-**Timeline**: 2-3 sesiones | **Risk**: Medio
-
-### **Prioridad 4: Packaging Nativo** 📦
-
-**Objetivo**: Distribución como ejecutable auto-contenido
-
-**Tareas**:
-
-- Flet build configuration
-- Windows executable (.exe) + installer
-- macOS application (.app) + DMG
-- Linux executable (.deb/.AppImage)
-- Auto-update mechanism
-
-**Timeline**: 2-4 sesiones | **Risk**: Medio
+1. **Yarn sobre NPM**: Bug crítico en Windows
+2. **Base64 para frames**: Simplicidad sobre WebRTC
+3. **Sidecar sobre API HTTP**: Menor latencia
+4. **MVP mantenido**: Backend Python sin cambios mayores
 
 ---
 
-## 📋 **Para el Próximo Desarrollador/AI**
-
-### **Estado Actual Resumido**
-
-- ✅ **UI**: Moderna y profesional con Flet + Material Design 3
-- ✅ **Funcionalidad**: 100% operativa, 4 marcas probadas
-- ✅ **Architecture**: SOLID + MVP parcial (65%)
-- 🔄 **Next**: Presenter Layer para MVP completo
-
-### **Archivos Clave**
-
-- `src/main.py` - Aplicación Flet principal
-- `src/views/main_view.py` - UI moderna Material Design 3
-- `src/models/` - Entidades completas
-- `src/services/` - Business logic organizada
-- `src/presenters/` - **PENDIENTE** - MVP layer
-
-### **Decisiones Técnicas Importantes**
-
-1. **Flet como UI framework**: Excelente elección, performance superior
-2. **Material Design 3**: Implementación exitosa, look profesional
-3. **MVP Architecture**: Patrón correcto para desktop apps
-4. **DuckDB para analytics**: Planeado para métricas avanzadas
-
-### **Warnings/Cuidados**
-
-- **No romper funcionalidad existente** durante reestructuración MVP
-- **Mantener UI polish** mientras se refactoriza backend  
-- **Testing crítico** antes de packaging final
-- **DuckDB integration** debe ser opcional/fallback ready
-
----
-
-> **📊 Estado: EXCELENTE progreso - UI moderna completada**  
-> **🎯 Next Critical Step: Implementar Presenter Layer MVP**  
-> **⏱️ ETA: 2-3 sesiones para MVP completo + Analytics**
->
-> **Contacto**: JorgeTato99 | **Última Actualización**: Diciembre 2024
+> **Estado: Migración a Tauri iniciada - Backend listo, Frontend pendiente**  
+> **Versión: 0.8.0 - Breaking changes en estructura**  
+> **Última actualización: Enero 2025**
