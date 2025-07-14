@@ -469,3 +469,9 @@ EVENTS = {
 **📡 Servicios:** 5 servicios principales con APIs bien definidas  
 **💾 Persistencia:** SQLite + DuckDB para datos y analytics  
 **📊 Métricas:** Sistema completo de analytics y reporting
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Protocolos de Cámara](camera-protocols.md) | [📑 Índice](README.md) | [Siguiente: Deployment y Distribución →](deployment.md)

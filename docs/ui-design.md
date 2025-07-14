@@ -458,3 +458,9 @@ ELEVATION = {
 **🎨 Design System:** Material Design 3 completo con Flet  
 **📱 Responsive:** Adaptativo a mobile, tablet y desktop  
 **♿ Accessibility:** Contraste y navegación accesible por defecto
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Características Detalladas](FEATURES.md) | [📑 Índice](README.md) | [Siguiente: Compatibilidad de Cámaras →](CAMERA_COMPATIBILITY.md)

@@ -196,3 +196,9 @@ make check-all
 ---
 
 **💡 Tip:** Usa `make help` para ver todos los comandos disponibles
+
+---
+
+### 📚 Navegación
+
+[📑 Índice](README.md) | [Siguiente: Configuración para Windows →](WINDOWS_SETUP.md)

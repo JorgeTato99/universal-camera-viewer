@@ -390,3 +390,9 @@ common_endpoints = [
 **🌐 Protocolos:** ONVIF, RTSP, HTTP/CGI con auto-detección  
 **🏷️ Marcas:** Dahua, TP-Link, Steren, Generic con configuraciones optimizadas  
 **🔍 Detección:** Automática de protocolos disponibles por marca
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Compatibilidad de Cámaras](CAMERA_COMPATIBILITY.md) | [📑 Índice](README.md) | [Siguiente: API y Servicios →](api-services.md)

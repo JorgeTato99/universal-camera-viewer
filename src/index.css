@@ -1,30 +1,191 @@
+/**
+ * 🎨 Global Styles - Universal Camera Viewer
+ * Estilos globales optimizados para aplicación de cámaras IP
+ */
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  /* Fuentes principales */
+  --font-family-primary: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  --font-family-mono: 'Roboto Mono', 'Consolas', 'Monaco', monospace;
+  
+  /* Colores principales */
+  --color-primary: #2196f3;
+  --color-secondary: #4caf50;
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-text: #212121;
+  
+  /* Configuración de renderizado */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  
+  /* Configuración de scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #bdbdbd transparent;
+}
+
+/* Scrollbar personalizado para webkit */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9e9e9e;
+}
+
+/* Reset y configuración base */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  font-size: 16px;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  padding: 0;
   min-height: 100vh;
+  font-family: var(--font-family-primary);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  
+  /* Evitar selección de texto innecesaria */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
+/* Permitir selección de texto en elementos específicos */
+p, span, input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Contenedor raíz */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Configuración para aplicación de cámaras */
+.camera-viewer-app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Utilidades de texto */
+.text-monospace {
+  font-family: var(--font-family-mono);
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Utilidades de accesibilidad */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Animaciones de carga */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Clases utilitarias */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+.pulse {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* Configuración para modo oscuro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #121212;
+    --color-surface: #1e1e1e;
+    --color-text: #ffffff;
+    scrollbar-color: #616161 transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #616161;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #757575;
+  }
+}
+
+/* Configuración para dispositivos móviles */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
 }

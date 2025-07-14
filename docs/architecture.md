@@ -214,3 +214,9 @@ RAM: < 50MB por stream
 - Memory leak detection
 - Network stress testing
 - UI responsiveness
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Guía de Desarrollo](development.md) | [📑 Índice](README.md) | [Siguiente: Características Detalladas →](FEATURES.md)

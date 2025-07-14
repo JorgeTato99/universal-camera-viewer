@@ -403,3 +403,9 @@ pyinstaller --upx-dir=/path/to/upx main.spec
 **📱 Distribución:** Ejecutables nativos para Windows, Linux, macOS  
 **🌐 Web:** Deploy con Flet server para acceso remoto  
 **🚀 CI/CD:** Automatización completa de build y release
+
+---
+
+### 📚 Navegación
+
+[← Anterior: API y Servicios](api-services.md) | [📑 Índice](README.md)

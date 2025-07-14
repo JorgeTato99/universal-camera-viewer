@@ -16,6 +16,15 @@ src/
 │   ├── ui/                     # Componentes básicos de UI
 │   ├── layout/                 # Componentes de layout
 │   └── common/                 # Componentes de negocio comunes
+├── 📁 design-system/           # Sistema de diseño completo
+│   ├── tokens.ts               # Tokens fundamentales (colores, tipografía, espaciado)
+│   ├── theme.ts                # Configuración Material-UI
+│   ├── colors.ts               # Paleta de colores y funciones utilitarias
+│   ├── typography.ts           # Sistema de tipografía
+│   ├── spacing.ts              # Sistema de espaciado y layout
+│   ├── breakpoints.ts          # Breakpoints responsive
+│   ├── components.ts           # Estilos de componentes específicos
+│   └── index.ts                # Export principal del design system
 ├── 📁 features/                # Módulos por funcionalidad (Feature-based)
 │   ├── cameras/                # Gestión de cámaras
 │   ├── scanner/                # Descubrimiento de red
@@ -34,7 +43,8 @@ src/
 │   ├── icons/
 │   ├── images/
 │   └── styles/
-└── 📁 lib/                     # Configuraciones de librerías
+├── 📁 lib/                     # Configuraciones de librerías
+└── 📄 UI_UX_DESIGN_GUIDE.md   # Guía completa del sistema de diseño
 ```
 
 ## **🎯 Principios de Arquitectura**
@@ -122,18 +132,89 @@ const { showSuccess, showError } = useNotificationStore();
 
 ## **🎨 Sistema de Diseño**
 
-### **Material Design 3**
+### **Design System Completo**
 
-- Colores semánticos consistentes
-- Tipografía jerárquica
-- Elevaciones y sombras estandarizadas
-- Componentes responsive
+Universal Camera Viewer implementa un sistema de diseño robusto basado en **Material Design 3** con extensiones específicas para aplicaciones de cámaras IP:
 
-### **Theming**
+#### **Tokens de Diseño** (`src/design-system/tokens.ts`)
+- **Colores**: Paleta completa con estados específicos para cámaras
+- **Tipografía**: Jerarquía clara con variantes para IPs y métricas
+- **Espaciado**: Escala consistente de 4px a 96px
+- **Breakpoints**: Responsividad optimizada para grids de cámaras
+- **Sombras**: Elevaciones Material Design 3
+- **Bordes**: Radios y anchos estandarizados
 
-- Soporte para modo claro/oscuro
-- Personalización de colores primarios
-- Consistencia visual en toda la app
+#### **Colores Semánticos**
+```typescript
+// Estados de cámaras
+connected: '#4caf50'    // Verde
+connecting: '#ff9800'   // Naranja
+disconnected: '#f44336' // Rojo
+streaming: '#2196f3'    // Azul
+error: '#f44336'        // Rojo
+unavailable: '#9e9e9e'  // Gris
+```
+
+#### **Tipografía Especializada**
+- **Roboto**: Fuente principal para UI
+- **Roboto Mono**: IPs, códigos y métricas
+- **Variantes específicas**: Nombres de cámaras, estados, métricas de streaming
+
+#### **Componentes Temáticos**
+```typescript
+// Estilos específicos por uso
+cardStyles.camera      // Cards de cámaras
+buttonStyles.connect   // Botones de conexión
+statusStyles.connected // Estados de cámaras
+gridStyles.cameraGrid  // Grids responsivos
+```
+
+#### **Breakpoints Inteligentes**
+- **xs**: 0px - 1 columna (móvil)
+- **sm**: 600px - 2 columnas (tablet)
+- **md**: 900px - 2 columnas (desktop)
+- **lg**: 1200px - 3 columnas (desktop grande)
+- **xl**: 1536px - 4 columnas (pantallas grandes)
+
+#### **Funciones Utilitarias**
+```typescript
+getCameraStatusColor(status)   // Color por estado
+getCameraGridColumns(width)    // Columnas por ancho
+getPadding('md')              // Espaciado consistente
+truncateText(2)               // Truncar texto
+```
+
+### **Theming Avanzado**
+
+#### **Modo Claro/Oscuro**
+- Paletas optimizadas para cada modo
+- Transiciones suaves entre temas
+- Persistencia de preferencias
+
+#### **Tema Material-UI Personalizado**
+```typescript
+// Configuración extendida
+const theme = createTheme({
+  palette: { /* colores del design system */ },
+  typography: { /* tipografía especializada */ },
+  components: { /* componentes customizados */ }
+});
+```
+
+#### **Colores de Estado**
+- **Éxito**: Conexiones exitosas
+- **Advertencia**: Estados transitorios
+- **Error**: Fallos de conexión
+- **Info**: Información general
+
+### **Guía de Uso**
+
+Consultar `src/UI_UX_DESIGN_GUIDE.md` para:
+- Implementación práctica
+- Mejores prácticas
+- Ejemplos de código
+- Patrones de diseño
+- Accesibilidad WCAG 2.1 AA
 
 ## **🚀 Rutas y Navegación**
 
@@ -154,9 +235,15 @@ const { showSuccess, showError } = useNotificationStore();
 - ✅ Sistema de tipos TypeScript completo
 - ✅ Stores Zustand configurados
 - ✅ Routing con React Router DOM
-- ✅ Material-UI theming
+- ✅ Material-UI theming completo
 - ✅ Servicio Tauri base
 - ✅ Páginas placeholder funcionales
+- ✅ **Sistema de diseño completo**
+- ✅ **Tokens de diseño (colores, tipografía, espaciado)**
+- ✅ **Tema Material-UI integrado**
+- ✅ **Componentes específicos para cámaras**
+- ✅ **Breakpoints responsive**
+- ✅ **Guía de uso UI/UX**
 
 ### **🔄 En Progreso**
 

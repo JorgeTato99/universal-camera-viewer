@@ -307,3 +307,9 @@ def connect_camera(ip: str, protocol: str) -> bool:
 - Usa `make help` para ver todos los comandos
 - Configura tu IDE con las extensiones recomendadas
 - Ejecuta `make check-all` antes de cada commit
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Configuración para Windows](WINDOWS_SETUP.md) | [📑 Índice](README.md) | [Siguiente: Arquitectura Técnica →](ARCHITECTURE.md)

@@ -149,3 +149,9 @@ rtsp://192.168.1.180:554/user=EightMPWiFiSCmr&password=password&channel=1&stream
    - Editar `camera_brands.json`
    - Agregar perfil de marca
    - Documentar en este archivo
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Diseño UI - Material Design 3](ui-design.md) | [📑 Índice](README.md) | [Siguiente: Protocolos de Cámara →](camera-protocols.md)

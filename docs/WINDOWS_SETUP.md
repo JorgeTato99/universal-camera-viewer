@@ -122,3 +122,9 @@ yarn tauri-build
 - Si cambias el puerto, actualiza ambos archivos
 - Los logs de Python sidecar se guardan en `python_sidecar.log`
 - Los builds de producción se generan en `src-tauri/target/release`
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Instalación y Setup](installation.md) | [📑 Índice](README.md) | [Siguiente: Guía de Desarrollo →](development.md)

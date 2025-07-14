@@ -104,3 +104,9 @@
 - **WebSocket** para eventos real-time
 - **MQTT** para IoT (planeado)
 - **Integración con NVR** (planeado)
+
+---
+
+### 📚 Navegación
+
+[← Anterior: Arquitectura Técnica](ARCHITECTURE.md) | [📑 Índice](README.md) | [Siguiente: Diseño UI - Material Design 3 →](ui-design.md)
