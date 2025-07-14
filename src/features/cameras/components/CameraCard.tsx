@@ -60,6 +60,16 @@ export const CameraCard: React.FC<CameraCardProps> = ({
   onSettings,
   onCapture,
 }) => {
+  // Estado local para métricas del streaming
+  const [streamMetrics, setStreamMetrics] = React.useState({
+    fps: 0,
+    latency: 0,
+    isStreaming: false,
+  });
+  
+  // Estado para el tiempo conectado
+  const [connectionTime, setConnectionTime] = React.useState<Date | null>(null);
+  const [displayTime, setDisplayTime] = React.useState("--:--:--");
   const getStatusColor = () => {
     switch (status) {
       case "connected":
@@ -88,6 +98,44 @@ export const CameraCard: React.FC<CameraCardProps> = ({
 
   const isConnected = status === "connected";
   const isConnecting = status === "connecting";
+  
+  // Efecto para actualizar el tiempo cuando se conecta/desconecta
+  React.useEffect(() => {
+    if (streamMetrics.isStreaming && !connectionTime) {
+      setConnectionTime(new Date());
+    } else if (!streamMetrics.isStreaming) {
+      setConnectionTime(null);
+      setDisplayTime("--:--:--");
+    }
+  }, [streamMetrics.isStreaming, connectionTime]);
+  
+  // Efecto para actualizar el contador de tiempo
+  React.useEffect(() => {
+    if (!connectionTime) return;
+    
+    const updateTimer = () => {
+      const now = new Date();
+      const elapsed = now.getTime() - connectionTime.getTime();
+      
+      const hours = Math.floor(elapsed / 3600000);
+      const minutes = Math.floor((elapsed % 3600000) / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      
+      const formatted = `${hours.toString().padStart(2, '0')}:${minutes
+        .toString()
+        .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      setDisplayTime(formatted);
+    };
+    
+    // Actualizar inmediatamente
+    updateTimer();
+    
+    // Actualizar cada segundo
+    const interval = setInterval(updateTimer, 1000);
+    
+    return () => clearInterval(interval);
+  }, [connectionTime]);
 
   return (
     <Card
@@ -213,7 +261,7 @@ export const CameraCard: React.FC<CameraCardProps> = ({
                   color: (theme) => theme.palette.text.secondary,
                 }}
               >
-                {isConnected ? connectedTime : "--:--:--"}
+                {displayTime}
               </Typography>
             </Box>
 
@@ -232,7 +280,7 @@ export const CameraCard: React.FC<CameraCardProps> = ({
                   color: (theme) => theme.palette.text.secondary,
                 }}
               >
-                {isConnected ? `${fps} FPS` : "-- FPS"}
+                {streamMetrics.isStreaming ? `${streamMetrics.fps} FPS` : "-- FPS"}
               </Typography>
             </Box>
 
@@ -251,7 +299,7 @@ export const CameraCard: React.FC<CameraCardProps> = ({
                   color: (theme) => theme.palette.text.secondary,
                 }}
               >
-                {isConnected ? `${latency}ms` : "-- ms"}
+                {streamMetrics.isStreaming ? `${streamMetrics.latency}ms` : "-- ms"}
               </Typography>
             </Box>
           </Box>
@@ -285,6 +333,7 @@ export const CameraCard: React.FC<CameraCardProps> = ({
               onError={(error) =>
                 console.error(`Error en cámara ${cameraId}:`, error)
               }
+              onMetricsUpdate={(metrics) => setStreamMetrics(metrics)}
             />
           ) : (
             <CameraVideoPreview

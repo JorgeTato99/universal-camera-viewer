@@ -53,6 +53,10 @@ export class StreamingService {
   private frameCount: number = 0;
   private lastFrameTime: number = 0;
   private connectionStartTime: number = 0;
+  
+  // Para cálculo de FPS más preciso (ventana deslizante)
+  private recentFrameTimes: number[] = [];
+  private fpsWindowSize: number = 30; // Calcular FPS sobre los últimos 30 frames
 
   constructor(wsUrl?: string) {
     if (wsUrl) {
@@ -104,6 +108,7 @@ export class StreamingService {
     this.isConnecting = true;
     this.shouldReconnect = true;
     this.frameCount = 0;
+    this.recentFrameTimes = []; // Limpiar historial de frames
 
     return new Promise((resolve, reject) => {
       try {
@@ -294,7 +299,16 @@ export class StreamingService {
    */
   private handleFrame(frameData: FrameData): void {
     this.frameCount++;
-    this.lastFrameTime = Date.now();
+    const now = Date.now();
+    this.lastFrameTime = now;
+    
+    // Agregar tiempo del frame actual a la ventana deslizante
+    this.recentFrameTimes.push(now);
+    
+    // Mantener solo los últimos N frames
+    if (this.recentFrameTimes.length > this.fpsWindowSize) {
+      this.recentFrameTimes.shift();
+    }
     
     // Emitir a todos los callbacks registrados
     this.onFrameCallbacks.forEach(callback => {
@@ -433,13 +447,22 @@ export class StreamingService {
     const connectionTime = this.connectionStartTime ? 
       (now - this.connectionStartTime) / 1000 : 0;
     
-    const fps = connectionTime > 0 ? 
-      this.frameCount / connectionTime : 0;
+    // Calcular FPS basado en frames recientes
+    let fps = 0;
+    if (this.recentFrameTimes.length >= 2) {
+      const oldestFrame = this.recentFrameTimes[0];
+      const newestFrame = this.recentFrameTimes[this.recentFrameTimes.length - 1];
+      const timeDiff = (newestFrame - oldestFrame) / 1000; // En segundos
+      
+      if (timeDiff > 0) {
+        fps = (this.recentFrameTimes.length - 1) / timeDiff;
+      }
+    }
     
     return {
       frameCount: this.frameCount,
       connectionTime: Math.round(connectionTime),
-      fps: Math.round(fps * 10) / 10
+      fps: Math.round(fps * 10) / 10 // Redondear a 1 decimal
     };
   }
 

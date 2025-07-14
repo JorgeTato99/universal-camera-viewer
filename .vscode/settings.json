@@ -52,5 +52,8 @@
         "**/dist": true,
         "**/build": true,
         "**/__pycache__": true
-    }
+    },
+    "conventionalCommits.scopes": [
+        "Main"
+    ]
 }

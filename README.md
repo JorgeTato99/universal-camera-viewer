@@ -1,34 +1,57 @@
 # 🎥 Universal Camera Viewer
 
-[![Version](https://img.shields.io/badge/version-0.8.0-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
+[![Version](https://img.shields.io/badge/version-0.8.5-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
+[![Status](https://img.shields.io/badge/status-FUNCIONAL-brightgreen)](CURRENT_STATUS.md)
 [![Python](https://img.shields.io/badge/python-3.8+-green)](https://www.python.org/)
 [![React](https://img.shields.io/badge/react-19-61dafb)](https://react.dev/)
-[![Tauri](https://img.shields.io/badge/tauri-2.0-ffc131)](https://tauri.app/)
+[![FastAPI](https://img.shields.io/badge/fastapi-WebSocket-009688)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 
-Sistema profesional de videovigilancia para cámaras IP multi-marca con interfaz nativa moderna.
+Sistema profesional de videovigilancia IP con streaming en tiempo real. ¡Ciclo completo funcional implementado!
 
-## ✨ Características
+## 🎉 Nuevo en v0.8.5: Streaming en Tiempo Real
 
-- 📷 **Multi-marca**: Dahua, TP-Link, Steren, cámaras genéricas
-- 🔌 **Multi-protocolo**: ONVIF, RTSP, HTTP/CGI
-- 🎯 **Auto-detección**: Descubrimiento automático de cámaras en red
-- 🖥️ **Interfaz nativa**: Aplicación desktop con Tauri + React
-- 📊 **Alto rendimiento**: 13-20+ FPS, < 200MB RAM, < 15% CPU
+- ✅ **Streaming RTSP funcional** con cámaras Dahua
+- ✅ **WebSocket estable** con heartbeat automático
+- ✅ **Métricas en vivo**: FPS, latencia y tiempo de conexión
+- ✅ **Interfaz pulida** con área de video limpia
+- ✅ **Manejo robusto de errores** con reintentos automáticos
+
+## ✨ Características Principales
+
+### 🎥 Streaming de Video
+- **Tiempo real**: Transmisión fluida vía WebSocket con base64 encoding
+- **Multi-protocolo**: ONVIF, RTSP, HTTP/CGI
+- **Alto rendimiento**: 13-15 FPS @ 2880x1620, < 300MB RAM
+- **Reconexión automática**: Sistema inteligente de recuperación
+
+### 📷 Compatibilidad de Cámaras
+- **Dahua**: Probado con modelos Hero-K51H (RTSP puerto 554)
+- **TP-Link**: Soporte ONVIF (puerto 2020)
+- **Steren**: Compatible con ONVIF (puerto 8000)
+- **Genéricas**: Auto-detección con 16+ patrones RTSP
+
+### 🖥️ Interfaz Moderna
+- **React + Material-UI**: Diseño responsivo y elegante
+- **Tema claro/oscuro**: Persistente en localStorage
+- **Grid de cámaras**: Vista optimizada para múltiples streams
+- **Controles intuitivos**: Conexión con un click
 
 ## 🚀 Inicio Rápido
 
 ### Requisitos Previos
 
 ```bash
-# Windows: Rust con MSVC (NO GNU)
-# https://www.rust-lang.org/tools/install
-
-# Yarn (requerido por bug de npm)
-npm install -g yarn
-
 # Python 3.8+
 python --version
+
+# Node.js 18+ y Yarn
+node --version
+npm install -g yarn  # IMPORTANTE: Usar yarn, no npm
+
+# Para build nativo (opcional)
+# Rust con MSVC en Windows
+# https://www.rust-lang.org/tools/install
 ```
 
 ### Instalación
@@ -38,56 +61,81 @@ python --version
 git clone https://github.com/JorgeTato99/universal-camera-viewer.git
 cd universal-camera-viewer
 
-# Frontend
+# Frontend React
 yarn install         # IMPORTANTE: Usar yarn, NO npm
 
-# Backend Python
+# Backend FastAPI
 pip install -r requirements.txt
 ```
 
 ### Ejecución
 
 ```bash
-# Desarrollo completo
-yarn tauri-dev      # App completa con hot reload
+# Terminal 1 - Backend FastAPI
+python run_api.py
+# API en http://localhost:8000
+# Docs en http://localhost:8000/docs
 
-# Solo frontend
-yarn dev            # http://localhost:5173
+# Terminal 2 - Frontend React
+yarn dev
+# UI en http://localhost:5173
 
-# Build producción
-yarn tauri-build    # Genera instalador nativo
+# Opcional: App nativa con Tauri
+yarn tauri-dev      # Desarrollo con hot reload
+yarn tauri-build    # Genera instalador .exe/.msi
 ```
 
 ## 📁 Estructura del Proyecto
 
 ```
 ├── src/              # Frontend React/TypeScript
-├── src-python/       # Backend Python (MVP)
-├── src-tauri/        # Core Rust/Tauri
-├── scripts/          # Utilidades y comunicación IPC
+│   ├── features/     # Componentes por funcionalidad
+│   │   ├── cameras/  # Gestión de cámaras
+│   │   └── streaming/# Reproductor de video
+│   └── services/     # Comunicación WebSocket
+├── src-python/       # Backend FastAPI + Python
+│   ├── websocket/    # Handlers de streaming
+│   ├── presenters/   # Lógica MVP
+│   └── services/     # RTSP, ONVIF, Video
+├── src-tauri/        # Wrapper nativo (opcional)
 └── docs/             # Documentación detallada
 ```
 
 ## 🔧 Configuración
 
-Crear archivo `.env` con las credenciales de tus cámaras:
+### Configuración Básica
+
+Las cámaras se pueden configurar directamente desde la interfaz o mediante archivo `.env`:
 
 ```env
 # Ejemplo para Dahua
 DAHUA_IP=192.168.1.172
 DAHUA_USER=admin
 DAHUA_PASSWORD=tu_password
+DAHUA_RTSP_PORT=554
 
-# Ver más ejemplos en .env.example
+# URLs RTSP por marca
+# Dahua: rtsp://user:pass@ip:554/cam/realmonitor?channel=1&subtype=0
+# TP-Link: rtsp://user:pass@ip:554/stream1
+# Hikvision: rtsp://user:pass@ip:554/Streaming/Channels/101
 ```
+
+### Puertos Comunes
+
+| Marca | RTSP | ONVIF | HTTP |
+|-------|------|-------|------|
+| Dahua | 554  | 80    | 80   |
+| TP-Link | 554 | 2020  | 80   |
+| Steren | 5543 | 8000  | 80   |
 
 ## 📚 Documentación
 
+- [Estado actual del proyecto](CURRENT_STATUS.md) - ⭐ Ver detalles del streaming funcional
 - [Características detalladas](docs/FEATURES.md)
 - [Arquitectura técnica](docs/ARCHITECTURE.md)
 - [Compatibilidad de cámaras](docs/CAMERA_COMPATIBILITY.md)
 - [Configuración Windows](docs/WINDOWS_SETUP.md)
-- [Estado del proyecto](CURRENT_STATUS.md)
+- [Protocolo WebSocket](CURRENT_STATUS.md#-protocolo-websocket)
 
 ## 🤝 Contribuir
 
@@ -101,10 +149,29 @@ DAHUA_PASSWORD=tu_password
 
 Distribuido bajo licencia MIT. Ver `LICENSE` para más información.
 
+## 🎯 Próximos Pasos
+
+- [ ] Soporte para múltiples cámaras simultáneas
+- [ ] Grabación de video local
+- [ ] Detección de movimiento
+- [ ] Control PTZ para cámaras móviles
+- [ ] Integración con servicios cloud
+
+## 📈 Rendimiento
+
+- **FPS**: 13-15 (limitado por cámara fuente)
+- **Latencia**: < 200ms end-to-end
+- **CPU**: ~10-15% con streaming activo
+- **RAM**: < 300MB por stream
+- **Red**: 2-4 Mbps por cámara HD
+
 ## 👥 Autor
 
 **Jorge Tato** - [@JorgeTato99](https://github.com/JorgeTato99)
 
 ---
 
-⚠️ **Nota importante**: En Windows, usar siempre `yarn` en lugar de `npm` debido a un bug con dependencias nativas.
+> ⚠️ **Notas importantes**:
+> - En Windows, usar siempre `yarn` en lugar de `npm` debido a un bug con dependencias nativas
+> - El streaming requiere que el backend FastAPI esté ejecutándose en `http://localhost:8000`
+> - Para cámaras Dahua, usar la ruta RTSP específica: `/cam/realmonitor?channel=1&subtype=0`

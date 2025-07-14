@@ -15,20 +15,29 @@ src-python/models/
     └── frame_model.py   # Datos del frame
 ```
 
-### View Layer (Migrando a React)
+### View Layer (✅ React Funcional)
 - **Legacy**: `src-python/views/` - Flet UI (referencia)
-- **Nuevo**: `src/` - React + TypeScript + Material-UI
+- **Actual**: `src/` - React + TypeScript + Material-UI
+  - VideoPlayer con streaming WebSocket funcional
+  - CameraCard con métricas en tiempo real
+  - Grid responsivo de cámaras
 
-### Presenter Layer (20% Completo)
+### Presenter Layer (✅ Streaming Funcional)
 ```
 src-python/presenters/
 ├── camera_presenter.py     # Gestión de cámaras
 ├── streaming/
-│   └── video_stream_presenter.py  # Streaming adaptado para Tauri
-└── [pendientes...]         # 80% por implementar
+│   └── video_stream_presenter.py  # ✅ Streaming WebSocket funcional
+└── [pendientes...]         # 70% por implementar
 ```
 
-### Service Layer (100% Completo)
+**WebSocket Streaming Implementado**:
+- StreamHandler para conexiones WebSocket
+- Integración con VideoStreamPresenter
+- Transmisión de frames base64 JPEG
+- Heartbeat y reconexiones automáticas
+
+### Service Layer (✅ 100% Completo)
 ```
 src-python/services/
 ├── connection_service.py   # Gestión de conexiones
@@ -36,7 +45,9 @@ src-python/services/
 ├── scan_service.py         # Descubrimiento de red
 ├── config_service.py       # Configuración
 └── video/
-    └── video_stream_service.py  # Singleton para streaming
+    ├── video_stream_service.py  # Singleton para streaming
+    ├── rtsp_stream_manager.py   # ✅ RTSP con OpenCV funcional
+    └── stream_manager.py        # Gestión de streams
 ```
 
 ## Patrones de Diseño Implementados
@@ -83,40 +94,61 @@ class StreamManager(ABC):
         self._begin_capture()   # Template
 ```
 
-## Comunicación Frontend-Backend (Tauri)
+## Comunicación Frontend-Backend
 
-### Arquitectura de Comunicación
+### Arquitectura WebSocket (FastAPI) ✅ FUNCIONAL
+```
+┌─────────────────┐     WebSocket      ┌────────────────┐
+│  React Frontend │ ←───────────────→  │ FastAPI Backend │
+│   VideoPlayer   │     ws://8000      │  StreamHandler  │
+└─────────────────┘                    └────────────────┘
+        ↓                                       ↓
+   Base64 JPEG                             OpenCV RTSP
+   @ 13-15 FPS                            Capture Thread
+```
+
+### Flujo de Streaming en Tiempo Real
+1. **Conexión**: React establece WebSocket con `/ws/stream/{camera_id}`
+2. **Autenticación**: Backend valida cámara y credenciales
+3. **RTSP Stream**: OpenCV captura frames de la cámara
+4. **Encoding**: Frames BGR → JPEG → Base64
+5. **Transmisión**: WebSocket envía frames a 13-15 FPS
+6. **Renderizado**: React muestra frames en `<img>` tag
+
+### Protocolo WebSocket Implementado
+```typescript
+// Frontend → Backend
+{
+  "action": "start_stream",
+  "params": {
+    "quality": "medium",
+    "fps": 30,
+    "format": "jpeg"
+  }
+}
+
+// Backend → Frontend (cada frame)
+{
+  "type": "frame",
+  "camera_id": "cam_192.168.1.172",
+  "data": "base64_jpeg_string",
+  "timestamp": "2025-01-14T18:00:00.123Z",
+  "frame_number": 1234,
+  "metrics": {
+    "fps": 15,
+    "frameCount": 1234
+  }
+}
+
+// Heartbeat (cada 30s)
+Frontend: { "type": "ping" }
+Backend: { "type": "pong" }
+```
+
+### Arquitectura Tauri (Opcional)
 ```
 React Frontend <-> Tauri Core <-> Python Sidecar
      JSON            IPC           stdin/stdout
-```
-
-### Flujo de Datos
-1. **Comandos**: React → Tauri Command → Python
-2. **Eventos**: Python → stdout JSON → Tauri → React
-3. **Video**: OpenCV → Base64 → Tauri Event → React Image
-
-### Ejemplo de Comunicación
-```typescript
-// Frontend (React)
-const stream = await invoke('start_camera_stream', { 
-    cameraId: 'cam1' 
-});
-
-// Python Sidecar recibe
-{
-    "action": "start_stream",
-    "params": { "camera_id": "cam1" }
-}
-
-// Python emite frames
-{
-    "event": "video_frame",
-    "data": {
-        "camera_id": "cam1",
-        "frame": "base64_encoded_jpeg..."
-    }
-}
 ```
 
 ## Protocolos de Cámara

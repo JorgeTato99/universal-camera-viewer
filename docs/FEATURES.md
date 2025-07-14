@@ -38,11 +38,14 @@
 - **Configuración persistente** por cámara
 - **Reconexión automática** con backoff exponencial
 
-### Streaming de Video
-- **Decodificación en tiempo real** con OpenCV
+### Streaming de Video ✅ FUNCIONAL
+- **Streaming RTSP en tiempo real** con OpenCV y WebSocket
+- **Transmisión base64 JPEG** optimizada para baja latencia
+- **Métricas en vivo**: FPS, latencia, tiempo de conexión
+- **Reconexión automática** con heartbeat cada 30 segundos
 - **Ajuste dinámico de calidad** según ancho de banda
 - **Multi-stream support** para cámaras compatibles
-- **Grabación local** opcional
+- **Buffer inteligente** para reducir latencia
 
 ### Herramientas de Descubrimiento
 - **Network Scanner** con detección de puertos

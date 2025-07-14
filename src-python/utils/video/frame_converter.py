@@ -52,15 +52,12 @@ class Base64JPEGStrategy(FrameConversionStrategy):
             String base64 del JPEG
         """
         try:
-            # Convertir BGR a RGB
-            if len(frame.shape) == 3 and frame.shape[2] == 3:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            else:
-                frame_rgb = frame
+            # OpenCV captura en BGR, cv2.imencode espera BGR para JPEG
+            # No convertir a RGB ya que causaría inversión de colores
             
-            # Codificar a JPEG
+            # Codificar a JPEG directamente desde BGR
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
-            _, buffer = cv2.imencode('.jpg', frame_rgb, encode_param)
+            _, buffer = cv2.imencode('.jpg', frame, encode_param)
             
             # Convertir a base64
             jpg_as_text = base64.b64encode(buffer).decode('utf-8')
@@ -90,18 +87,15 @@ class Base64PNGStrategy(FrameConversionStrategy):
             String base64 del PNG
         """
         try:
-            # Convertir BGR a RGB
-            if len(frame.shape) == 3 and frame.shape[2] == 3:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            else:
-                frame_rgb = frame
+            # OpenCV captura en BGR, cv2.imencode espera BGR para PNG
+            # No convertir a RGB ya que causaría inversión de colores
             
             # Mapear quality (1-100) a compression level (0-9)
             compression_level = int(9 - (quality / 100 * 9))
             
-            # Codificar a PNG
+            # Codificar a PNG directamente desde BGR
             encode_param = [int(cv2.IMWRITE_PNG_COMPRESSION), compression_level]
-            _, buffer = cv2.imencode('.png', frame_rgb, encode_param)
+            _, buffer = cv2.imencode('.png', frame, encode_param)
             
             # Convertir a base64
             png_as_text = base64.b64encode(buffer).decode('utf-8')
@@ -131,15 +125,12 @@ class BytesJPEGStrategy(FrameConversionStrategy):
             Bytes del JPEG
         """
         try:
-            # Convertir BGR a RGB
-            if len(frame.shape) == 3 and frame.shape[2] == 3:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            else:
-                frame_rgb = frame
+            # OpenCV captura en BGR, cv2.imencode espera BGR para JPEG
+            # No convertir a RGB ya que causaría inversión de colores
             
-            # Codificar a JPEG
+            # Codificar a JPEG directamente desde BGR
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
-            _, buffer = cv2.imencode('.jpg', frame_rgb, encode_param)
+            _, buffer = cv2.imencode('.jpg', frame, encode_param)
             
             return buffer.tobytes()
             

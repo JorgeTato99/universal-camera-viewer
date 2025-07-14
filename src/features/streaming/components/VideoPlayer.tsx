@@ -10,7 +10,6 @@ import {
   Typography,
   Tooltip,
   CircularProgress,
-  Chip,
   Paper,
   Fade,
 } from '@mui/material';
@@ -23,13 +22,9 @@ import {
   VolumeOff as MuteIcon,
   VolumeUp as UnmuteIcon,
   PhotoCamera as SnapshotIcon,
-  Settings as SettingsIcon,
-  SignalCellularAlt as SignalIcon,
-  Circle as RecordIcon,
 } from '@mui/icons-material';
 import { useStreamingStore } from '../../../stores/streamingStore';
 import { streamingService } from '../../../services/python/streamingService';
-import { colorTokens } from '../../../design-system/tokens';
 
 interface VideoPlayerProps {
   cameraId: string;
@@ -39,6 +34,7 @@ interface VideoPlayerProps {
   showControls?: boolean;
   onSnapshot?: (imageData: string) => void;
   onError?: (error: string) => void;
+  onMetricsUpdate?: (metrics: { fps: number; latency: number; isStreaming: boolean }) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -49,6 +45,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   showControls = true,
   onSnapshot,
   onError,
+  onMetricsUpdate,
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -222,21 +219,41 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, []); // Solo ejecutar al montar
 
-  // Calcular métricas
+  // Calcular métricas y notificar al padre
   useEffect(() => {
-    if (streamingService.isConnected()) {
-      const interval = setInterval(() => {
-        const metrics = streamingService.getMetrics();
-        setMetrics(prev => ({
-          ...prev,
-          fps: metrics.fps,
-          latency: Math.round(Math.random() * 50 + 20), // Mock latency
-        }));
-      }, 1000);
-      
-      return () => clearInterval(interval);
+    if (!isPlaying || !streamingService.isConnected()) {
+      // Si no está reproduciendo, notificar que no hay streaming
+      onMetricsUpdate?.({ fps: 0, latency: 0, isStreaming: false });
+      return;
     }
-  }, [isPlaying]);
+
+    // Actualizar métricas inmediatamente al iniciar
+    const updateMetrics = () => {
+      const metrics = streamingService.getMetrics();
+      const currentMetrics = {
+        fps: metrics.fps,
+        latency: Math.round(Math.random() * 50 + 20), // Mock latency por ahora
+        isStreaming: true,
+      };
+      
+      setMetrics(prev => ({
+        ...prev,
+        fps: currentMetrics.fps,
+        latency: currentMetrics.latency,
+      }));
+      
+      // Notificar al componente padre
+      onMetricsUpdate?.(currentMetrics);
+    };
+
+    // Primera actualización inmediata
+    updateMetrics();
+    
+    // Luego actualizar cada segundo
+    const interval = setInterval(updateMetrics, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isPlaying]); // Solo depender de isPlaying, no de onMetricsUpdate
 
   return (
     <Box
@@ -289,74 +306,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           )}
         </Box>
       )}
-
-      {/* Status Overlay */}
-      <Fade in={showOverlay}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            p: 2,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-          }}
-        >
-          {/* Camera Info */}
-          <Box>
-            <Typography variant="h6" sx={{ color: '#fff', fontSize: '1rem' }}>
-              Cámara {cameraId}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-              <Chip
-                size="small"
-                icon={<RecordIcon sx={{ fontSize: '0.8rem' }} />}
-                label={isPlaying ? 'EN VIVO' : 'DETENIDO'}
-                sx={{
-                  backgroundColor: isPlaying ? colorTokens.status.connected : colorTokens.status.disconnected,
-                  color: '#fff',
-                  fontSize: '0.7rem',
-                }}
-              />
-              {isPlaying && (
-                <>
-                  <Chip
-                    size="small"
-                    label={`${metrics.fps} FPS`}
-                    sx={{
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      color: '#fff',
-                      fontSize: '0.7rem',
-                    }}
-                  />
-                  <Chip
-                    size="small"
-                    icon={<SignalIcon sx={{ fontSize: '0.8rem' }} />}
-                    label={`${metrics.latency}ms`}
-                    sx={{
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      color: '#fff',
-                      fontSize: '0.7rem',
-                    }}
-                  />
-                </>
-              )}
-            </Box>
-          </Box>
-
-          {/* Settings */}
-          <IconButton
-            size="small"
-            sx={{ color: '#fff' }}
-            onClick={() => console.log('Settings')}
-          >
-            <SettingsIcon />
-          </IconButton>
-        </Box>
-      </Fade>
 
       {/* Controls Overlay */}
       {showControls && (
