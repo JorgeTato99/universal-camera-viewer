@@ -28,6 +28,7 @@ import {
 } from "@mui/icons-material";
 import { cardStyles, statusStyles } from "../../../design-system/components";
 import { colorTokens } from "../../../design-system/tokens";
+import { CameraVideoPreview } from "./CameraVideoPreview";
 
 interface CameraCardProps {
   cameraId: string;
@@ -255,93 +256,25 @@ export const CameraCard: React.FC<CameraCardProps> = ({
           </Box>
         </Box>
 
-        {/* Área de video placeholder - SIN OVERLAY */}
-        <Box
-          sx={{
-            width: "100%",
-            flex: 1, // Usar flex: 1 para que ocupe el espacio disponible
-            aspectRatio: aspectRatio,
-            backgroundColor: (theme) =>
-              theme.palette.mode === "dark"
-                ? colorTokens.background.dark
-                : colorTokens.background.light,
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: (theme) => `1px solid ${theme.palette.divider}`,
-            position: "relative",
-            overflow: "hidden",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            "&:hover": {
-              borderColor: (theme) => theme.palette.primary.main,
-            },
-          }}
-        >
-          {isConnected ? (
-            // Placeholder para video en vivo
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 0.5,
-                color: (theme) => theme.palette.text.secondary,
-                transition: "all 0.2s ease-in-out",
-              }}
-            >
-              <VideocamIcon
-                sx={{
-                  fontSize: 32,
-                  color: colorTokens.status.connected,
-                  transition: "all 0.2s ease-in-out",
-                  "&:hover": {
-                    transform: "scale(1.1)",
-                  },
-                }}
-              />
-              <Typography variant="caption" sx={{ fontSize: "0.7rem" }}>
-                Video en vivo
-              </Typography>
-            </Box>
-          ) : (
-            // Placeholder para cámara desconectada
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 0.5,
-                color: (theme) => theme.palette.text.disabled,
-                transition: "all 0.2s ease-in-out",
-              }}
-            >
-              <VideocamIcon
-                sx={{
-                  fontSize: 32,
-                  transition: "all 0.2s ease-in-out",
-                  "&:hover": {
-                    transform: "scale(1.1)",
-                  },
-                }}
-              />
-              <Typography variant="caption" sx={{ fontSize: "0.7rem" }}>
-                Sin conexión
-              </Typography>
-            </Box>
-          )}
-        </Box>
+        {/* Área de video con componente CameraVideoPreview */}
+        <CameraVideoPreview
+          cameraId={cameraId}
+          isConnected={isConnected}
+          aspectRatio={aspectRatio}
+          height="200px"
+          onError={(error) => console.error(`Error en cámara ${cameraId}:`, error)}
+        />
 
-        {/* Botones de acción - REBALANCEADOS */}
+        {/* Botones de acción - REBALANCEADOS A 1/3 CADA UNO */}
         <Box
           sx={{
             mt: 1,
             display: "flex",
             gap: 0.5,
-            justifyContent: "space-between",
+            width: "100%",
           }}
         >
-          {/* Botón principal (Conectar/Desconectar) - 65% del ancho */}
+          {/* Botón Conectar/Desconectar - 1/3 del ancho */}
           <Button
             variant={isConnected ? "outlined" : "contained"}
             size="small"
@@ -349,11 +282,12 @@ export const CameraCard: React.FC<CameraCardProps> = ({
             onClick={isConnected ? onDisconnect : onConnect}
             disabled={isConnecting}
             sx={{
-              flex: "0 0 65%", // 65% del ancho disponible
-              fontSize: "0.7rem",
+              flex: "1", // 1/3 del ancho disponible
+              fontSize: "0.65rem",
               height: "28px",
               borderRadius: "4px",
               transition: "all 0.2s ease-in-out",
+              minWidth: 0, // Permitir que se comprima
               ...(isConnected
                 ? {
                     color: colorTokens.status.error,
@@ -379,57 +313,60 @@ export const CameraCard: React.FC<CameraCardProps> = ({
               : "Conectar"}
           </Button>
 
-          {/* Botones secundarios - 35% del ancho restante */}
-          <Box
+          {/* Botón Configuración - 1/3 del ancho */}
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<SettingsIcon />}
+            onClick={onSettings}
             sx={{
-              display: "flex",
-              gap: 0.5,
-              flex: "0 0 35%", // 35% del ancho restante
-              justifyContent: "space-between",
+              flex: "1", // 1/3 del ancho disponible
+              fontSize: "0.65rem",
+              height: "28px",
+              borderRadius: "4px",
+              transition: "all 0.2s ease-in-out",
+              minWidth: 0, // Permitir que se comprima
+              color: (theme) => theme.palette.text.secondary,
+              borderColor: (theme) => theme.palette.divider,
+              "&:hover": {
+                color: (theme) => theme.palette.primary.main,
+                borderColor: (theme) => theme.palette.primary.main,
+                backgroundColor: (theme) => theme.palette.action.hover,
+              },
             }}
           >
-            <Tooltip title="Configuración">
-              <IconButton
-                size="small"
-                onClick={onSettings}
-                sx={{
-                  flex: 1, // Repartir equitativamente el espacio
-                  height: "28px",
-                  color: (theme) => theme.palette.text.secondary,
-                  transition: "all 0.2s ease-in-out",
-                  "&:hover": {
-                    color: (theme) => theme.palette.primary.main,
-                    backgroundColor: (theme) => theme.palette.action.hover,
-                  },
-                }}
-              >
-                <SettingsIcon sx={{ fontSize: "0.9rem" }} />
-              </IconButton>
-            </Tooltip>
+            Config
+          </Button>
 
-            <Tooltip title="Capturar">
-              <IconButton
-                size="small"
-                onClick={onCapture}
-                disabled={!isConnected}
-                sx={{
-                  flex: 1, // Repartir equitativamente el espacio
-                  height: "28px",
-                  color: (theme) => theme.palette.text.secondary,
-                  transition: "all 0.2s ease-in-out",
-                  "&:hover": {
-                    color: (theme) => theme.palette.primary.main,
-                    backgroundColor: (theme) => theme.palette.action.hover,
-                  },
-                  "&.Mui-disabled": {
-                    color: (theme) => theme.palette.text.disabled,
-                  },
-                }}
-              >
-                <CameraAltIcon sx={{ fontSize: "0.9rem" }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
+          {/* Botón Capturar - 1/3 del ancho */}
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<CameraAltIcon />}
+            onClick={onCapture}
+            disabled={!isConnected}
+            sx={{
+              flex: "1", // 1/3 del ancho disponible
+              fontSize: "0.65rem",
+              height: "28px",
+              borderRadius: "4px",
+              transition: "all 0.2s ease-in-out",
+              minWidth: 0, // Permitir que se comprima
+              color: (theme) => theme.palette.text.secondary,
+              borderColor: (theme) => theme.palette.divider,
+              "&:hover": {
+                color: (theme) => theme.palette.primary.main,
+                borderColor: (theme) => theme.palette.primary.main,
+                backgroundColor: (theme) => theme.palette.action.hover,
+              },
+              "&.Mui-disabled": {
+                color: (theme) => theme.palette.text.disabled,
+                borderColor: (theme) => theme.palette.divider,
+              },
+            }}
+          >
+            Captura
+          </Button>
         </Box>
       </CardContent>
     </Card>

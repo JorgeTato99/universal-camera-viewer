@@ -3,84 +3,133 @@
  * Página principal de gestión de cámaras con nuevo design system
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { CameraToolbar, CameraGrid } from "./components";
 import { useCameraStore } from "../../stores";
+import { cameraService } from "../../services/python/cameraService";
+import { useNotificationStore } from "../../stores/notificationStore";
+import { Camera, ConnectionStatus, ProtocolType } from "../../types/camera.types";
+import { CameraInfo } from "../../types/service.types";
+
+// Función para convertir CameraInfo (de la API) a Camera (del store)
+const convertApiCameraToStoreCamera = (apiCamera: CameraInfo): Camera => {
+  return {
+    camera_id: apiCamera.camera_id,
+    brand: apiCamera.brand,
+    model: apiCamera.model || 'Unknown',
+    display_name: apiCamera.display_name,
+    connection_config: {
+      ip: apiCamera.ip,
+      username: 'admin',
+      password: apiCamera.camera_id === 'cam_192.168.1.172' 
+        ? '3gfwb3ToWfeWNqm22223DGbzcH-4si' 
+        : 'admin',
+      rtsp_port: 554,
+      onvif_port: 80,
+      http_port: 80,
+      timeout: 10,
+      max_retries: 3,
+      retry_delay: 1000,
+    },
+    stream_config: {
+      channel: 1,
+      subtype: 0,
+      resolution: '1920x1080',
+      codec: 'h264',
+      fps: 30,
+      bitrate: 4096,
+      quality: 'high',
+    },
+    capabilities: {
+      supported_protocols: [ProtocolType.ONVIF, ProtocolType.RTSP],
+      max_resolution: '1920x1080',
+      supported_codecs: ['h264', 'h265'],
+      has_ptz: false,
+      has_audio: true,
+      has_ir: true,
+      onvif_version: '2.0',
+    },
+    status: apiCamera.is_connected 
+      ? ConnectionStatus.CONNECTED 
+      : ConnectionStatus.DISCONNECTED,
+    is_connected: apiCamera.is_connected,
+    is_streaming: apiCamera.is_streaming,
+    current_protocol: ProtocolType.ONVIF,
+    stats: {
+      connection_attempts: 0,
+      successful_connections: 0,
+      failed_connections: 0,
+      total_uptime: 0,
+      average_response_time: 0,
+    },
+    created_at: new Date().toISOString(),
+    last_updated: apiCamera.last_updated,
+    metadata: {},
+  };
+};
 
 const CamerasPage: React.FC = () => {
-  const { cameras, isLoading } = useCameraStore();
+  const { 
+    cameras, 
+    isLoading, 
+    addCamera, 
+    updateCamera,
+    getFilteredCameras,
+    getCameraCount,
+    clearAllCameras
+  } = useCameraStore();
+  const { addNotification } = useNotificationStore();
   const [gridColumns, setGridColumns] = useState<2 | 3>(3);
   const [isChangingLayout, setIsChangingLayout] = useState(false);
+  const [loadingCameras, setLoadingCameras] = useState(true);
 
-  // Datos simulados para demostrar el layout con información técnica completa
-  const mockCameras = [
-    {
-      id: "cam-001",
-      name: "Cámara Entrada",
-      status: "connected" as const,
-      ip: "192.168.1.101",
-      fps: 30,
-      latency: 25,
-      connectedTime: "02:30:15",
-      aspectRatio: "16:9" as const,
-    },
-    {
-      id: "cam-002",
-      name: "Cámara Sala",
-      status: "disconnected" as const,
-      ip: "192.168.1.102",
-      fps: 0,
-      latency: 0,
-      connectedTime: "00:00:00",
-      aspectRatio: "16:9" as const,
-    },
-    {
-      id: "cam-003",
-      name: "Cámara Cocina",
-      status: "connecting" as const,
-      ip: "192.168.1.103",
-      fps: 0,
-      latency: 0,
-      connectedTime: "00:00:00",
-      aspectRatio: "4:3" as const,
-    },
-    {
-      id: "cam-004",
-      name: "Cámara Jardín",
-      status: "error" as const,
-      ip: "192.168.1.104",
-      fps: 0,
-      latency: 0,
-      connectedTime: "00:00:00",
-      aspectRatio: "16:9" as const,
-    },
-    {
-      id: "cam-005",
-      name: "Cámara Garaje",
-      status: "connected" as const,
-      ip: "192.168.1.105",
-      fps: 25,
-      latency: 40,
-      connectedTime: "01:15:30",
-      aspectRatio: "16:9" as const,
-    },
-    {
-      id: "cam-006",
-      name: "Cámara Oficina",
-      status: "connected" as const,
-      ip: "192.168.1.106",
-      fps: 30,
-      latency: 18,
-      connectedTime: "00:45:20",
-      aspectRatio: "4:3" as const,
-    },
-  ];
+  // Cargar cámaras desde el backend
+  useEffect(() => {
+    const loadCameras = async () => {
+      try {
+        setLoadingCameras(true);
+        const cameraList = await cameraService.listCameras();
+        
+        // Limpiar cámaras existentes y agregar las nuevas
+        clearAllCameras();
+        cameraList.forEach(apiCamera => {
+          const storeCamera = convertApiCameraToStoreCamera(apiCamera);
+          addCamera(storeCamera);
+        });
+      } catch (error) {
+        console.error('Error cargando cámaras:', error);
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Error al cargar las cámaras',
+        });
+      } finally {
+        setLoadingCameras(false);
+      }
+    };
 
-  // Calcular cámaras conectadas
-  const connectedCameras = mockCameras.filter(
-    (camera) => camera.status === "connected"
-  ).length;
+    loadCameras();
+  }, [addCamera, addNotification]);
+
+  // Obtener cámaras filtradas del store
+  const filteredCameras = getFilteredCameras();
+  
+  // Transformar datos de cámaras para el componente
+  const cameraData = filteredCameras.map((camera: Camera) => ({
+    id: camera.camera_id,
+    name: camera.display_name || `Cámara ${camera.camera_id}`,
+    status: camera.is_connected ? 'connected' as const : 'disconnected' as const,
+    ip: camera.connection_config.ip,
+    fps: camera.is_connected ? 30 : 0, // Mock FPS por ahora
+    latency: camera.is_connected ? 45 : 0, // Mock latency por ahora
+    connectedTime: camera.is_connected ? "02:30:15" : "00:00:00", // Mock por ahora
+    aspectRatio: "16:9" as const,
+  }));
+
+  // Obtener conteo de cámaras
+  const cameraCount = getCameraCount();
+  const connectedCameras = cameraCount.connected;
 
   const handleGridColumnsChange = (columns: 2 | 3) => {
     setIsChangingLayout(true);
@@ -92,25 +141,120 @@ const CamerasPage: React.FC = () => {
     }, 400); // Coincide con la duración de la transición del grid
   };
 
-  const handleConnectAll = () => {
-    console.log("Conectar todas las cámaras");
-    // TODO: Implementar lógica de conexión
+  const handleConnectAll = async () => {
+    const allCameras: Camera[] = Array.from(cameras.values());
+    const disconnectedCameras = allCameras.filter((cam: Camera) => !cam.is_connected);
+    
+    for (const camera of disconnectedCameras as Camera[]) {
+      try {
+        await cameraService.connectCamera(camera.camera_id, {
+          ip: camera.connection_config.ip,
+          username: 'admin',
+          password: camera.camera_id === 'cam_192.168.1.172' 
+            ? '3gfwb3ToWfeWNqm22223DGbzcH-4si' 
+            : 'admin',
+          protocol: 'ONVIF',
+          port: 80
+        });
+      } catch (error) {
+        console.error(`Error conectando ${camera.camera_id}:`, error);
+      }
+    }
+    
+    // Recargar cámaras
+    const updatedCameras = await cameraService.listCameras();
+    cameras.clear();
+    updatedCameras.forEach((apiCamera: CameraInfo) => {
+      const storeCamera = convertApiCameraToStoreCamera(apiCamera);
+      addCamera(storeCamera);
+    });
   };
 
-  const handleDisconnectAll = () => {
-    console.log("Desconectar todas las cámaras");
-    // TODO: Implementar lógica de desconexión
+  const handleDisconnectAll = async () => {
+    const allCameras: Camera[] = Array.from(cameras.values());
+    const connectedCameras = allCameras.filter((cam: Camera) => cam.is_connected);
+    
+    for (const camera of connectedCameras as Camera[]) {
+      try {
+        await cameraService.disconnectCamera(camera.camera_id);
+      } catch (error) {
+        console.error(`Error desconectando ${camera.camera_id}:`, error);
+      }
+    }
+    
+    // Recargar cámaras
+    const updatedCameras = await cameraService.listCameras();
+    cameras.clear();
+    updatedCameras.forEach((apiCamera: CameraInfo) => {
+      const storeCamera = convertApiCameraToStoreCamera(apiCamera);
+      addCamera(storeCamera);
+    });
   };
 
   // Handlers para acciones de cámaras individuales
-  const handleCameraConnect = (cameraId: string) => {
-    console.log(`Conectar cámara: ${cameraId}`);
-    // TODO: Implementar lógica de conexión individual
+  const handleCameraConnect = async (cameraId: string) => {
+    try {
+      const camera = cameras.get(cameraId);
+      if (!camera) return;
+
+      await cameraService.connectCamera(cameraId, {
+        ip: camera.connection_config.ip,
+        username: 'admin',
+        password: cameraId === 'cam_192.168.1.172' 
+          ? '3gfwb3ToWfeWNqm22223DGbzcH-4si' 
+          : 'admin',
+        protocol: 'ONVIF',
+        port: 80
+      });
+
+      // Recargar cámaras
+      const updatedCameras = await cameraService.listCameras();
+      cameras.clear();
+      updatedCameras.forEach((apiCamera: CameraInfo) => {
+        const storeCamera = convertApiCameraToStoreCamera(apiCamera);
+        addCamera(storeCamera);
+      });
+      
+      addNotification({
+        type: 'success',
+        title: 'Conexión exitosa',
+        message: `Cámara ${camera.display_name} conectada`,
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error de conexión',
+        message: `Error al conectar la cámara`,
+      });
+    }
   };
 
-  const handleCameraDisconnect = (cameraId: string) => {
-    console.log(`Desconectar cámara: ${cameraId}`);
-    // TODO: Implementar lógica de desconexión individual
+  const handleCameraDisconnect = async (cameraId: string) => {
+    try {
+      await cameraService.disconnectCamera(cameraId);
+      
+      const camera = cameras.get(cameraId);
+      
+      // Recargar cámaras
+      const updatedCameras = await cameraService.listCameras();
+      cameras.clear();
+      updatedCameras.forEach((apiCamera: CameraInfo) => {
+        const storeCamera = convertApiCameraToStoreCamera(apiCamera);
+        addCamera(storeCamera);
+      });
+      
+      addNotification({
+        type: 'success',
+        title: 'Desconexión exitosa',
+        message: `Cámara ${camera?.display_name} desconectada`,
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error de desconexión',
+        message: `Error al desconectar la cámara`,
+      });
+    }
   };
 
   const handleCameraSettings = (cameraId: string) => {
@@ -118,9 +262,28 @@ const CamerasPage: React.FC = () => {
     // TODO: Implementar modal de configuración
   };
 
-  const handleCameraCapture = (cameraId: string) => {
-    console.log(`Capturar imagen de cámara: ${cameraId}`);
-    // TODO: Implementar captura de imagen
+  const handleCameraCapture = async (cameraId: string) => {
+    try {
+      const snapshot = await cameraService.captureSnapshot(cameraId);
+      
+      // Descargar imagen
+      const link = document.createElement('a');
+      link.href = `data:image/jpeg;base64,${snapshot.image_data}`;
+      link.download = `snapshot_${cameraId}_${new Date().getTime()}.jpg`;
+      link.click();
+      
+      addNotification({
+        type: 'success',
+        title: 'Captura exitosa',
+        message: 'Captura guardada',
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error de captura',
+        message: 'Error al capturar imagen',
+      });
+    }
   };
 
   return (
@@ -128,7 +291,7 @@ const CamerasPage: React.FC = () => {
       {/* Toolbar superior */}
       <CameraToolbar
         connectedCameras={connectedCameras}
-        totalCameras={mockCameras.length}
+        totalCameras={cameras.size}
         gridColumns={gridColumns}
         onGridColumnsChange={handleGridColumnsChange}
         onConnectAll={handleConnectAll}
@@ -185,9 +348,9 @@ const CamerasPage: React.FC = () => {
         )}
 
         <CameraGrid
-          cameras={mockCameras}
+          cameras={cameraData}
           gridColumns={gridColumns}
-          isLoading={isLoading}
+          isLoading={loadingCameras || isLoading}
           onCameraConnect={handleCameraConnect}
           onCameraDisconnect={handleCameraDisconnect}
           onCameraSettings={handleCameraSettings}

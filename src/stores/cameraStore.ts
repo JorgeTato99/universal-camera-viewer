@@ -48,6 +48,7 @@ interface CameraState {
   // Bulk Actions
   connectAllCameras: () => void;
   disconnectAllCameras: () => void;
+  clearAllCameras: () => void;
 
   // Persistence
   saveToLocalStorage: () => void;
@@ -258,6 +259,15 @@ export const useCameraStore = create<CameraState>()(
     disconnectAllCameras: () => {
       // This will be handled by the service layer
       console.log("Disconnect all cameras requested");
+    },
+
+    clearAllCameras: () => {
+      set({
+        cameras: new Map(),
+        cameraGridItems: new Map(),
+        selectedCamera: null,
+        isConnecting: new Map(),
+      });
     },
 
     // Persistence
