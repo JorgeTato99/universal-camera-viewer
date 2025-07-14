@@ -545,5 +545,4 @@ class StreamManager:
 # Instancia global del stream manager
 stream_manager = StreamManager()
 
-# Inicializar el servicio al importar
-asyncio.create_task(websocket_stream_service.initialize())
+# El servicio se inicializará cuando sea necesario, no al importar

@@ -192,11 +192,27 @@ class WebSocketStreamService(BaseService):
                     'camera_id': camera_id
                 }
                 
-        except Exception as e:
-            self.logger.error(f"Error starting stream for {camera_id}: {e}")
+        except StreamingError as e:
+            # Re-lanzar errores específicos de streaming
+            self.logger.error(f"Streaming error for {camera_id}: {e.to_dict()}")
             return {
                 'success': False,
-                'error': str(e),
+                'error': e.message,
+                'error_code': e.error_code,
+                'camera_id': camera_id
+            }
+        except Exception as e:
+            # Envolver errores inesperados
+            self.logger.error(f"Unexpected error starting stream for {camera_id}: {e}", exc_info=True)
+            wrapped_error = StreamingError(
+                message=f"Error inesperado iniciando stream: {str(e)}",
+                error_code="STREAM_START_FAILED",
+                context={'camera_id': camera_id, 'original_error': str(e)}
+            )
+            return {
+                'success': False,
+                'error': wrapped_error.message,
+                'error_code': wrapped_error.error_code,
                 'camera_id': camera_id
             }
             
@@ -237,11 +253,27 @@ class WebSocketStreamService(BaseService):
                     'camera_id': camera_id
                 }
                 
-        except Exception as e:
-            self.logger.error(f"Error stopping stream for {camera_id}: {e}")
+        except StreamingError as e:
+            # Re-lanzar errores específicos de streaming
+            self.logger.error(f"Streaming error stopping {camera_id}: {e.to_dict()}")
             return {
                 'success': False,
-                'error': str(e),
+                'error': e.message,
+                'error_code': e.error_code,
+                'camera_id': camera_id
+            }
+        except Exception as e:
+            # Envolver errores inesperados
+            self.logger.error(f"Unexpected error stopping stream for {camera_id}: {e}", exc_info=True)
+            wrapped_error = StreamingError(
+                message=f"Error inesperado deteniendo stream: {str(e)}",
+                error_code="STREAM_STOP_FAILED",
+                context={'camera_id': camera_id, 'original_error': str(e)}
+            )
+            return {
+                'success': False,
+                'error': wrapped_error.message,
+                'error_code': wrapped_error.error_code,
                 'camera_id': camera_id
             }
             

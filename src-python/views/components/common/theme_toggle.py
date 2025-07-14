@@ -12,7 +12,19 @@ Incluye:
 
 import flet as ft
 from typing import Optional, Callable
-from ....services.theme_service import theme_service, ThemeMode
+import asyncio
+
+# Importar el presenter de tema
+try:
+    from ....presenters import get_theme_presenter
+except ImportError:
+    get_theme_presenter = None
+
+# ThemeMode para compatibilidad
+class ThemeMode:
+    LIGHT = "light"
+    DARK = "dark"
+    SYSTEM = "system"
 
 
 class ThemeToggle(ft.Row):
@@ -41,6 +53,9 @@ class ThemeToggle(ft.Row):
         self.page = page
         self.on_theme_change = on_theme_change
         
+        # Obtener presenter
+        self.theme_presenter = get_theme_presenter() if get_theme_presenter else None
+        
         # Componentes
         self.theme_switch = None
         self.theme_icon = None
@@ -57,8 +72,8 @@ class ThemeToggle(ft.Row):
     def _build_toggle(self):
         """Construye el toggle de tema."""
         
-        # Obtener estado actual
-        is_dark = theme_service.is_dark_theme()
+        # Obtener estado actual del presenter
+        is_dark = self.theme_presenter.is_dark_theme() if self.theme_presenter else False
         
         # Icono de tema
         self.theme_icon = ft.Icon(
@@ -99,10 +114,12 @@ class ThemeToggle(ft.Row):
             
         is_dark = self.theme_switch.value
         
-        # Cambiar tema
+        # Cambiar tema a través del presenter
         new_theme = ThemeMode.DARK if is_dark else ThemeMode.LIGHT
-        if self.page is not None:
-            theme_service.set_theme(new_theme, self.page)
+        if self.page is not None and self.theme_presenter:
+            # Usar el presenter para cambiar el tema
+            import asyncio
+            asyncio.create_task(self._change_theme_async(new_theme))
         
         # Actualizar componentes visuales
         self._update_visual_state(is_dark)
@@ -110,6 +127,12 @@ class ThemeToggle(ft.Row):
         # Notificar cambio si hay callback
         if self.on_theme_change:
             self.on_theme_change(new_theme)
+    
+    async def _change_theme_async(self, theme_name: str):
+        """Cambia el tema de forma asíncrona a través del presenter."""
+        if self.theme_presenter:
+            await self.theme_presenter.set_theme(theme_name)
+            await self.theme_presenter.apply_theme_to_page(self.page)
     
     def _update_visual_state(self, is_dark: bool):
         """Actualiza el estado visual del toggle."""
@@ -124,7 +147,7 @@ class ThemeToggle(ft.Row):
     
     def refresh(self):
         """Refresca el estado del toggle según el tema actual."""
-        is_dark = theme_service.is_dark_theme()
+        is_dark = self.theme_presenter.is_dark_theme() if self.theme_presenter else False
         
         if self.theme_switch:
             self.theme_switch.value = is_dark
@@ -170,9 +193,40 @@ class ThemeSelector(ft.Column):
         # Construir contenido
         self._build_selector()
     
+    def __init__(
+        self,
+        page: ft.Page,
+        on_theme_change: Optional[Callable[[str], None]] = None,
+        show_system_option: bool = False,
+        **kwargs
+    ):
+        """
+        Inicializa el selector de tema.
+        
+        Args:
+            page: Página de Flet para aplicar cambios
+            on_theme_change: Callback opcional para notificar cambios
+            show_system_option: Si mostrar opción "Seguir sistema"
+        """
+        super().__init__(**kwargs)
+        
+        self.page = page
+        self.on_theme_change = on_theme_change
+        self.show_system_option = show_system_option
+        
+        # Obtener presenter
+        self.theme_presenter = get_theme_presenter() if get_theme_presenter else None
+        
+        # Configurar columna
+        self.spacing = 16
+        self.tight = True
+        
+        # Construir contenido
+        self._build_selector()
+    
     def _build_selector(self):
         """Construye el selector de tema."""
-        current_theme = theme_service.get_current_theme()
+        current_theme = self._get_current_theme()
         
         # Título
         title = ft.Text(
@@ -233,17 +287,39 @@ class ThemeSelector(ft.Column):
             *theme_options
         ]
     
+    def _get_current_theme(self) -> str:
+        """Obtiene el tema actual del presenter."""
+        if self.theme_presenter:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Si estamos en un contexto async, usar create_task
+                future = asyncio.create_task(self.theme_presenter.get_current_theme())
+                # Por ahora retornar light como default
+                return "light"
+            else:
+                # Si no hay loop corriendo, ejecutar sync
+                return loop.run_until_complete(self.theme_presenter.get_current_theme())
+        return "light"
+    
     def _handle_option_change(self, e):
         """Maneja el cambio de opción de tema."""
         selected_theme = e.control.value
         
-        # Cambiar tema
-        if self.page is not None:
-            theme_service.set_theme(selected_theme, self.page)
+        # Cambiar tema a través del presenter
+        if self.page is not None and self.theme_presenter:
+            import asyncio
+            asyncio.create_task(self._change_theme_async(selected_theme))
         
         # Notificar cambio si hay callback
         if self.on_theme_change:
             self.on_theme_change(selected_theme)
+    
+    async def _change_theme_async(self, theme_name: str):
+        """Cambia el tema de forma asíncrona a través del presenter."""
+        if self.theme_presenter:
+            await self.theme_presenter.set_theme(theme_name)
+            await self.theme_presenter.apply_theme_to_page(self.page)
     
     def refresh(self):
         """Refresca el estado del selector."""

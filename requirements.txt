@@ -9,6 +9,7 @@ numpy>=1.24.0                  # Operaciones numéricas para imágenes
 # Protocolos de cámara
 onvif-zeep>=0.2.12             # Protocolo ONVIF para cámaras IP
 requests>=2.31.0               # HTTP/HTTPS para APIs REST y CGI
+aiohttp>=3.9.0                 # Cliente HTTP asíncrono para streaming
 
 # Interfaz de usuario
 flet>=0.21.0                   # Framework UI moderno con Material Design

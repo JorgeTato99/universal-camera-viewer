@@ -17,10 +17,10 @@ from dataclasses import dataclass
 
 # Importaciones para el theme toggle
 try:
-    from ...services.theme_service import theme_service
+    from ...presenters import get_theme_presenter
 except ImportError:
-    # Si no está disponible, theme_service será None
-    theme_service = None
+    # Si no está disponible, get_theme_presenter será None
+    get_theme_presenter = None
 
 # Importar design system
 try:
@@ -79,6 +79,9 @@ class ModernNavigationBar(ft.Container):
         self.page = page
         self.show_theme_toggle = show_theme_toggle
         
+        # Obtener presenter de tema si está disponible
+        self.theme_presenter = get_theme_presenter() if get_theme_presenter else None
+        
         # Configurar contenido
         self.content = self._build_navigation_content()
         
@@ -123,7 +126,7 @@ class ModernNavigationBar(ft.Container):
         # Controles adicionales (theme toggle, etc.)
         additional_controls = []
         
-        if self.show_theme_toggle and self.page and theme_service:
+        if self.show_theme_toggle and self.page and self.theme_presenter:
             theme_button = self._create_theme_button()
             additional_controls.append(theme_button)
         
@@ -216,11 +219,11 @@ class ModernNavigationBar(ft.Container):
     
     def _create_theme_button(self) -> ft.Container:
         """Crea el botón para cambiar el tema."""
-        if not self.page or not theme_service:
+        if not self.page or not self.theme_presenter:
             return ft.Container()
         
         # Determinar icono según tema actual
-        is_dark = theme_service.is_dark_theme()
+        is_dark = self.theme_presenter.is_dark_theme()
         icon = ft.Icons.DARK_MODE if is_dark else ft.Icons.LIGHT_MODE
         tooltip = "Cambiar a tema claro" if is_dark else "Cambiar a tema oscuro"
         
@@ -236,10 +239,17 @@ class ModernNavigationBar(ft.Container):
     
     def _handle_theme_toggle(self, e):
         """Maneja el cambio de tema."""
-        if self.page and theme_service:
-            theme_service.toggle_theme(self.page)
-            # Forzar recarga para asegurar que todos los componentes se actualicen
-            theme_service.force_theme_reload(self.page)
+        if self.page and self.theme_presenter:
+            # Usar el presenter para cambiar el tema
+            import asyncio
+            asyncio.create_task(self._toggle_theme_async())
+    
+    async def _toggle_theme_async(self):
+        """Cambia el tema de forma asíncrona a través del presenter."""
+        if self.theme_presenter:
+            await self.theme_presenter.toggle_theme()
+            # Aplicar tema a la página
+            await self.theme_presenter.apply_theme_to_page(self.page)
             # Actualizar el botón
             self.content = self._build_navigation_content()
             self.update()

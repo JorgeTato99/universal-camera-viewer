@@ -7,6 +7,7 @@ con el frontend Tauri para streaming de video.
 
 import asyncio
 import json
+import logging
 from typing import Dict, Any
 
 from presenters.streaming.video_stream_presenter import VideoStreamPresenter
@@ -24,6 +25,7 @@ class TauriIntegration:
     
     def __init__(self):
         """Inicializa la integración."""
+        self.logger = logging.getLogger(__name__)
         self.event_emitter = TauriEventEmitter()
         self.video_presenter = VideoStreamPresenter(event_emitter=self.event_emitter)
         self.is_running = False
@@ -183,7 +185,8 @@ async def example_usage():
         "quality": 85
     })
     
-    print(f"Start result: {json.dumps(start_result, indent=2)}")
+    logger = logging.getLogger(__name__)
+    logger.info(f"Start result: {json.dumps(start_result, indent=2)}")
     
     # El frontend recibiría eventos via Tauri:
     # - 'stream-status' con estado 'connecting'
@@ -199,14 +202,14 @@ async def example_usage():
         "cameraId": "camera_001"
     })
     
-    print(f"Metrics: {json.dumps(metrics_result, indent=2)}")
+    logger.info(f"Metrics: {json.dumps(metrics_result, indent=2)}")
     
     # Detener stream
     stop_result = await integration.handle_tauri_command("stop_camera_stream", {
         "cameraId": "camera_001"
     })
     
-    print(f"Stop result: {json.dumps(stop_result, indent=2)}")
+    logger.info(f"Stop result: {json.dumps(stop_result, indent=2)}")
     
     # Limpiar
     await integration.cleanup()

@@ -68,7 +68,14 @@ setup_middleware(app)
 
 @app.get("/")
 async def root():
-    """Endpoint raíz."""
+    """
+    Endpoint raíz de la API.
+    
+    Proporciona información básica sobre el servicio y enlaces útiles.
+    
+    Returns:
+        Dict con nombre, versión, estado y enlaces de documentación
+    """
     return {
         "name": settings.app_name,
         "version": settings.app_version,
@@ -80,7 +87,15 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """
+    Endpoint de verificación de salud del servicio.
+    
+    Utilizado para monitoreo y balanceadores de carga para verificar
+    que el servicio está funcionando correctamente.
+    
+    Returns:
+        Respuesta con estado 'healthy' y versión actual
+    """
     return create_response(
         success=True,
         data={
@@ -92,7 +107,15 @@ async def health_check():
 
 @app.get(f"{settings.api_prefix}/info")
 async def api_info():
-    """Información de la API."""
+    """
+    Información detallada de la API.
+    
+    Proporciona información sobre endpoints disponibles, protocolos
+    soportados y capacidades del sistema.
+    
+    Returns:
+        Respuesta con endpoints, características y capacidades
+    """
     return create_response(
         success=True,
         data={
@@ -116,7 +139,15 @@ async def api_info():
 
 @app.get(f"{settings.api_prefix}/system/info")
 async def system_info():
-    """Información del sistema."""
+    """
+    Información del sistema y recursos.
+    
+    Proporciona estadísticas del sistema operativo, uso de recursos
+    (CPU, memoria, disco) y métricas de la API.
+    
+    Returns:
+        Respuesta con información de plataforma, recursos y métricas
+    """
     import platform
     import psutil
     
@@ -149,7 +180,19 @@ async def system_info():
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
-    """Manejador para rutas no encontradas."""
+    """
+    Manejador personalizado para errores 404.
+    
+    Captura todas las rutas no encontradas y devuelve una respuesta
+    consistente en formato JSON.
+    
+    Args:
+        request: Objeto Request de FastAPI con información de la petición
+        exc: Excepción HTTPException con detalles del error
+        
+    Returns:
+        JSONResponse con mensaje de error y la ruta solicitada
+    """
     return JSONResponse(
         status_code=404,
         content=create_response(
@@ -162,7 +205,19 @@ async def not_found_handler(request: Request, exc):
 
 @app.exception_handler(500)
 async def internal_error_handler(request: Request, exc):
-    """Manejador para errores internos."""
+    """
+    Manejador personalizado para errores 500.
+    
+    Captura errores internos del servidor, los registra para debugging
+    y devuelve una respuesta genérica sin exponer detalles sensibles.
+    
+    Args:
+        request: Objeto Request de FastAPI con información de la petición
+        exc: Excepción del servidor con detalles del error
+        
+    Returns:
+        JSONResponse con mensaje de error genérico
+    """
     logger.error(f"Error interno: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,

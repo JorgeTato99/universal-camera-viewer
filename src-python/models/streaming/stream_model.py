@@ -10,6 +10,11 @@ from enum import Enum
 from typing import Optional, Dict, Any
 import uuid
 
+from utils.exceptions import (
+    ValidationError,
+    MissingRequiredFieldError
+)
+
 
 class StreamStatus(Enum):
     """Estados posibles de un stream."""
@@ -82,13 +87,21 @@ class StreamModel:
     def validate(self) -> None:
         """Valida la integridad del modelo."""
         if not self.camera_id:
-            raise ValueError("camera_id es obligatorio")
+            raise MissingRequiredFieldError("camera_id", "StreamModel")
         
         if self.target_fps < 1 or self.target_fps > 60:
-            raise ValueError(f"target_fps debe estar entre 1 y 60, recibido: {self.target_fps}")
+            raise ValidationError(
+                message=f"target_fps debe estar entre 1 y 60, recibido: {self.target_fps}",
+                error_code="INVALID_FPS",
+                context={'target_fps': self.target_fps, 'valid_range': '1-60'}
+            )
         
         if self.buffer_size < 1 or self.buffer_size > 30:
-            raise ValueError(f"buffer_size debe estar entre 1 y 30, recibido: {self.buffer_size}")
+            raise ValidationError(
+                message=f"buffer_size debe estar entre 1 y 30, recibido: {self.buffer_size}",
+                error_code="INVALID_BUFFER_SIZE",
+                context={'buffer_size': self.buffer_size, 'valid_range': '1-30'}
+            )
     
     def start(self) -> None:
         """Marca el stream como iniciado."""

@@ -233,12 +233,11 @@ def main():
         asyncio.run(main_async())
         
     except KeyboardInterrupt:
-        print("\\nAplicación interrumpida por el usuario")
+        logging.info("\\nAplicación interrumpida por el usuario")
     except Exception as e:
-        print(f"Error fatal en la aplicación: {str(e)}")
-        logging.error(f"Error fatal: {str(e)}", exc_info=True)
+        logging.error(f"Error fatal en la aplicación: {str(e)}", exc_info=True)
     finally:
-        print("👋 Aplicación finalizada")
+        logging.info("👋 Aplicación finalizada")
 
 
 if __name__ == "__main__":

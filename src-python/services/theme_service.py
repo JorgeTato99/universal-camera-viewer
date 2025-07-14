@@ -12,10 +12,14 @@ Incluye:
 """
 
 import flet as ft
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 import json
 import os
+import logging
 from pathlib import Path
+
+from models.theme_config import ThemeConfig, LIGHT_THEME, DARK_THEME
+from utils.event_bus import Event, emit
 
 
 class ThemeMode:
@@ -37,12 +41,20 @@ class ThemeService:
     """
     
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.current_theme = ThemeMode.LIGHT
         self.theme_change_callbacks = []
+        self._observers: List[Callable] = []
         
         # Colores base para temas
         self.primary_color = ft.Colors.BLUE_700
         self.config_file = Path("config/theme_config.json")
+        
+        # Configuraciones de tema
+        self._theme_configs = {
+            ThemeMode.LIGHT: LIGHT_THEME,
+            ThemeMode.DARK: DARK_THEME,
+        }
         
         # Cargar configuración persistente
         self._load_theme_config()
@@ -55,13 +67,13 @@ class ThemeService:
                     config = json.load(f)
                     self.current_theme = config.get('theme', ThemeMode.LIGHT)
                     self.primary_color = config.get('primary_color', ft.Colors.BLUE_700)
-                    print(f"Tema cargado desde archivo: {self.current_theme}")
+                    self.logger.info(f"Tema cargado desde archivo: {self.current_theme}")
             else:
-                print(f"Archivo de configuración no existe, usando tema por defecto: {ThemeMode.LIGHT}")
+                self.logger.info(f"Archivo de configuración no existe, usando tema por defecto: {ThemeMode.LIGHT}")
                 self.current_theme = ThemeMode.LIGHT
         except Exception as e:
             # Si hay error, usar valores por defecto
-            print(f"Error cargando configuración, usando tema por defecto: {e}")
+            self.logger.error(f"Error cargando configuración, usando tema por defecto: {e}")
             self.current_theme = ThemeMode.LIGHT
     
     def _save_theme_config(self):
@@ -197,7 +209,7 @@ class ThemeService:
     
     def configure_page_theme(self, page: ft.Page, force_update: bool = True):
         """Configura el tema de la página."""
-        print(f"Configurando tema: {self.current_theme}")
+        self.logger.debug(f"Configurando tema: {self.current_theme}")
         
         # Configurar temas
         page.theme = self.get_light_theme()
@@ -207,20 +219,20 @@ class ThemeService:
         if self.current_theme == ThemeMode.LIGHT:
             page.theme_mode = ft.ThemeMode.LIGHT
             page.bgcolor = ft.Colors.GREY_50
-            print("Aplicando tema CLARO")
+            self.logger.debug("Aplicando tema CLARO")
         elif self.current_theme == ThemeMode.DARK:
             page.theme_mode = ft.ThemeMode.DARK
             page.bgcolor = ft.Colors.GREY_900
-            print("Aplicando tema OSCURO")
+            self.logger.debug("Aplicando tema OSCURO")
         else:
             page.theme_mode = ft.ThemeMode.SYSTEM
             page.bgcolor = ft.Colors.GREY_50
-            print("Aplicando tema SISTEMA")
+            self.logger.debug("Aplicando tema SISTEMA")
         
         # Actualizar página si se solicita
         if force_update:
             page.update()
-            print("Página actualizada")
+            self.logger.debug("Página actualizada")
     
     def toggle_theme(self, page: ft.Page):
         """Cambia entre tema claro y oscuro."""
@@ -300,7 +312,7 @@ class ThemeService:
 
     def force_theme_reload(self, page: ft.Page):
         """Fuerza la recarga completa del tema - útil para resolver problemas de inicialización."""
-        print(f"FORZANDO RECARGA DEL TEMA: {self.current_theme}")
+        self.logger.warning(f"FORZANDO RECARGA DEL TEMA: {self.current_theme}")
         
         # Limpiar configuración actual
         page.theme = None
@@ -316,30 +328,108 @@ class ThemeService:
         if self.current_theme == ThemeMode.LIGHT:
             page.theme_mode = ft.ThemeMode.LIGHT
             page.bgcolor = ft.Colors.GREY_50
-            print("TEMA CLARO APLICADO FORZADAMENTE")
+            self.logger.info("TEMA CLARO APLICADO FORZADAMENTE")
         elif self.current_theme == ThemeMode.DARK:
             page.theme_mode = ft.ThemeMode.DARK
             page.bgcolor = ft.Colors.GREY_900
-            print("TEMA OSCURO APLICADO FORZADAMENTE")
+            self.logger.info("TEMA OSCURO APLICADO FORZADAMENTE")
         else:
             page.theme_mode = ft.ThemeMode.SYSTEM
             page.bgcolor = ft.Colors.GREY_50
-            print("TEMA SISTEMA APLICADO FORZADAMENTE")
+            self.logger.info("TEMA SISTEMA APLICADO FORZADAMENTE")
         
         # Forzar actualización múltiple
         page.update()
-        print("PRIMERA ACTUALIZACIÓN COMPLETADA")
+        self.logger.debug("PRIMERA ACTUALIZACIÓN COMPLETADA")
         
         # Segunda actualización para asegurar que todos los componentes se actualicen
         page.update()
-        print("SEGUNDA ACTUALIZACIÓN COMPLETADA")
+        self.logger.debug("SEGUNDA ACTUALIZACIÓN COMPLETADA")
 
     def reset_to_light_theme(self, page: ft.Page):
         """Resetea el tema a claro por defecto - útil para debugging."""
-        print("RESETEANDO A TEMA CLARO")
+        self.logger.info("RESETEANDO A TEMA CLARO")
         self.current_theme = ThemeMode.LIGHT
         self._save_theme_config()
         self.force_theme_reload(page)
+    
+    def get_theme_config(self, theme_mode: Optional[str] = None) -> ThemeConfig:
+        """
+        Obtiene la configuración completa de un tema.
+        
+        Args:
+            theme_mode: Modo del tema. Si no se especifica, usa el actual.
+            
+        Returns:
+            Configuración completa del tema
+        """
+        mode = theme_mode or self.current_theme
+        return self._theme_configs.get(mode, LIGHT_THEME)
+    
+    def subscribe(self, callback: Callable) -> None:
+        """
+        Suscribe un callback para notificación de cambios de tema.
+        
+        Args:
+            callback: Función a llamar cuando cambie el tema
+        """
+        if callback not in self._observers:
+            self._observers.append(callback)
+            self.logger.debug(f"Observer suscrito: {callback.__name__}")
+    
+    def unsubscribe(self, callback: Callable) -> None:
+        """
+        Desuscribe un callback de notificaciones.
+        
+        Args:
+            callback: Función a desuscribir
+        """
+        if callback in self._observers:
+            self._observers.remove(callback)
+            self.logger.debug(f"Observer desuscrito: {callback.__name__}")
+    
+    def _notify_observers(self, new_theme: str) -> None:
+        """
+        Notifica a todos los observers del cambio de tema.
+        
+        Args:
+            new_theme: Nombre del nuevo tema
+        """
+        # Crear evento para el event bus
+        event = Event(
+            name="theme_changed",
+            data={"theme": new_theme, "config": self.get_theme_config().to_dict()},
+            source="theme_service"
+        )
+        
+        # Notificar via event bus
+        emit("theme_changed", event.data, "theme_service")
+        
+        # Notificar a observers directos
+        for observer in self._observers.copy():
+            try:
+                observer(event)
+            except Exception as e:
+                self.logger.error(f"Error notificando observer: {e}")
+    
+    def apply_theme_to_page(self, page: ft.Page, theme_name: str) -> None:
+        """Aplica un tema específico a la página Flet."""
+        self.current_theme = theme_name
+        self.configure_page_theme(page)
+    
+    def apply_theme(self, theme_name: str) -> None:
+        """
+        Aplica un tema sin necesidad de referencia a la página.
+        
+        Args:
+            theme_name: Nombre del tema a aplicar
+        """
+        if theme_name not in [ThemeMode.LIGHT, ThemeMode.DARK]:
+            raise ValueError(f"Tema inválido: {theme_name}")
+            
+        self.current_theme = theme_name
+        self._save_theme_config()
+        self._notify_theme_change(theme_name)
 
 
 # Instancia global del servicio de tema

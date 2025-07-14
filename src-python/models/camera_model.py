@@ -19,6 +19,15 @@ from dataclasses import dataclass, field
 from enum import Enum
 from datetime import datetime, timedelta
 import threading
+import ipaddress
+
+from utils.exceptions import (
+    ValidationError,
+    InvalidIPAddressError,
+    MissingRequiredFieldError,
+    InvalidPortError
+)
+from utils.constants import DefaultPorts, DefaultCredentials, SystemLimits
 
 
 class ConnectionStatus(Enum):
@@ -46,9 +55,9 @@ class ConnectionConfig:
     ip: str
     username: str
     password: str
-    rtsp_port: int = 554
-    onvif_port: int = 80
-    http_port: int = 80
+    rtsp_port: int = DefaultPorts.RTSP
+    onvif_port: int = DefaultPorts.ONVIF
+    http_port: int = DefaultPorts.HTTP
     timeout: int = 10
     max_retries: int = 3
     retry_delay: float = 1.0
@@ -56,9 +65,24 @@ class ConnectionConfig:
     def __post_init__(self):
         """Validación post-inicialización."""
         if not self.ip:
-            raise ValueError("IP address is required")
+            raise MissingRequiredFieldError("ip", "ConnectionConfig")
+        
+        # Validar formato de IP
+        try:
+            ipaddress.ip_address(self.ip)
+        except ValueError:
+            raise InvalidIPAddressError(self.ip)
+            
         if not self.username:
-            raise ValueError("Username is required")
+            raise MissingRequiredFieldError("username", "ConnectionConfig")
+            
+        # Validar puertos
+        if not (1 <= self.rtsp_port <= 65535):
+            raise InvalidPortError(self.rtsp_port)
+        if not (1 <= self.onvif_port <= 65535):
+            raise InvalidPortError(self.onvif_port)
+        if not (1 <= self.http_port <= 65535):
+            raise InvalidPortError(self.http_port)
 
 
 @dataclass 
