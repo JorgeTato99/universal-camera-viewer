@@ -4,7 +4,13 @@
  */
 
 import React from "react";
-import { Box, IconButton, Tooltip, useTheme, alpha } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  useTheme as useMuiTheme,
+  alpha,
+} from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Videocam as CamerasIcon,
@@ -14,6 +20,7 @@ import {
   PlayArrow as StreamingIcon,
   Dashboard as DashboardIcon,
 } from "@mui/icons-material";
+import { useTheme } from "../../hooks/useTheme";
 import { colorTokens } from "../../design-system/tokens";
 
 interface SidebarProps {
@@ -71,7 +78,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed = false,
   onToggle,
 }) => {
-  const theme = useTheme();
+  const muiTheme = useMuiTheme();
+  const { effectiveTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 

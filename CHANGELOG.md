@@ -7,6 +7,100 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.8.2] - 2025-07-14
+
+### ✨ Added - Frontend React Implementation
+
+- **Frontend React completo** con estructura profesional:
+  - **Design System** con tokens, temas light/dark, colores para estados de cámaras
+  - **Material-UI v5** personalizado con tema extendido
+  - **Zustand stores** para gestión de estado (cameras, streaming, scanner, notifications)
+  - **TauriService** completo con todos los comandos IPC
+  - **Páginas principales** implementadas (Cameras, Streaming, Scanner, Settings, Analytics)
+  - **Layout responsivo** con Sidebar, TopBar y MainLayout
+  - **TypeScript estricto** con tipos completos para toda la aplicación
+
+- **Arquitectura frontend organizada**:
+  - `/design-system` - Tokens de diseño y configuración de tema
+  - `/stores` - Estado global con Zustand
+  - `/services` - Servicios Tauri y API
+  - `/features` - Módulos de funcionalidad por página
+  - `/components` - Componentes reutilizables UI
+
+### 📚 Documentation - Complete Update
+
+- **Todos los docs actualizados a v0.8.0**:
+  - `installation.md` - Instrucciones con Yarn y requisitos Tauri
+  - `development.md` - Flujo de trabajo React/TypeScript
+  - `ui-design.md` - Migrado completamente a React + Material-UI
+  - `deployment.md` - Build process con Tauri y Python sidecar
+  
+- **Navegación mejorada** entre documentos con links
+- **WINDOWS_SETUP.md** añadido a navegación principal
+- **Estado de documentación** actualizado al 100%
+
+### 🔄 Changed - Project Organization
+
+- **Consolidación de documentos**:
+  - `CURRENT_STATUS.md` unificado (elimina PROJECT_STRUCTURE.md y MISSING_COMPONENTS_ANALYSIS.md)
+  - Incluye roadmap, arquitectura, y estado actual en un solo lugar
+  
+- **README.md simplificado**:
+  - Reducido de ~500 a ~110 líneas
+  - Información detallada movida a `/docs`
+  - Enlaces claros a documentación específica
+
+### 🛠️ Fixed - Build Configuration
+
+- **Tauri capabilities** configurado correctamente
+- **Cargo.toml** con metadata del proyecto
+- **GitHub Actions** actualizado para CI/CD con Yarn
+- **PowerShell commands** en documentación para Windows
+
+---
+
+## [0.8.1] - 2025-07-14
+
+### ✨ Added - Video Streaming Architecture
+
+- **Sistema completo de streaming de video**:
+  - `StreamModel` y `FrameModel` para gestión de estado
+  - `VideoStreamService` (Singleton) para gestión centralizada
+  - `StreamManager` con Template Method y Factory patterns
+  - `RTSPStreamManager` y `ONVIFStreamManager` implementaciones específicas
+  - `FrameConverter` con Strategy pattern (JPEG/PNG/WebP)
+  - `VideoStreamPresenter` adaptado para eventos Tauri
+
+- **Integración con arquitectura existente**:
+  - `CameraPresenter` actualizado con métodos de streaming
+  - Emisión de eventos Tauri para frames de video
+  - Gestión de recursos y cleanup automático
+  - Manejo de errores y reconexión
+
+### 🔄 Changed - Documentation Structure
+
+- **Documentación reorganizada en `/docs`**:
+  - `FEATURES.md` - Características detalladas
+  - `ARCHITECTURE.md` - Detalles técnicos MVP
+  - `CAMERA_COMPATIBILITY.md` - Guía de marcas y protocolos
+  - `README.md` en docs con índice numerado
+
+- **Nuevos archivos de estado**:
+  - `CURRENT_STATUS.md` - Estado consolidado del proyecto
+  - `UI_UX_DESIGN_GUIDE.md` - Guía de diseño para React
+
+### 🛠️ Fixed - Project Structure
+
+- **Separación clara Python/React**:
+  - `src/` ahora solo contiene código React/TypeScript
+  - `src-python/` contiene todo el backend Python
+  - Evita mezcla de tecnologías en mismo directorio
+
+- **Importaciones Python** actualizadas para nueva estructura
+- **Scripts** ajustados para nueva organización
+
+---
+
 ## [0.8.0] - 2025-07-14
 
 ### 🚀 Major Change - Migración de Flet a Tauri

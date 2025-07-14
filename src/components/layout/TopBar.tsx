@@ -10,8 +10,8 @@ import {
   Typography,
   IconButton,
   Box,
-  useTheme,
   alpha,
+  useTheme as useMuiTheme,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -22,6 +22,8 @@ import {
   CropSquare,
   Close,
 } from "@mui/icons-material";
+import { useTheme } from "../../hooks/useTheme";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { colorTokens } from "../../design-system/tokens";
 
 interface TopBarProps {
@@ -33,7 +35,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onMenuToggle,
   sidebarCollapsed = false,
 }) => {
-  const theme = useTheme();
+  const muiTheme = useMuiTheme();
+  const { effectiveTheme } = useTheme();
 
   const handleMinimize = () => {
     // Implementar minimizar ventana (Tauri)
@@ -55,9 +58,16 @@ export const TopBar: React.FC<TopBarProps> = ({
       position="fixed"
       elevation={0}
       sx={{
-        backgroundColor: colorTokens.neutral[900],
-        borderBottom: `1px solid ${colorTokens.neutral[800]}`,
-        zIndex: theme.zIndex.drawer + 1,
+        backgroundColor:
+          effectiveTheme === "dark"
+            ? colorTokens.neutral[900]
+            : colorTokens.neutral[800],
+        borderBottom: `1px solid ${
+          effectiveTheme === "dark"
+            ? colorTokens.neutral[800]
+            : colorTokens.neutral[700]
+        }`,
+        zIndex: muiTheme.zIndex.drawer + 1,
         height: "32px",
         minHeight: "32px",
         "& .MuiToolbar-root": {
@@ -138,6 +148,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <NotificationsIcon fontSize="small" />
           </IconButton>
+
+          <ThemeToggle size="small" />
 
           <IconButton
             size="small"
