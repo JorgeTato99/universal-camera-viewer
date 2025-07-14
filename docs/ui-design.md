@@ -2,462 +2,396 @@
 
 ## 🎯 Filosofía de Diseño
 
-**Universal Camera Viewer** implementa **Material Design 3** con **Flet** para crear una experiencia moderna, accesible y consistente.
+**Universal Camera Viewer** implementa **Material Design 3** con **React + Material-UI v7** para crear una experiencia moderna, accesible y consistente.
 
 ### **Principios Clave**
 
 - ✨ **Modern First**: Material Design 3 con componentes elevados
-- 🎨 **Adaptive Colors**: ColorScheme dinámico basado en colores semilla
+- 🎨 **Adaptive Colors**: Temas dinámicos light/dark
 - 📱 **Responsive**: Adaptable a diferentes tamaños de pantalla
 - ♿ **Accessible**: Contraste y navegación accesible
-- ⚡ **Performance**: Animaciones fluidas y rendering optimizado
+- ⚡ **Performance**: Renderizado optimizado con React 19
 
-## 🎨 Sistema de Colores
+## 🎨 Sistema de Diseño
 
-### **Color Scheme Principal**
+### **Design Tokens** (`src/design-system/tokens.ts`)
 
-```python
-# Color seed: BLUE_700 (#1976d2)
-color_scheme = ft.ColorScheme.from_seed(ft.Colors.BLUE_700)
+```typescript
+// Espaciado basado en 8dp grid
+export const spacing = {
+  xxs: 4,
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
 
-# Paleta resultante
-PRIMARY = "#1976d2"           # Azul principal
-ON_PRIMARY = "#ffffff"        # Texto sobre primario
-PRIMARY_CONTAINER = "#d0e2ff" # Contenedor primario claro
-ON_PRIMARY_CONTAINER = "#001d36"
+// Paleta de colores personalizada
+export const colors = {
+  // Estados de cámara
+  camera: {
+    connected: '#4caf50',
+    connecting: '#ff9800',
+    disconnected: '#f44336',
+    error: '#d32f2f',
+  },
+  
+  // Colores semánticos
+  success: { main: '#2e7d32', light: '#4caf50', dark: '#1b5e20' },
+  warning: { main: '#ed6c02', light: '#ff9800', dark: '#e65100' },
+  error: { main: '#d32f2f', light: '#ef5350', dark: '#c62828' },
+  info: { main: '#0288d1', light: '#03a9f4', dark: '#01579b' },
+};
 
-SECONDARY = "#535f70"         # Azul grisáceo
-ON_SECONDARY = "#ffffff"
-SECONDARY_CONTAINER = "#d7e3f7"
-ON_SECONDARY_CONTAINER = "#101c2b"
-
-SURFACE = "#fefbff"          # Superficie principal
-ON_SURFACE = "#1a1c1e"       # Texto principal
-SURFACE_VARIANT = "#dfe2eb"   # Superficie variante
-ON_SURFACE_VARIANT = "#42474e"
+// Sistema tipográfico
+export const typography = {
+  h1: { fontSize: '2.5rem', fontWeight: 600 },
+  h2: { fontSize: '2rem', fontWeight: 600 },
+  h3: { fontSize: '1.75rem', fontWeight: 500 },
+  body1: { fontSize: '1rem', lineHeight: 1.5 },
+  caption: { fontSize: '0.875rem', color: 'text.secondary' },
+};
 ```
 
-### **Estados Interactivos**
+### **Configuración de Tema** (`src/design-system/theme.ts`)
 
-```python
-# Estados de componentes
-HOVER_OVERLAY = "rgba(25, 118, 210, 0.08)"    # 8% primario
-PRESSED_OVERLAY = "rgba(25, 118, 210, 0.12)"  # 12% primario  
-FOCUS_OVERLAY = "rgba(25, 118, 210, 0.12)"    # 12% primario
-DISABLED_OVERLAY = "rgba(26, 28, 30, 0.12)"   # 12% on_surface
+```typescript
+import { createTheme, ThemeOptions } from '@mui/material/styles';
+
+// Tema Light
+export const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2',
+      light: '#42a5f5',
+      dark: '#1565c0',
+    },
+    background: {
+      default: '#fafafa',
+      paper: '#ffffff',
+    },
+  },
+  
+  components: {
+    // Personalización de componentes MUI
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          textTransform: 'none',
+          fontWeight: 500,
+        },
+      },
+    },
+    
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+  },
+});
+
+// Tema Dark
+export const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#90caf9',
+      light: '#e3f2fd',
+      dark: '#42a5f5',
+    },
+    background: {
+      default: '#121212',
+      paper: '#1e1e1e',
+    },
+  },
+  // Misma configuración de componentes
+});
 ```
 
 ## 🏗️ Arquitectura de Componentes
 
-### **Jerarquía de Layout**
+### **Estructura de Carpetas**
 
-```python
-# Estructura principal
-MainView
-├── AppBar                    # Barra superior
-│   ├── Leading (Logo)
-│   ├── Title  
-│   └── Actions (Settings, Help)
-├── NavigationBar            # Navegación Material 3
-│   ├── Destination: Scan
-│   ├── Destination: Cameras  
-│   └── Destination: Analytics
-├── Body Container
-│   ├── SidePanel (Card)     # Panel lateral elevado
-│   │   ├── Connection Card
-│   │   ├── Config Card
-│   │   └── Status Card
-│   └── MainContent
-│       ├── CameraGrid       # Grid de cámaras
-│       └── StatusBar        # Barra de estado
-└── FloatingActionButton     # FAB para acciones rápidas
+```
+src/
+├── app/
+│   ├── providers/
+│   │   └── AppProviders.tsx    # Theme + Router providers
+│   └── router/
+│       └── AppRouter.tsx        # Rutas de la aplicación
+│
+├── features/                    # Páginas principales
+│   ├── cameras/
+│   │   ├── CamerasPage.tsx
+│   │   └── components/
+│   │       ├── CameraCard.tsx
+│   │       └── CameraGrid.tsx
+│   ├── scanner/
+│   ├── analytics/
+│   ├── settings/
+│   └── streaming/
+│
+├── components/                  # Componentes compartidos
+│   ├── layout/
+│   │   ├── AppLayout.tsx
+│   │   └── NavigationBar.tsx
+│   ├── feedback/
+│   │   ├── LoadingSpinner.tsx
+│   │   └── ErrorBoundary.tsx
+│   └── camera/
+│       ├── VideoPlayer.tsx
+│       └── CameraStatus.tsx
+│
+└── design-system/
+    ├── tokens.ts               # Design tokens
+    └── theme.ts                # Temas MUI
 ```
 
-### **Componentes Personalizados**
+### **Componentes Principales**
 
-#### **ElevatedCard**
-
-```python
-class ElevatedCard(ft.Container):
-    def __init__(self, content, title=None, **kwargs):
-        super().__init__(
-            content=ft.Column([
-                ft.Text(title, style=ft.TextThemeStyle.TITLE_MEDIUM) if title else None,
-                content
-            ], tight=True),
-            padding=16,
-            border_radius=12,
-            bgcolor=ft.Colors.SURFACE,
-            shadow=ft.BoxShadow(
-                spread_radius=0,
-                blur_radius=3,
-                color=ft.Colors.BLACK12,
-                offset=ft.Offset(0, 1)
-            ),
-            **kwargs
-        )
-```
-
-#### **ModernTextField**
-
-```python
-class ModernTextField(ft.TextField):
-    def __init__(self, label, hint_text=None, prefix_icon=None, **kwargs):
-        super().__init__(
-            label=label,
-            hint_text=hint_text,
-            prefix_icon=prefix_icon,
-            border=ft.InputBorder.OUTLINE,
-            border_radius=8,
-            filled=True,
-            fill_color=ft.Colors.SURFACE_VARIANT,
-            **kwargs
-        )
-```
-
-#### **StatusChip**
-
-```python
-class StatusChip(ft.Container):
-    def __init__(self, status, text):
-        color_map = {
-            'connected': ft.Colors.GREEN,
-            'disconnected': ft.Colors.RED,
-            'scanning': ft.Colors.ORANGE,
-            'idle': ft.Colors.GREY
-        }
-        
-        super().__init__(
-            content=ft.Row([
-                ft.Icon(ft.Icons.CIRCLE, size=8, color=color_map[status]),
-                ft.Text(text, size=12)
-            ], tight=True),
-            padding=ft.Padding(8, 4, 8, 4),
-            border_radius=16,
-            bgcolor=f"{color_map[status]}20"  # 20% opacity
-        )
-```
-
-## 📱 Responsive Design
-
-### **Breakpoints y Adaptaciones**
-
-```python
-class ResponsiveLayout:
-    MOBILE = 600
-    TABLET = 900  
-    DESKTOP = 1200
+#### NavigationBar
+```tsx
+<AppBar position="static" elevation={2}>
+  <Toolbar>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <VideocamIcon />
+      <Typography variant="h6">
+        Universal Camera Viewer
+      </Typography>
+    </Box>
     
-    def get_layout_config(self, width: int) -> dict:
-        if width < self.MOBILE:
-            return {
-                'side_panel_width': width,           # Full width
-                'camera_grid_columns': 1,
-                'navigation_type': 'bottom_sheet',   # NavigationBar en bottom
-                'show_labels': False
-            }
-        elif width < self.TABLET:
-            return {
-                'side_panel_width': 300,
-                'camera_grid_columns': 2,
-                'navigation_type': 'rail',           # NavigationRail lateral
-                'show_labels': True
-            }
-        else:
-            return {
-                'side_panel_width': 350,
-                'camera_grid_columns': 3,
-                'navigation_type': 'drawer',         # NavigationDrawer expandible
-                'show_labels': True
-            }
-```
-
-### **Adaptive Components**
-
-```python
-def build_adaptive_navigation(self, width: int) -> ft.Control:
-    """Construye navegación adaptativa según ancho de pantalla"""
-    config = self.responsive.get_layout_config(width)
+    <Box sx={{ flexGrow: 1 }} />
     
-    destinations = [
-        ft.NavigationDestination(
-            icon=ft.Icons.RADAR_OUTLINED,
-            selected_icon=ft.Icons.RADAR,
-            label="Escanear"
-        ),
-        ft.NavigationDestination(
-            icon=ft.Icons.VIDEOCAM_OUTLINED,
-            selected_icon=ft.Icons.VIDEOCAM,
-            label="Cámaras"
-        ),
-        ft.NavigationDestination(
-            icon=ft.Icons.ANALYTICS_OUTLINED,
-            selected_icon=ft.Icons.ANALYTICS,
-            label="Analytics"
-        )
-    ]
-    
-    if config['navigation_type'] == 'bottom_sheet':
-        return ft.NavigationBar(destinations=destinations)
-    elif config['navigation_type'] == 'rail':
-        return ft.NavigationRail(destinations=destinations)
-    else:
-        return ft.NavigationDrawer(destinations=destinations)
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      <Button startIcon={<CameraAltIcon />}>
+        Cámaras
+      </Button>
+      <Button startIcon={<SearchIcon />}>
+        Escanear
+      </Button>
+    </Box>
+  </Toolbar>
+</AppBar>
 ```
 
-## 🎭 Sistema de Animaciones
-
-### **Transiciones Fluidas**
-
-```python
-class AnimationManager:
-    def __init__(self):
-        self.duration = 200  # ms
-        self.curve = ft.AnimationCurve.EASE_OUT
-        
-    def slide_in_from_right(self, control: ft.Control) -> ft.AnimatedSwitcher:
-        """Animación de entrada desde derecha"""
-        return ft.AnimatedSwitcher(
-            content=control,
-            transition=ft.AnimatedSwitcherTransition.SLIDE_FROM_RIGHT,
-            duration=self.duration,
-            reverse_duration=self.duration,
-            switch_in_curve=self.curve,
-            switch_out_curve=self.curve
-        )
-        
-    def fade_in(self, control: ft.Control) -> ft.AnimatedOpacity:
-        """Animación de fade in"""
-        return ft.AnimatedOpacity(
-            opacity=1,
-            duration=self.duration,
-            curve=self.curve,
-            content=control
-        )
-        
-    def scale_on_tap(self, control: ft.Control) -> ft.GestureDetector:
-        """Efecto de escala al hacer tap"""
-        return ft.GestureDetector(
-            content=ft.AnimatedContainer(
-                content=control,
-                duration=100,
-                curve=ft.AnimationCurve.EASE_OUT
-            ),
-            on_tap_down=lambda e: self._scale_down(e.control),
-            on_tap_up=lambda e: self._scale_up(e.control),
-            on_tap_cancel=lambda e: self._scale_up(e.control)
-        )
+#### CameraCard
+```tsx
+<Paper 
+  elevation={2}
+  sx={{
+    p: 2,
+    borderRadius: 2,
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: 4,
+    },
+  }}
+>
+  <Box sx={{ position: 'relative' }}>
+    <VideoPlayer cameraId={camera.id} />
+    <Chip
+      label={camera.status}
+      color={getStatusColor(camera.status)}
+      size="small"
+      sx={{ position: 'absolute', top: 8, right: 8 }}
+    />
+  </Box>
+  
+  <Typography variant="h6" sx={{ mt: 2 }}>
+    {camera.name}
+  </Typography>
+  
+  <Typography variant="body2" color="text.secondary">
+    {camera.ip} • {camera.brand}
+  </Typography>
+</Paper>
 ```
 
-### **Estados de Loading**
+## 📱 Diseño Responsive
 
-```python
-class LoadingStates:
-    @staticmethod
-    def spinner() -> ft.ProgressRing:
-        """Spinner de carga Material 3"""
-        return ft.ProgressRing(
-            width=24,
-            height=24,
-            stroke_width=3,
-            color=ft.Colors.PRIMARY
-        )
-        
-    @staticmethod
-    def skeleton_card() -> ft.Container:
-        """Skeleton loading para cards"""
-        return ft.Container(
-            width=300,
-            height=200,
-            border_radius=12,
-            gradient=ft.LinearGradient(
-                colors=[
-                    ft.Colors.SURFACE_VARIANT,
-                    ft.Colors.SURFACE,
-                    ft.Colors.SURFACE_VARIANT
-                ],
-                stops=[0.0, 0.5, 1.0]
-            ),
-            animate=ft.Animation(2000, ft.AnimationCurve.LINEAR)
-        )
-        
-    @staticmethod
-    def progress_indicator(progress: float) -> ft.Container:
-        """Indicador de progreso con porcentaje"""
-        return ft.Container(
-            content=ft.Column([
-                ft.ProgressBar(value=progress, height=8, border_radius=4),
-                ft.Text(f"{progress*100:.0f}%", size=12, text_align=ft.TextAlign.CENTER)
-            ], spacing=8),
-            padding=16
-        )
+### **Breakpoints**
+
+```typescript
+// MUI default breakpoints
+xs: 0px     // Móvil
+sm: 600px   // Tablet portrait
+md: 900px   // Tablet landscape
+lg: 1200px  // Desktop
+xl: 1536px  // Desktop grande
+
+// Uso en componentes
+<Grid container spacing={2}>
+  <Grid item xs={12} sm={6} md={4} lg={3}>
+    <CameraCard />
+  </Grid>
+</Grid>
 ```
 
-## 🌙 Sistema de Temas
+### **Layout Adaptativo**
 
-### **Configuración de Tema**
-
-```python
-class ThemeManager:
-    def __init__(self):
-        self.current_theme = "auto"  # auto, light, dark
-        
-    def get_theme_data(self) -> ft.Theme:
-        """Genera configuración de tema Material 3"""
-        return ft.Theme(
-            color_scheme_seed=ft.Colors.BLUE_700,
-            use_material3=True,
-            visual_density=ft.ThemeVisualDensity.ADAPTIVE,
-            font_family="Roboto"
-        )
-        
-    def get_dark_theme_data(self) -> ft.Theme:
-        """Tema oscuro Material 3"""
-        return ft.Theme(
-            color_scheme_seed=ft.Colors.BLUE_700,
-            use_material3=True,
-            visual_density=ft.ThemeVisualDensity.ADAPTIVE,
-            font_family="Roboto"
-        )
+```tsx
+const useResponsive = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  
+  return { isMobile, isTablet, isDesktop };
+};
 ```
 
-### **Configuración de Tipografía**
+## 🎯 Estados y Animaciones
 
-```python
-# Material Design 3 Typography Scale
-TYPOGRAPHY = {
-    'display_large': ft.TextStyle(size=57, weight=ft.FontWeight.W400),
-    'display_medium': ft.TextStyle(size=45, weight=ft.FontWeight.W400),
-    'display_small': ft.TextStyle(size=36, weight=ft.FontWeight.W400),
-    
-    'headline_large': ft.TextStyle(size=32, weight=ft.FontWeight.W400),
-    'headline_medium': ft.TextStyle(size=28, weight=ft.FontWeight.W400),
-    'headline_small': ft.TextStyle(size=24, weight=ft.FontWeight.W400),
-    
-    'title_large': ft.TextStyle(size=22, weight=ft.FontWeight.W400),
-    'title_medium': ft.TextStyle(size=16, weight=ft.FontWeight.W500),
-    'title_small': ft.TextStyle(size=14, weight=ft.FontWeight.W500),
-    
-    'body_large': ft.TextStyle(size=16, weight=ft.FontWeight.W400),
-    'body_medium': ft.TextStyle(size=14, weight=ft.FontWeight.W400),
-    'body_small': ft.TextStyle(size=12, weight=ft.FontWeight.W400),
-    
-    'label_large': ft.TextStyle(size=14, weight=ft.FontWeight.W500),
-    'label_medium': ft.TextStyle(size=12, weight=ft.FontWeight.W500),
-    'label_small': ft.TextStyle(size=11, weight=ft.FontWeight.W500)
-}
+### **Estados de Componentes**
+
+```typescript
+// Estados de cámara con colores
+const cameraStates = {
+  connected: {
+    color: colors.camera.connected,
+    icon: <CheckCircleIcon />,
+    animation: 'pulse',
+  },
+  connecting: {
+    color: colors.camera.connecting,
+    icon: <CircularProgress size={20} />,
+    animation: 'rotate',
+  },
+  disconnected: {
+    color: colors.camera.disconnected,
+    icon: <ErrorIcon />,
+    animation: 'shake',
+  },
+};
 ```
 
-## 🎯 Guidelines de UX
+### **Transiciones CSS**
 
-### **Principios de Interacción**
+```typescript
+// Transiciones suaves
+const transitions = {
+  fast: 'all 0.2s ease',
+  medium: 'all 0.3s ease',
+  slow: 'all 0.5s ease',
+};
 
-1. **🎯 Feedback Inmediato**
-   - Hover states en todos los elementos interactivos
-   - Pressed states con animaciones de escala
-   - Loading states durante operaciones asíncronas
-
-2. **📍 Navegación Clara**
-   - Breadcrumbs para navegación profunda
-   - Estados activos visibles en navegación
-   - Shortcuts de teclado documentados
-
-3. **⚠️ Manejo de Errores**
-   - Snackbars para errores no críticos
-   - Dialogs para errores que requieren acción
-   - Estados de error inline en formularios
-
-4. **📊 Información Contextual**
-   - Tooltips para iconos sin etiqueta
-   - Status chips para estados de conexión
-   - Progress indicators para operaciones largas
-
-### **Patrones de Interacción**
-
-```python
-# Patrón: Confirmación de acciones destructivas
-def show_delete_confirmation(self, item_name: str):
-    return ft.AlertDialog(
-        title=ft.Text("Confirmar eliminación"),
-        content=ft.Text(f"¿Eliminar {item_name}? Esta acción no se puede deshacer."),
-        actions=[
-            ft.TextButton("Cancelar", on_click=self.close_dialog),
-            ft.ElevatedButton(
-                "Eliminar", 
-                style=ft.ButtonStyle(bgcolor=ft.Colors.ERROR),
-                on_click=self.confirm_delete
-            )
-        ]
-    )
-
-# Patrón: Feedback de acciones exitosas
-def show_success_snackbar(self, message: str):
-    return ft.SnackBar(
-        content=ft.Row([
-            ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN),
-            ft.Text(message)
-        ]),
-        bgcolor=ft.Colors.SURFACE_VARIANT
-    )
+// Animaciones
+const animations = {
+  fadeIn: keyframes`
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  `,
+  pulse: keyframes`
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  `,
+};
 ```
 
-## 📏 Especificaciones de Diseño
+## 🔧 Integración con Estado Global
 
-### **Spacing System (8dp Grid)**
+### **Zustand Store**
 
-```python
-SPACING = {
-    'xs': 4,    # 0.5 units
-    'sm': 8,    # 1 unit
-    'md': 16,   # 2 units  
-    'lg': 24,   # 3 units
-    'xl': 32,   # 4 units
-    'xxl': 48   # 6 units
+```typescript
+// src/stores/uiStore.ts
+interface UIStore {
+  theme: 'light' | 'dark';
+  sidebarOpen: boolean;
+  toggleTheme: () => void;
+  toggleSidebar: () => void;
 }
 
-# Aplicación en componentes
-card_padding = SPACING['md']      # 16dp
-button_spacing = SPACING['sm']    # 8dp
-section_spacing = SPACING['lg']   # 24dp
+export const useUIStore = create<UIStore>((set) => ({
+  theme: 'light',
+  sidebarOpen: true,
+  toggleTheme: () => set((state) => ({ 
+    theme: state.theme === 'light' ? 'dark' : 'light' 
+  })),
+  toggleSidebar: () => set((state) => ({ 
+    sidebarOpen: !state.sidebarOpen 
+  })),
+}));
 ```
 
-### **Elevación y Sombras**
+## 📊 Componentes Especializados
 
-```python
-ELEVATION = {
-    'level_0': None,  # Sin sombra
-    'level_1': ft.BoxShadow(         # Cards en reposo
-        spread_radius=0,
-        blur_radius=3,
-        color=ft.Colors.BLACK12,
-        offset=ft.Offset(0, 1)
-    ),
-    'level_2': ft.BoxShadow(         # Cards hover
-        spread_radius=0, 
-        blur_radius=6,
-        color=ft.Colors.BLACK12,
-        offset=ft.Offset(0, 2)
-    ),
-    'level_3': ft.BoxShadow(         # FAB, Dialogs
-        spread_radius=0,
-        blur_radius=12,
-        color=ft.Colors.BLACK12, 
-        offset=ft.Offset(0, 4)
-    )
+### **VideoPlayer para Streaming**
+
+```tsx
+interface VideoPlayerProps {
+  cameraId: string;
+  onError?: (error: Error) => void;
 }
+
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  cameraId, 
+  onError 
+}) => {
+  const [frame, setFrame] = useState<string>('');
+  
+  useEffect(() => {
+    // Escuchar eventos de Tauri
+    const unlisten = listen<FrameEvent>('video_frame', (event) => {
+      if (event.payload.cameraId === cameraId) {
+        setFrame(`data:image/jpeg;base64,${event.payload.frame}`);
+      }
+    });
+    
+    return () => { unlisten.then(fn => fn()); };
+  }, [cameraId]);
+  
+  return (
+    <Box sx={{ position: 'relative', paddingTop: '56.25%' }}>
+      <img 
+        src={frame || '/placeholder-camera.png'}
+        alt="Camera view"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+        }}
+      />
+    </Box>
+  );
+};
 ```
 
-## 🎯 Próximos Pasos
+## 🎯 Mejores Prácticas
 
-1. **[🏛️ Entender Arquitectura](architecture.md)** - Estructura MVP del proyecto
-2. **[💻 Setup Desarrollo](development.md)** - Configurar entorno de desarrollo
-3. **[📦 Instalación](installation.md)** - Setup inicial del proyecto
+1. **Usar sx prop para estilos inline** en lugar de CSS modules
+2. **Aprovechar el tema MUI** para consistencia
+3. **Componentes pequeños y reutilizables**
+4. **Lazy loading** para páginas pesadas
+5. **Error boundaries** para manejo de errores
+6. **Skeleton loaders** durante carga
 
----
+## 📝 Migración de Flet a React
 
-**🎨 Design System:** Material Design 3 completo con Flet  
-**📱 Responsive:** Adaptativo a mobile, tablet y desktop  
-**♿ Accessibility:** Contraste y navegación accesible por defecto
+### Mapeo de Componentes
+
+| Flet | React + MUI |
+|------|-------------|
+| `ft.Container` | `<Box>` |
+| `ft.Text` | `<Typography>` |
+| `ft.ElevatedButton` | `<Button variant="contained">` |
+| `ft.Card` | `<Paper>` |
+| `ft.Column` | `<Stack direction="column">` |
+| `ft.Row` | `<Stack direction="row">` |
+| `ft.IconButton` | `<IconButton>` |
+| `ft.Image` | `<img>` o custom `<VideoPlayer>` |
 
 ---
 

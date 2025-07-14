@@ -7,6 +7,7 @@ Este documento define el sistema de diseño completo para Universal Camera Viewe
 ## **🎯 Filosofía de Diseño**
 
 ### **Principios Fundamentales**
+
 - **Claridad**: Interfaz intuitiva para operadores de cámaras
 - **Eficiencia**: Acceso rápido a funciones críticas
 - **Consistencia**: Experiencia uniforme en toda la aplicación
@@ -14,6 +15,7 @@ Este documento define el sistema de diseño completo para Universal Camera Viewe
 - **Responsividad**: Adaptación a diferentes tamaños de pantalla
 
 ### **Audiencia Objetivo**
+
 - Operadores de seguridad
 - Técnicos de sistemas
 - Administradores de red
@@ -32,6 +34,7 @@ const secondaryColor = colorTokens.secondary[500]; // #4caf50
 ```
 
 **Paleta de Colores:**
+
 - **Primario**: Azul tecnológico (#2196f3) - Navegación y acciones principales
 - **Secundario**: Verde éxito (#4caf50) - Estados positivos y confirmaciones
 - **Estados de Cámaras**:
@@ -53,12 +56,14 @@ const cameraNameStyle = typography.camera.name;
 ```
 
 **Jerarquía de Texto:**
+
 - **H1-H6**: Títulos principales con peso decreciente
 - **Body1/Body2**: Texto de párrafo principal y secundario
 - **Caption**: Texto pequeño para metadatos
 - **Monospace**: IPs, códigos, métricas (Roboto Mono)
 
 **Variantes Específicas para Cámaras:**
+
 - `camera.name`: Nombre de cámara
 - `camera.ip`: Dirección IP
 - `camera.status`: Estado de conexión
@@ -77,6 +82,7 @@ const containerStyle = {
 ```
 
 **Escala de Espaciado:**
+
 - `xs`: 4px - Espaciado mínimo
 - `sm`: 8px - Espaciado pequeño
 - `md`: 16px - Espaciado estándar
@@ -171,6 +177,7 @@ const columns = getCameraGridColumns(windowWidth);
 ```
 
 **Breakpoints:**
+
 - `xs`: 0px - Móvil pequeño (1 columna)
 - `sm`: 600px - Móvil grande (2 columnas)
 - `md`: 900px - Tablet (2 columnas)
@@ -279,6 +286,7 @@ const shouldCollapse = shouldCollapseSidebar(windowWidth);
 ### **Consistencia Visual**
 
 1. **Siempre usar tokens del design system**
+
    ```typescript
    // ✅ Correcto
    color: colorTokens.primary[500]
@@ -288,6 +296,7 @@ const shouldCollapse = shouldCollapseSidebar(windowWidth);
    ```
 
 2. **Usar variantes de tipografía definidas**
+
    ```typescript
    // ✅ Correcto
    <Typography variant="h1">Título</Typography>
@@ -297,6 +306,7 @@ const shouldCollapse = shouldCollapseSidebar(windowWidth);
    ```
 
 3. **Aplicar espaciado consistente**
+
    ```typescript
    // ✅ Correcto
    sx={getPadding('md')}
@@ -322,18 +332,21 @@ const shouldCollapse = shouldCollapseSidebar(windowWidth);
 ### **Responsive Design**
 
 1. **Grid adaptativo**
+
    ```typescript
    // Usar configuración automática
    sx={gridStyles.responsiveGrid}
    ```
 
 2. **Breakpoints consistentes**
+
    ```typescript
    // Usar funciones del sistema
    const columns = getCameraGridColumns(width);
    ```
 
 3. **Sidebar responsivo**
+
    ```typescript
    // Colapsar automáticamente
    const collapsed = shouldCollapseSidebar(width);
@@ -342,24 +355,28 @@ const shouldCollapse = shouldCollapseSidebar(windowWidth);
 ## **🎯 Componentes Específicos por Página**
 
 ### **Página de Cámaras**
+
 - Grid responsivo de cards
 - Estados visuales claros
 - Botones de acción contextuales
 - Métricas en tiempo real
 
 ### **Página de Escáner**
+
 - Indicadores de progreso
 - Resultados tabulares
 - Filtros y ordenamiento
 - Estados de carga
 
 ### **Página de Analytics**
+
 - Gráficos con paleta consistente
 - Métricas destacadas
 - Layouts de dashboard
 - Exportación de datos
 
 ### **Página de Configuración**
+
 - Formularios estructurados
 - Validación visual
 - Guardado automático
@@ -368,12 +385,14 @@ const shouldCollapse = shouldCollapseSidebar(windowWidth);
 ## **📊 Métricas y Performance**
 
 ### **Carga de Recursos**
+
 - Fuentes optimizadas (Roboto)
 - Iconos SVG vectoriales
 - Imágenes responsive
 - Lazy loading de componentes
 
 ### **Experiencia de Usuario**
+
 - Transiciones suaves (300ms)
 - Feedback visual inmediato
 - Estados de carga claros
@@ -382,18 +401,21 @@ const shouldCollapse = shouldCollapseSidebar(windowWidth);
 ## **🔄 Mantenimiento del Sistema**
 
 ### **Actualización de Tokens**
+
 1. Modificar valores en `tokens.ts`
 2. Regenerar tema automáticamente
 3. Probar en modo claro y oscuro
 4. Validar contraste y accesibilidad
 
 ### **Nuevos Componentes**
+
 1. Definir en `components.ts`
 2. Documentar uso en esta guía
 3. Crear ejemplos de implementación
 4. Agregar tests de componente
 
 ### **Extensiones Futuras**
+
 - Más variantes de color
 - Componentes especializados
 - Animaciones avanzadas
@@ -407,4 +429,4 @@ Para dudas sobre el sistema de diseño o implementación de nuevos componentes, 
 
 **Versión**: 2.0.0  
 **Última actualización**: 2024  
-**Compatibilidad**: React 19, Material-UI v7, TypeScript 5+ 
+**Compatibilidad**: React 19, Material-UI v7, TypeScript 5+

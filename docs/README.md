@@ -59,16 +59,19 @@
 ## 🎯 Quick Links
 
 ### Para Empezar
+
 - **[⚡ Inicio Rápido](installation.md#quick-start)** - Ejecutar en 5 minutos
 - **[🐛 Solución Bug NPM](WINDOWS_SETUP.md#bug-crítico-de-npm-en-windows)** - Usar Yarn obligatorio
 - **[🔧 Comandos Básicos](development.md#comandos-principales)** - yarn tauri-dev
 
 ### Arquitectura
+
 - **[🏗️ Patrón MVP](ARCHITECTURE.md#arquitectura-mvp-model-view-presenter)** - Entender la estructura
 - **[🔄 Comunicación IPC](ARCHITECTURE.md#comunicación-frontend-backend-tauri)** - React ↔ Python
 - **[📐 Patrones de Diseño](ARCHITECTURE.md#patrones-de-diseño-implementados)** - Singleton, Factory, etc.
 
 ### Cámaras
+
 - **[📷 Marcas Soportadas](CAMERA_COMPATIBILITY.md#marcas-soportadas-y-testadas)** - Dahua, TP-Link, Steren
 - **[🔧 Configuración Rápida](CAMERA_COMPATIBILITY.md#configuración-por-marca)** - Por marca
 - **[🚨 Troubleshooting](CAMERA_COMPATIBILITY.md#solución-de-problemas)** - Problemas comunes
@@ -79,15 +82,18 @@
 
 ### Errores Comunes
 
-**Error: Cannot find module '@tauri-apps/cli-win32-x64-msvc'**
+#### **Error: Cannot find module '@tauri-apps/cli-win32-x64-msvc'**
+
 - Ver: [Bug NPM Windows](WINDOWS_SETUP.md#el-problema)
 - Solución: Usar `yarn install` en lugar de `npm install`
 
-**Error: Microsoft Visual C++ 14.0 or greater is required**
+#### **Error: Microsoft Visual C++ 14.0 or greater is required**
+
 - Ver: [Requisitos Rust](WINDOWS_SETUP.md#1-rust--msvc-toolchain)
 - Solución: Instalar Visual Studio Build Tools
 
-**Cámara no conecta**
+#### **Cámara no conecta**
+
 - Ver: [Troubleshooting Cámaras](CAMERA_COMPATIBILITY.md#solución-de-problemas)
 - Verificar: Puerto correcto según marca
 
@@ -96,12 +102,14 @@
 ## 📝 Notas de Migración v0.8.0
 
 ### Cambios Principales
+
 - 🔄 **Frontend**: Flet → React + TypeScript
 - 📁 **Estructura**: Python movido a `src-python/`
 - 🚀 **Framework**: Tauri para aplicación nativa
 - 📦 **Dependencias**: Yarn obligatorio (bug npm)
 
 ### Documentos por Actualizar
+
 1. `installation.md` - Agregar pasos Tauri/Yarn
 2. `development.md` - Cambiar npm → yarn
 3. `ui-design.md` - Migrar ejemplos a React

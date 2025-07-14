@@ -137,6 +137,7 @@ const { showSuccess, showError } = useNotificationStore();
 Universal Camera Viewer implementa un sistema de diseño robusto basado en **Material Design 3** con extensiones específicas para aplicaciones de cámaras IP:
 
 #### **Tokens de Diseño** (`src/design-system/tokens.ts`)
+
 - **Colores**: Paleta completa con estados específicos para cámaras
 - **Tipografía**: Jerarquía clara con variantes para IPs y métricas
 - **Espaciado**: Escala consistente de 4px a 96px
@@ -145,6 +146,7 @@ Universal Camera Viewer implementa un sistema de diseño robusto basado en **Mat
 - **Bordes**: Radios y anchos estandarizados
 
 #### **Colores Semánticos**
+
 ```typescript
 // Estados de cámaras
 connected: '#4caf50'    // Verde
@@ -156,11 +158,13 @@ unavailable: '#9e9e9e'  // Gris
 ```
 
 #### **Tipografía Especializada**
+
 - **Roboto**: Fuente principal para UI
 - **Roboto Mono**: IPs, códigos y métricas
 - **Variantes específicas**: Nombres de cámaras, estados, métricas de streaming
 
 #### **Componentes Temáticos**
+
 ```typescript
 // Estilos específicos por uso
 cardStyles.camera      // Cards de cámaras
@@ -170,6 +174,7 @@ gridStyles.cameraGrid  // Grids responsivos
 ```
 
 #### **Breakpoints Inteligentes**
+
 - **xs**: 0px - 1 columna (móvil)
 - **sm**: 600px - 2 columnas (tablet)
 - **md**: 900px - 2 columnas (desktop)
@@ -177,6 +182,7 @@ gridStyles.cameraGrid  // Grids responsivos
 - **xl**: 1536px - 4 columnas (pantallas grandes)
 
 #### **Funciones Utilitarias**
+
 ```typescript
 getCameraStatusColor(status)   // Color por estado
 getCameraGridColumns(width)    // Columnas por ancho
@@ -187,11 +193,13 @@ truncateText(2)               // Truncar texto
 ### **Theming Avanzado**
 
 #### **Modo Claro/Oscuro**
+
 - Paletas optimizadas para cada modo
 - Transiciones suaves entre temas
 - Persistencia de preferencias
 
 #### **Tema Material-UI Personalizado**
+
 ```typescript
 // Configuración extendida
 const theme = createTheme({
@@ -202,6 +210,7 @@ const theme = createTheme({
 ```
 
 #### **Colores de Estado**
+
 - **Éxito**: Conexiones exitosas
 - **Advertencia**: Estados transitorios
 - **Error**: Fallos de conexión
@@ -210,6 +219,7 @@ const theme = createTheme({
 ### **Guía de Uso**
 
 Consultar `src/UI_UX_DESIGN_GUIDE.md` para:
+
 - Implementación práctica
 - Mejores prácticas
 - Ejemplos de código

@@ -7,7 +7,8 @@
 make fresh-start
 
 # O paso a paso:
-make install-dev
+yarn install        # Frontend (USAR YARN)
+make install-dev    # Backend Python
 make install-pre-commit
 make check-all
 ```
@@ -23,17 +24,23 @@ git checkout -b feature/nueva-funcionalidad
 ### 2. **Desarrollo Local**
 
 ```bash
-# Ejecutar en modo desarrollo
-make dev
+# Aplicación completa (Tauri + React + Python)
+yarn tauri-dev
 
-# O con debug
+# Solo Frontend (React)
+yarn dev           # http://localhost:5173
+
+# Solo Backend (Python Flet legacy)
+make run           # o python run_python.py
+
+# Con debug
 make run-debug
 ```
 
 ### 3. **Verificación de Calidad**
 
 ```bash
-# Formatear código
+# Formatear código Python
 make format
 
 # Verificar calidad completa
@@ -41,6 +48,9 @@ make check-all
 
 # Tests
 make test-cov
+
+# Verificar Rust/dependencias
+make rust-check
 ```
 
 ### 4. **Pre-commit**
@@ -53,263 +63,311 @@ git commit -m "feat: nueva funcionalidad"
 make pre-commit
 ```
 
-## 🛠️ Comandos Make Esenciales
+## 🛠️ Comandos Esenciales
 
-### **Desarrollo Diario**
+### **Desarrollo Frontend (Yarn)**
 
 ```bash
-make dev           # Setup + ejecutar
-make run           # Ejecutar aplicación
+yarn dev           # Frontend solo
+yarn tauri-dev     # App completa con hot reload
+yarn build         # Build producción frontend
+yarn tauri-build   # Build app nativa
+yarn preview       # Preview del build
+```
+
+### **Desarrollo Backend (Make)**
+
+```bash
+make run           # Ejecutar backend Python
 make run-debug     # Ejecutar con debug
 make format        # Formatear código
 make lint          # Verificar linting
 make test          # Ejecutar tests
-```
-
-### **Calidad de Código**
-
-```bash
-make check-all     # Todas las verificaciones
 make type-check    # Verificar tipos
-make security      # Análisis de seguridad
-make pre-commit    # Hooks completos
 ```
 
-### **Mantenimiento**
+### **Comandos Combinados**
 
 ```bash
-make clean         # Limpiar temporales
-make clean-all     # Limpieza profunda
-make db-backup     # Respaldar BD
-make config-backup # Respaldar config
+make tauri-dev     # Wrapper para yarn tauri-dev
+make frontend-dev  # Wrapper para yarn dev
+make yarn-install  # Wrapper para yarn install
+make status        # Estado del proyecto
 ```
 
 ## 🏗️ Estructura de Desarrollo
 
 ```bash
+# Frontend (React/TypeScript)
 src/
-├── models/           # 🗃️ Capa de datos
+├── components/       # 🎨 Componentes React
+│   ├── Camera/      # Componentes de cámara
+│   ├── Controls/    # Controles UI
+│   └── Layout/      # Layout components
+├── hooks/           # 🪝 Custom React hooks
+├── services/        # 📡 Servicios y APIs
+├── store/           # 🗃️ Estado global (Zustand)
+└── types/           # 📝 TypeScript types
+
+# Backend (Python MVP)
+src-python/
+├── models/          # 🗃️ Capa de datos
 │   ├── camera_model.py
-│   ├── connection_model.py
-│   └── scan_model.py
-├── views/            # 🎨 Interfaz Flet
-│   ├── main_view.py
-│   └── camera_view.py
-├── presenters/       # 🔗 Lógica MVP (EN DESARROLLO)
-│   ├── main_presenter.py
+│   └── streaming/   # Modelos de streaming
+├── views/           # 🎨 UI Flet (legacy, referencia)
+├── presenters/      # 🔗 Lógica MVP (20% completo)
 │   ├── camera_presenter.py
-│   └── scan_presenter.py
-├── services/         # ⚙️ Servicios de negocio
+│   └── streaming/   # Presenters de video
+├── services/        # ⚙️ Servicios de negocio
 │   ├── protocol_service.py
-│   ├── scan_service.py
-│   └── connection_service.py
-└── utils/            # 🛠️ Utilidades
-    ├── config.py
-    └── brand_manager.py
+│   └── video/       # Servicios de streaming
+└── utils/           # 🛠️ Utilidades
+    └── video/       # Frame converter
 ```
 
 ## 🎯 Tareas Prioritarias
 
-### **Próximo Sprint (MVP Completion)**
+### **Sprint Actual (Migración Tauri)**
 
-1. **🔗 Completar Presenter Layer (80% restante)**
+1. **🔗 Configurar Python Sidecar**
 
-   ```python
-   # Implementar en presenters/
-   - camera_presenter.py  # Gestión de cámaras
-   - scan_presenter.py    # Escaneo de red
-   - config_presenter.py  # Configuración
+   ```typescript
+   // En src-tauri/tauri.conf.json
+   "bundle": {
+     "externalBin": [
+       "scripts/python_sidecar"
+     ]
+   }
    ```
 
-2. **📊 Integración DuckDB Analytics**
+2. **⚛️ Implementar Componentes React**
 
-   ```python
-   # Agregar en services/
-   - analytics_service.py
-   - data_service.py (mejorar)
+   ```typescript
+   // Crear en src/components/
+   - Camera/VideoPlayer.tsx     # Display de video
+   - Camera/CameraGrid.tsx      # Grid de cámaras
+   - Controls/ConnectionPanel.tsx
    ```
 
-3. **🧪 Test Suite Completo**
+3. **🔌 Conectar IPC Frontend-Backend**
 
-   ```python
-   # Crear en tests/
-   - test_presenters/
-   - test_integration/
+   ```typescript
+   // En src/services/
+   - cameraService.ts   # Comandos Tauri
+   - streamService.ts   # Eventos de video
    ```
+
+### **Próximo Sprint**
+
+1. **Completar Presenter Layer (80% restante)**
+2. **Integración DuckDB Analytics**
+3. **Test Suite Completo**
 
 ## 🔧 Herramientas de Desarrollo
 
-### **IDE Setup Recomendado**
-
-**VS Code Extensions:**
+### **VS Code Extensions Recomendadas**
 
 ```json
 {
   "recommendations": [
+    // Python
     "ms-python.python",
     "ms-python.black-formatter",
     "ms-python.isort",
     "ms-python.flake8",
-    "ms-python.mypy-type-checker"
+    
+    // TypeScript/React
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "dsznajder.es7-react-js-snippets",
+    
+    // Tauri/Rust
+    "rust-lang.rust-analyzer",
+    "tauri-apps.tauri-vscode"
   ]
 }
 ```
 
-**PyCharm Settings:**
+### **Configuración de Proyecto**
 
-- Black formatter configurado
-- isort integration
-- MyPy type checking habilitado
-
-### **Pre-commit Hooks**
-
-```yaml
-# Instalados automáticamente:
-- black (formateo)
-- isort (imports)
-- flake8 (linting)
-- mypy (tipos)
-- bandit (seguridad)
+```json
+// .vscode/settings.json ya configurado con:
+- Python paths apuntando a src-python/
+- Formateo automático con Black
+- TypeScript/React con Prettier
+- Exclusiones de archivos temporales
 ```
 
 ## 🐛 Debugging
 
-### **Debug de UI (Flet)**
+### **Debug Frontend (React DevTools)**
+
+```bash
+# Instalar React DevTools
+yarn add -D @react-devtools/core
+
+# En yarn tauri-dev, abrir DevTools con F12
+```
+
+### **Debug Backend (Python)**
 
 ```python
-# En src/main.py
-if __name__ == "__main__":
-    flet.app(
-        target=main,
-        view=flet.AppView.WEB_BROWSER,  # Para debug web
-        port=8080
-    )
+# Usar logging en lugar de print
+import logging
+logger = logging.getLogger(__name__)
+logger.debug("Debug message")
+
+# Debug específico de cámaras
+python examples/protocols/onvif_example.py
+python examples/network/port_scanner.py
 ```
 
-### **Debug de Cámaras**
+### **Debug Tauri IPC**
 
-```bash
-# Scripts de diagnóstico
-python examples/diagnostics/camera_detector.py
-python examples/diagnostics/network_analyzer.py
+```typescript
+// En frontend
+import { invoke } from '@tauri-apps/api/core';
 
-# Tests específicos por marca
-python examples/testing/tplink_complete_test.py
-python examples/testing/steren_complete_test.py
+// Log comandos
+console.log('Invoking command:', commandName, args);
+
+// En Rust (src-tauri/src/main.rs)
+println!("Command received: {:?}", command);
 ```
 
-### **Performance Profiling**
-
-```bash
-# Análisis de rendimiento
-make performance
-
-# Memory profiling
-python -m memory_profiler src/main.py
-```
-
-## 📊 Métricas de Desarrollo
+## 📊 Métricas de Calidad
 
 ### **Code Quality Gates**
 
-- **Coverage:** >80% para servicios core
+- **Coverage Python:** >80% para servicios core
 - **Linting:** 0 errores en flake8
 - **Type Hints:** >70% coverage con mypy
-- **Security:** Sin vulnerabilidades altas en bandit
+- **TypeScript:** strict mode habilitado
+- **Security:** Sin vulnerabilidades altas
 
 ### **Performance Targets**
 
 - **Startup:** <3 segundos
-- **Scan Network:** <10 segundos para /24
-- **Camera Connection:** <5 segundos
-- **Memory Usage:** <200MB en operación normal
+- **Hot Reload:** <1 segundo
+- **Build Time:** <2 minutos
+- **Bundle Size:** <50MB
 
 ## 🚨 Problemas Comunes
 
-### **Error: Import not found**
+### **Error: Cannot find module '@tauri-apps/...'**
+
+```bash
+# SIEMPRE usar yarn
+rm -rf node_modules
+yarn install       # NO npm install
+```
+
+### **Error: Python imports failing**
 
 ```bash
 # Verificar PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+cd src-python
+python -c "import sys; print(sys.path)"
 
-# O usar relative imports
+# O usar imports relativos
 from ..services import protocol_service
 ```
 
-### **Error: Flet no conecta**
+### **Error: Puerto 5173 ocupado**
 
 ```bash
-# Verificar puerto disponible
-netstat -an | grep 8080
+# Windows
+netstat -ano | findstr :5173
+taskkill /PID <PID> /F
 
-# Limpiar caché
-make clean
+# Linux/Mac
+lsof -i :5173
+kill -9 <PID>
 ```
 
-### **Error: Tests fallan**
+### **Error: Rust compilation failed**
 
 ```bash
-# Ejecutar con verbose
-pytest tests/ -v -s
+# Verificar toolchain
+rustup default stable-msvc    # Windows
+rustup default stable         # Linux/Mac
 
-# Test específico
-pytest tests/test_services/test_protocol_service.py -v
+# Limpiar y reconstruir
+cd src-tauri
+cargo clean
+cd ..
+yarn tauri-build
 ```
 
-## 🎨 Contribución UI
+## 🎨 Guías de Estilo
 
-### **Material Design 3 Guidelines**
+### **React/TypeScript**
 
-- Usar `ColorScheme.from_seed()`
-- Componentes elevados con sombras
-- Typography scale consistente
-- Estados interactivos (hover, pressed)
+```typescript
+// Componentes funcionales con TypeScript
+interface VideoPlayerProps {
+  cameraId: string;
+  onError?: (error: Error) => void;
+}
 
-### **Responsive Design**
-
-```python
-# Breakpoints
-MOBILE = 600
-TABLET = 900
-DESKTOP = 1200
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  cameraId, 
+  onError 
+}) => {
+  // Hooks al inicio
+  const [frame, setFrame] = useState<string>('');
+  
+  // Effects después
+  useEffect(() => {
+    // Lógica
+  }, [cameraId]);
+  
+  // Render al final
+  return <img src={frame} alt="Camera view" />;
+};
 ```
 
-## 📝 Documentación de Código
-
-### **Docstrings Style (Google)**
+### **Python (Google Style)**
 
 ```python
-def connect_camera(ip: str, protocol: str) -> bool:
+def connect_camera(
+    ip: str, 
+    protocol: CameraProtocol,
+    timeout: float = 10.0
+) -> ConnectionResult:
     """Conecta a una cámara usando el protocolo especificado.
     
     Args:
         ip: Dirección IP de la cámara
-        protocol: Protocolo a usar (onvif, rtsp, http)
+        protocol: Protocolo a usar (ONVIF, RTSP, HTTP)
+        timeout: Timeout de conexión en segundos
         
     Returns:
-        True si la conexión fue exitosa, False en caso contrario
+        ConnectionResult con estado y metadata
         
     Raises:
-        ConnectionError: Si no se puede establecer conexión
+        CameraConnectionError: Si no se puede conectar
     """
+    # Implementación
 ```
 
 ## 🎯 Próximos Pasos
 
-1. **[🏛️ Entender Arquitectura MVP](architecture.md)**
-2. **[📡 Conocer Services API](api-services.md)**
-3. **[📱 Build y Deploy](deployment.md)**
+1. **[🏛️ Arquitectura Técnica](ARCHITECTURE.md)** - Entender MVP y Tauri
+2. **[📡 API y Servicios](api-services.md)** - Backend APIs
+3. **[📦 Deployment](deployment.md)** - Build y distribución
 
 ---
 
 **💡 Tips:**
 
 - Usa `make help` para ver todos los comandos
-- Configura tu IDE con las extensiones recomendadas
-- Ejecuta `make check-all` antes de cada commit
+- Siempre `yarn` en lugar de `npm`
+- Ejecuta `make check-all` antes de commits
+- Revisa logs en `python_sidecar.log`
 
 ---
 
 ### 📚 Navegación
 
-[← Anterior: Configuración para Windows](WINDOWS_SETUP.md) | [📑 Índice](README.md) | [Siguiente: Arquitectura Técnica →](ARCHITECTURE.md)
+[← Anterior: Configuración Windows](WINDOWS_SETUP.md) | [📑 Índice](README.md) | [Siguiente: Arquitectura Técnica →](ARCHITECTURE.md)
