@@ -190,7 +190,7 @@ class ConfigService:
             return True
         
         try:
-            self.logger.info("🚀 Inicializando ConfigService...")
+            self.logger.info("Inicializando ConfigService...")
             
             # Crear directorios necesarios
             self._create_directories()
@@ -216,11 +216,11 @@ class ConfigService:
                 asyncio.create_task(self._backup_worker())
             
             self._initialized = True
-            self.logger.info("✅ ConfigService inicializado correctamente")
+            self.logger.info("ConfigService inicializado correctamente")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando ConfigService: {e}")
+            self.logger.error(f"Error inicializando ConfigService: {e}")
             return False
     
     def _create_directories(self) -> None:
@@ -238,7 +238,7 @@ class ConfigService:
     async def _initialize_encryption(self) -> None:
         """Inicializa el sistema de encriptación."""
         if not CRYPTO_AVAILABLE:
-            self.logger.warning("⚠️ Cryptography no disponible, credenciales se guardarán en texto plano")
+            self.logger.warning("Cryptography no disponible, credenciales se guardarán en texto plano")
             self.config.encryption_enabled = False
             return
         
@@ -387,7 +387,7 @@ class ConfigService:
             # Migrar configuración existente si es necesario
             await self._migrate_legacy_config()
             
-            self.logger.info("🔄 Integración con configuración legacy completada")
+            self.logger.info("Integración con configuración legacy completada")
             
         except Exception as e:
             self.logger.error(f"Error integrando configuración legacy: {e}")
@@ -435,7 +435,7 @@ class ConfigService:
                     )
             
             # Similar para otras marcas...
-            self.logger.info("✅ Migración de configuración legacy completada")
+            self.logger.info("Migración de configuración legacy completada")
             
         except Exception as e:
             self.logger.error(f"Error migrando configuración legacy: {e}")
@@ -670,7 +670,7 @@ class ConfigService:
             
             await self._save_profiles()
             
-            self.logger.info(f"✅ Perfil creado: {profile_id}")
+            self.logger.info(f"Perfil creado: {profile_id}")
             return True
             
         except Exception as e:
@@ -709,7 +709,7 @@ class ConfigService:
             
             await self._save_configuration()
             
-            self.logger.info(f"🔄 Perfil cambiado a: {profile_id}")
+            self.logger.info(f"Perfil cambiado a: {profile_id}")
             return True
             
         except Exception as e:
@@ -1026,7 +1026,7 @@ class ConfigService:
                     old_backup.unlink()
             
             self._stats["backup_operations"] += 1
-            self.logger.info(f"💾 Backup creado: {backup_file}")
+            self.logger.info(f"Backup creado: {backup_file}")
             return True
             
         except Exception as e:

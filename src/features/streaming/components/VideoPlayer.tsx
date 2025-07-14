@@ -160,10 +160,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       stopStream(cameraId);
       setIsPlaying(false);
       setCurrentFrame(null);
+      // Resetear métricas
+      setMetrics({
+        fps: 0,
+        latency: 0,
+        quality: 'medium',
+        frameCount: 0,
+      });
+      // Notificar al padre que el streaming se detuvo
+      onMetricsUpdate?.({ fps: 0, latency: 0, isStreaming: false });
     } catch (error) {
       console.error('Error desconectando:', error);
     }
-  }, [cameraId, stopStream]);
+  }, [cameraId, stopStream, onMetricsUpdate]);
 
   // Play/Pause
   const togglePlayPause = useCallback(async () => {
@@ -222,8 +231,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Calcular métricas y notificar al padre
   useEffect(() => {
     if (!isPlaying || !streamingService.isConnected()) {
-      // Si no está reproduciendo, notificar que no hay streaming
-      onMetricsUpdate?.({ fps: 0, latency: 0, isStreaming: false });
+      // Si no está reproduciendo, no hacer nada aquí
+      // Las métricas ya se resetean en handleDisconnect
       return;
     }
 

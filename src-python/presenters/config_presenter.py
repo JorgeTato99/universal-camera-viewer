@@ -61,7 +61,7 @@ class ConfigPresenter(BasePresenter):
             True si se inicializó correctamente
         """
         try:
-            self.logger.info("⚙️ Inicializando ConfigPresenter")
+            self.logger.info("Inicializando ConfigPresenter")
             
             # Cargar perfiles disponibles
             await self._load_available_profiles()
@@ -78,7 +78,7 @@ class ConfigPresenter(BasePresenter):
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando ConfigPresenter: {str(e)}")
+            self.logger.error(f"Error inicializando ConfigPresenter: {str(e)}")
             await self.set_error(f"Error de inicialización: {str(e)}")
             return False
     
@@ -86,10 +86,10 @@ class ConfigPresenter(BasePresenter):
         """Carga todos los perfiles de configuración disponibles."""
         try:
             self._available_profiles = self._config_service.get_all_profiles()
-            self.logger.info(f"📋 {len(self._available_profiles)} perfiles cargados")
+            self.logger.info(f"{len(self._available_profiles)} perfiles cargados")
             
         except Exception as e:
-            self.logger.error(f"❌ Error cargando perfiles: {str(e)}")
+            self.logger.error(f"Error cargando perfiles: {str(e)}")
             self._available_profiles = {}
     
     async def _load_active_profile(self) -> None:
@@ -99,10 +99,10 @@ class ConfigPresenter(BasePresenter):
             if self._current_profile:
                 self.logger.info(f"📁 Perfil activo: {self._current_profile.name}")
             else:
-                self.logger.warning("⚠️ No hay perfil activo")
+                self.logger.warning("No hay perfil activo")
                 
         except Exception as e:
-            self.logger.error(f"❌ Error cargando perfil activo: {str(e)}")
+            self.logger.error(f"Error cargando perfil activo: {str(e)}")
             self._current_profile = None
     
     async def _setup_metrics(self) -> None:
@@ -127,7 +127,7 @@ class ConfigPresenter(BasePresenter):
                 )
                 
         except Exception as e:
-            self.logger.error(f"❌ Error procesando cambio de configuración: {str(e)}")
+            self.logger.error(f"Error procesando cambio de configuración: {str(e)}")
     
     # === Gestión de Configuración ===
     
@@ -145,7 +145,7 @@ class ConfigPresenter(BasePresenter):
         try:
             return await self._config_service.get_config_value(key, default)
         except Exception as e:
-            self.logger.error(f"❌ Error obteniendo configuración {key}: {str(e)}")
+            self.logger.error(f"Error obteniendo configuración {key}: {str(e)}")
             return default
     
     async def set_config_value(
@@ -185,14 +185,14 @@ class ConfigPresenter(BasePresenter):
             
             if success:
                 self._set_state(PresenterState.READY)
-                self.logger.info(f"✅ Configuración actualizada: {key}")
+                self.logger.info(f"Configuración actualizada: {key}")
                 return True
             else:
                 raise ValueError("Error del servicio de configuración")
                 
         except Exception as e:
             error_msg = f"Error actualizando configuración {key}: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             
             # Notificar error de validación
@@ -218,14 +218,14 @@ class ConfigPresenter(BasePresenter):
             
             if success:
                 self._set_state(PresenterState.READY)
-                self.logger.info(f"🗑️ Configuración eliminada: {key}")
+                self.logger.info(f"Configuración eliminada: {key}")
                 return True
             else:
                 raise ValueError("Error del servicio de configuración")
                 
         except Exception as e:
             error_msg = f"Error eliminando configuración {key}: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -260,14 +260,14 @@ class ConfigPresenter(BasePresenter):
                 self.add_metric("total_profiles", len(self._available_profiles))
                 
                 self._set_state(PresenterState.READY)
-                self.logger.info(f"✅ Perfil creado: {name}")
+                self.logger.info(f"Perfil creado: {name}")
                 return True
             else:
                 raise ValueError("Error del servicio de configuración")
                 
         except Exception as e:
             error_msg = f"Error creando perfil {name}: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -296,14 +296,14 @@ class ConfigPresenter(BasePresenter):
                     await self.execute_safely(self._on_profile_changed, self._current_profile)
                 
                 self._set_state(PresenterState.READY)
-                self.logger.info(f"🔄 Perfil cambiado: {profile_id}")
+                self.logger.info(f"Perfil cambiado: {profile_id}")
                 return True
             else:
                 raise ValueError("Error del servicio de configuración")
                 
         except Exception as e:
             error_msg = f"Error cambiando perfil {profile_id}: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -347,7 +347,7 @@ class ConfigPresenter(BasePresenter):
                 
         except Exception as e:
             error_msg = f"Error configurando credenciales {brand}: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -364,7 +364,7 @@ class ConfigPresenter(BasePresenter):
         try:
             return await self._config_service.get_camera_credentials(brand)
         except Exception as e:
-            self.logger.error(f"❌ Error obteniendo credenciales {brand}: {str(e)}")
+            self.logger.error(f"Error obteniendo credenciales {brand}: {str(e)}")
             return {"username": "", "password": ""}
     
     # === Importación y Exportación ===
@@ -403,7 +403,7 @@ class ConfigPresenter(BasePresenter):
                 
         except Exception as e:
             error_msg = f"Error exportando configuración: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             
             # Notificar error
             if self._on_export_completed:
@@ -449,7 +449,7 @@ class ConfigPresenter(BasePresenter):
             
         except Exception as e:
             error_msg = f"Error importando configuración: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             
             # Notificar error
             if self._on_import_completed:
@@ -479,12 +479,12 @@ class ConfigPresenter(BasePresenter):
             self.add_metric("unsaved_changes", False)
             
             self._set_state(PresenterState.READY)
-            self.logger.info("🔄 Configuración restablecida a defaults")
+            self.logger.info("Configuración restablecida a defaults")
             return True
             
         except Exception as e:
             error_msg = f"Error restableciendo configuración: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -502,11 +502,11 @@ class ConfigPresenter(BasePresenter):
             # Esta funcionalidad se expandirá cuando se implemente en ConfigService
             validation_errors = {}
             
-            self.logger.info("✅ Configuración validada")
+            self.logger.info("Configuración validada")
             return validation_errors
             
         except Exception as e:
-            self.logger.error(f"❌ Error validando configuración: {str(e)}")
+            self.logger.error(f"Error validando configuración: {str(e)}")
             return {"general": [str(e)]}
     
     # === Gestión de Estado ===
@@ -562,7 +562,7 @@ class ConfigPresenter(BasePresenter):
             self.logger.info("🧹 ConfigPresenter limpiado")
             
         except Exception as e:
-            self.logger.error(f"❌ Error en limpieza de ConfigPresenter: {str(e)}")
+            self.logger.error(f"Error en limpieza de ConfigPresenter: {str(e)}")
     
     # === Cleanup ===
     

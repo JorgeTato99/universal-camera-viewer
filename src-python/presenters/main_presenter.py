@@ -73,7 +73,7 @@ class MainPresenter(BasePresenter):
     async def _initialize_presenter(self) -> None:
         """Implementación de inicialización específica del presenter."""
         try:
-            self.logger.info("🚀 Inicializando MainPresenter")
+            self.logger.info("Inicializando MainPresenter")
             
             # Inicializar servicios
             await self._initialize_services()
@@ -90,10 +90,10 @@ class MainPresenter(BasePresenter):
             # Configurar métricas
             await self._setup_metrics()
             
-            self.logger.info("✅ MainPresenter inicializado exitosamente")
+            self.logger.info("MainPresenter inicializado exitosamente")
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando MainPresenter: {str(e)}")
+            self.logger.error(f"Error inicializando MainPresenter: {str(e)}")
             raise
     
     async def _cleanup_presenter(self) -> None:
@@ -115,10 +115,10 @@ class MainPresenter(BasePresenter):
             # Limpiar servicios
             await self._protocol_service.cleanup()
             
-            self.logger.info("✅ MainPresenter limpiado")
+            self.logger.info("MainPresenter limpiado")
             
         except Exception as e:
-            self.logger.error(f"❌ Error limpiando MainPresenter: {str(e)}")
+            self.logger.error(f"Error limpiando MainPresenter: {str(e)}")
     
     async def _initialize_services(self):
         """Inicializa todos los servicios necesarios."""
@@ -127,10 +127,10 @@ class MainPresenter(BasePresenter):
             await self._data_service.initialize()
             await self._config_service.initialize()
             
-            self.logger.info("✅ Servicios inicializados")
+            self.logger.info("Servicios inicializados")
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando servicios: {str(e)}")
+            self.logger.error(f"Error inicializando servicios: {str(e)}")
             raise
     
     async def _create_sub_presenters(self):
@@ -149,10 +149,10 @@ class MainPresenter(BasePresenter):
             self._config_presenter = ConfigPresenter()
             await self._config_presenter.initialize_async()
             
-            self.logger.info("✅ Sub-presenters creados")
+            self.logger.info("Sub-presenters creados")
             
         except Exception as e:
-            self.logger.error(f"❌ Error creando sub-presenters: {str(e)}")
+            self.logger.error(f"Error creando sub-presenters: {str(e)}")
             raise
     
     # === Callback Wrappers Síncronos ===
@@ -163,7 +163,7 @@ class MainPresenter(BasePresenter):
             try:
                 self._on_scan_progress(current, total, message)
             except Exception as e:
-                self.logger.error(f"❌ Error en callback de progreso: {str(e)}")
+                self.logger.error(f"Error en callback de progreso: {str(e)}")
     
     def _on_scan_completed_wrapper(self, discovered_cameras: List[CameraModel]):
         """Wrapper síncrono para callback de escaneo completado."""
@@ -173,9 +173,9 @@ class MainPresenter(BasePresenter):
             try:
                 self._on_scan_completed(discovered_cameras)
             except Exception as e:
-                self.logger.error(f"❌ Error en callback de completado: {str(e)}")
+                self.logger.error(f"Error en callback de completado: {str(e)}")
         
-        self.logger.info(f"🔍 Escaneo completado: {len(discovered_cameras)} cámaras encontradas")
+        self.logger.info(f"Escaneo completado: {len(discovered_cameras)} cámaras encontradas")
     
     def _on_camera_discovered_wrapper(self, camera: CameraModel):
         """Wrapper síncrono para callback de cámara descubierta."""
@@ -189,7 +189,7 @@ class MainPresenter(BasePresenter):
             try:
                 self._on_camera_status_changed(camera_id, status)
             except Exception as e:
-                self.logger.error(f"❌ Error en callback de estado: {str(e)}")
+                self.logger.error(f"Error en callback de estado: {str(e)}")
         
         self.logger.info(f"📹 Cámara {camera_id}: {status} - {message}")
     
@@ -206,10 +206,10 @@ class MainPresenter(BasePresenter):
                 "scan.auto_scan_enabled", False
             )
             
-            self.logger.info("✅ Configuración inicial cargada")
+            self.logger.info("Configuración inicial cargada")
             
         except Exception as e:
-            self.logger.error(f"❌ Error cargando configuración: {str(e)}")
+            self.logger.error(f"Error cargando configuración: {str(e)}")
     
     async def _load_saved_cameras(self):
         """Carga cámaras guardadas desde el DataService."""
@@ -221,7 +221,7 @@ class MainPresenter(BasePresenter):
             await self._create_demo_cameras()
             
         except Exception as e:
-            self.logger.error(f"❌ Error cargando cámaras: {str(e)}")
+            self.logger.error(f"Error cargando cámaras: {str(e)}")
     
     async def _create_demo_cameras(self):
         """Crea cámaras de demostración para testing."""
@@ -246,10 +246,10 @@ class MainPresenter(BasePresenter):
             for camera_data in demo_cameras:
                 await self._add_camera_from_data(camera_data)
             
-            self.logger.info(f"✅ {len(demo_cameras)} cámaras demo creadas")
+            self.logger.info(f"{len(demo_cameras)} cámaras demo creadas")
             
         except Exception as e:
-            self.logger.error(f"❌ Error creando cámaras demo: {str(e)}")
+            self.logger.error(f"Error creando cámaras demo: {str(e)}")
     
     async def _setup_metrics(self):
         """Configura las métricas del presenter principal."""
@@ -272,7 +272,7 @@ class MainPresenter(BasePresenter):
             camera_id = camera_model.camera_id
             
             if camera_id in self._camera_presenters:
-                self.logger.warning(f"⚠️ Cámara {camera_id} ya existe")
+                self.logger.warning(f"Cámara {camera_id} ya existe")
                 return False
             
             # Crear presenter para la cámara
@@ -295,11 +295,11 @@ class MainPresenter(BasePresenter):
             # Notificar cambio
             await self._notify_cameras_updated()
             
-            self.logger.info(f"✅ Cámara agregada: {camera_model.display_name}")
+            self.logger.info(f"Cámara agregada: {camera_model.display_name}")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error agregando cámara: {str(e)}")
+            self.logger.error(f"Error agregando cámara: {str(e)}")
             return False
     
     async def _add_camera_from_data(self, camera_data: Dict[str, Any]) -> bool:
@@ -325,7 +325,7 @@ class MainPresenter(BasePresenter):
             return await self.add_camera(camera_model)
             
         except Exception as e:
-            self.logger.error(f"❌ Error creando cámara desde datos: {str(e)}")
+            self.logger.error(f"Error creando cámara desde datos: {str(e)}")
             return False
     
     async def remove_camera(self, camera_id: str) -> bool:
@@ -352,11 +352,11 @@ class MainPresenter(BasePresenter):
             # Notificar cambio
             await self._notify_cameras_updated()
             
-            self.logger.info(f"✅ Cámara removida: {camera_id}")
+            self.logger.info(f"Cámara removida: {camera_id}")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error removiendo cámara: {str(e)}")
+            self.logger.error(f"Error removiendo cámara: {str(e)}")
             return False
     
     async def _remove_camera_presenter(self, camera_id: str):
@@ -381,12 +381,12 @@ class MainPresenter(BasePresenter):
                 results[camera_id] = success
                 
                 if success:
-                    self.logger.info(f"✅ Cámara {camera_id} conectada")
+                    self.logger.info(f"Cámara {camera_id} conectada")
                 else:
-                    self.logger.warning(f"⚠️ No se pudo conectar cámara {camera_id}")
+                    self.logger.warning(f"No se pudo conectar cámara {camera_id}")
                     
             except Exception as e:
-                self.logger.error(f"❌ Error conectando {camera_id}: {str(e)}")
+                self.logger.error(f"Error conectando {camera_id}: {str(e)}")
                 results[camera_id] = False
         
         return results
@@ -406,7 +406,7 @@ class MainPresenter(BasePresenter):
                 results[camera_id] = success
                 
             except Exception as e:
-                self.logger.error(f"❌ Error desconectando {camera_id}: {str(e)}")
+                self.logger.error(f"Error desconectando {camera_id}: {str(e)}")
                 results[camera_id] = False
         
         return results
@@ -430,14 +430,14 @@ class MainPresenter(BasePresenter):
             success = await self._scan_presenter.start_network_scan(custom_config)
             
             if success:
-                self.logger.info("🔍 Escaneo de red iniciado")
+                self.logger.info("Escaneo de red iniciado")
             else:
-                self.logger.error("❌ No se pudo iniciar escaneo")
+                self.logger.error("No se pudo iniciar escaneo")
             
             return success
             
         except Exception as e:
-            self.logger.error(f"❌ Error iniciando escaneo: {str(e)}")
+            self.logger.error(f"Error iniciando escaneo: {str(e)}")
             return False
     
     async def stop_current_scan(self) -> bool:
@@ -476,11 +476,11 @@ class MainPresenter(BasePresenter):
             # Notificar cambio
             await self._notify_cameras_updated()
             
-            self.logger.info(f"📐 Layout cambiado a {columns} columnas")
+            self.logger.info(f"Layout cambiado a {columns} columnas")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error cambiando layout: {str(e)}")
+            self.logger.error(f"Error cambiando layout: {str(e)}")
             return False
     
     def get_current_layout(self) -> int:
@@ -556,7 +556,7 @@ class MainPresenter(BasePresenter):
                 else:
                     callback(*args, **kwargs)
         except Exception as e:
-            self.logger.error(f"❌ Error en callback: {str(e)}")
+            self.logger.error(f"Error en callback: {str(e)}")
     
     def get_application_stats(self) -> Dict[str, Any]:
         """Obtiene estadísticas de la aplicación."""

@@ -55,13 +55,13 @@ class ThemeService:
                     config = json.load(f)
                     self.current_theme = config.get('theme', ThemeMode.LIGHT)
                     self.primary_color = config.get('primary_color', ft.Colors.BLUE_700)
-                    print(f"🎨 Tema cargado desde archivo: {self.current_theme}")
+                    print(f"Tema cargado desde archivo: {self.current_theme}")
             else:
-                print(f"🎨 Archivo de configuración no existe, usando tema por defecto: {ThemeMode.LIGHT}")
+                print(f"Archivo de configuración no existe, usando tema por defecto: {ThemeMode.LIGHT}")
                 self.current_theme = ThemeMode.LIGHT
         except Exception as e:
             # Si hay error, usar valores por defecto
-            print(f"🎨 Error cargando configuración, usando tema por defecto: {e}")
+            print(f"Error cargando configuración, usando tema por defecto: {e}")
             self.current_theme = ThemeMode.LIGHT
     
     def _save_theme_config(self):
@@ -197,7 +197,7 @@ class ThemeService:
     
     def configure_page_theme(self, page: ft.Page, force_update: bool = True):
         """Configura el tema de la página."""
-        print(f"🎨 Configurando tema: {self.current_theme}")
+        print(f"Configurando tema: {self.current_theme}")
         
         # Configurar temas
         page.theme = self.get_light_theme()
@@ -207,20 +207,20 @@ class ThemeService:
         if self.current_theme == ThemeMode.LIGHT:
             page.theme_mode = ft.ThemeMode.LIGHT
             page.bgcolor = ft.Colors.GREY_50
-            print("🎨 Aplicando tema CLARO")
+            print("Aplicando tema CLARO")
         elif self.current_theme == ThemeMode.DARK:
             page.theme_mode = ft.ThemeMode.DARK
             page.bgcolor = ft.Colors.GREY_900
-            print("🎨 Aplicando tema OSCURO")
+            print("Aplicando tema OSCURO")
         else:
             page.theme_mode = ft.ThemeMode.SYSTEM
             page.bgcolor = ft.Colors.GREY_50
-            print("🎨 Aplicando tema SISTEMA")
+            print("Aplicando tema SISTEMA")
         
         # Actualizar página si se solicita
         if force_update:
             page.update()
-            print("🎨 Página actualizada")
+            print("Página actualizada")
     
     def toggle_theme(self, page: ft.Page):
         """Cambia entre tema claro y oscuro."""
@@ -300,7 +300,7 @@ class ThemeService:
 
     def force_theme_reload(self, page: ft.Page):
         """Fuerza la recarga completa del tema - útil para resolver problemas de inicialización."""
-        print(f"🎨 FORZANDO RECARGA DEL TEMA: {self.current_theme}")
+        print(f"FORZANDO RECARGA DEL TEMA: {self.current_theme}")
         
         # Limpiar configuración actual
         page.theme = None
@@ -316,27 +316,27 @@ class ThemeService:
         if self.current_theme == ThemeMode.LIGHT:
             page.theme_mode = ft.ThemeMode.LIGHT
             page.bgcolor = ft.Colors.GREY_50
-            print("🎨 TEMA CLARO APLICADO FORZADAMENTE")
+            print("TEMA CLARO APLICADO FORZADAMENTE")
         elif self.current_theme == ThemeMode.DARK:
             page.theme_mode = ft.ThemeMode.DARK
             page.bgcolor = ft.Colors.GREY_900
-            print("🎨 TEMA OSCURO APLICADO FORZADAMENTE")
+            print("TEMA OSCURO APLICADO FORZADAMENTE")
         else:
             page.theme_mode = ft.ThemeMode.SYSTEM
             page.bgcolor = ft.Colors.GREY_50
-            print("🎨 TEMA SISTEMA APLICADO FORZADAMENTE")
+            print("TEMA SISTEMA APLICADO FORZADAMENTE")
         
         # Forzar actualización múltiple
         page.update()
-        print("🎨 PRIMERA ACTUALIZACIÓN COMPLETADA")
+        print("PRIMERA ACTUALIZACIÓN COMPLETADA")
         
         # Segunda actualización para asegurar que todos los componentes se actualicen
         page.update()
-        print("🎨 SEGUNDA ACTUALIZACIÓN COMPLETADA")
+        print("SEGUNDA ACTUALIZACIÓN COMPLETADA")
 
     def reset_to_light_theme(self, page: ft.Page):
         """Resetea el tema a claro por defecto - útil para debugging."""
-        print("🎨 RESETEANDO A TEMA CLARO")
+        print("RESETEANDO A TEMA CLARO")
         self.current_theme = ThemeMode.LIGHT
         self._save_theme_config()
         self.force_theme_reload(page)

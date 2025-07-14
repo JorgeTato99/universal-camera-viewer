@@ -200,7 +200,7 @@ class DataService:
             return True
         
         try:
-            self.logger.info("🚀 Inicializando DataService...")
+            self.logger.info("Inicializando DataService...")
             
             # Crear directorios necesarios
             self._create_directories()
@@ -222,11 +222,11 @@ class DataService:
             await self._start_background_tasks()
             
             self._initialized = True
-            self.logger.info("✅ DataService inicializado correctamente")
+            self.logger.info("DataService inicializado correctamente")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando DataService: {e}")
+            self.logger.error(f"Error inicializando DataService: {e}")
             return False
     
     async def shutdown(self) -> None:
@@ -234,7 +234,7 @@ class DataService:
         if not self._initialized or self._shutdown:
             return
         
-        self.logger.info("🔄 Cerrando DataService...")
+        self.logger.info("Cerrando DataService...")
         self._shutdown = True
         
         # Detener tareas de fondo
@@ -248,7 +248,7 @@ class DataService:
         # Cerrar base de datos
         await self._close_database()
         
-        self.logger.info("✅ DataService cerrado correctamente")
+        self.logger.info("DataService cerrado correctamente")
     
     def _create_directories(self) -> None:
         """Crea los directorios necesarios."""
@@ -293,7 +293,7 @@ class DataService:
         self._db_connection.row_factory = sqlite3.Row
         await self._create_tables_sqlite()
         
-        self.logger.info("💾 Base de datos SQLite en memoria inicializada")
+        self.logger.info("Base de datos SQLite en memoria inicializada")
     
     async def _initialize_duckdb(self) -> None:
         """Inicializa base de datos DuckDB."""
@@ -888,7 +888,7 @@ class DataService:
         cleanup_task = asyncio.create_task(self._data_cleanup_worker())
         self._background_tasks.append(cleanup_task)
         
-        self.logger.info(f"🔄 Iniciadas {len(self._background_tasks)} tareas de fondo")
+        self.logger.info(f"Iniciadas {len(self._background_tasks)} tareas de fondo")
     
     async def _cache_cleanup_worker(self) -> None:
         """Worker para limpieza periódica del cache."""
@@ -949,7 +949,7 @@ class DataService:
             shutil.copy2(self.config.database_path, backup_path)
             
             self._stats["backup_operations"] += 1
-            self.logger.info(f"💾 Backup creado: {backup_path}")
+            self.logger.info(f"Backup creado: {backup_path}")
             
             # Limpiar backups antiguos (mantener solo los últimos 10)
             backup_dir = Path("data/backups")

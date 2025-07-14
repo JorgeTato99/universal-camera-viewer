@@ -387,111 +387,6 @@ class VideoStreamPresenter(BasePresenter):
             str(error)
         )
     
-    # === MÉTODOS DE COMPATIBILIDAD PARA STREAMHANDLER ===
-    
-    async def connect_camera(self, config: ConnectionConfig) -> bool:
-        """
-        Conecta a una cámara (wrapper para compatibilidad).
-        
-        Args:
-            config: Configuración de conexión
-            
-        Returns:
-            True si la conexión fue exitosa
-        """
-        try:
-            # Generar camera_id desde la IP
-            camera_id = f"cam_{config.ip.replace('.', '_')}"
-            
-            # Determinar protocolo
-            protocol = config.protocol if hasattr(config, 'protocol') else StreamProtocol.RTSP
-            
-            # Iniciar stream
-            success = await self.start_camera_stream(
-                camera_id=camera_id,
-                connection_config=config,
-                protocol=protocol,
-                options={
-                    'targetFps': 30,
-                    'bufferSize': 5
-                }
-            )
-            
-            # Guardar configuración para uso posterior
-            if success:
-                self._current_camera_id = camera_id
-                self._current_config = config
-            
-            return success
-            
-        except Exception as e:
-            self.logger.error(f"Error conectando cámara: {e}")
-            return False
-    
-    async def start_streaming(self) -> None:
-        """
-        Inicia el streaming (compatibilidad con StreamHandler).
-        El streaming ya se inicia en connect_camera, así que este método
-        solo verifica el estado.
-        """
-        if hasattr(self, '_current_camera_id') and self._current_camera_id:
-            stream = self._active_streams.get(self._current_camera_id)
-            if stream and stream.status == StreamStatus.STREAMING:
-                self.logger.info(f"Streaming ya activo para {self._current_camera_id}")
-            else:
-                self.logger.warning("Stream no está activo")
-        else:
-            raise RuntimeError("No hay cámara conectada")
-    
-    async def stop_streaming(self) -> None:
-        """
-        Detiene el streaming actual (compatibilidad).
-        """
-        if hasattr(self, '_current_camera_id') and self._current_camera_id:
-            await self.stop_camera_stream(self._current_camera_id)
-    
-    async def disconnect_camera(self) -> None:
-        """
-        Desconecta la cámara actual (compatibilidad).
-        """
-        if hasattr(self, '_current_camera_id') and self._current_camera_id:
-            # Detener stream si está activo
-            if self._current_camera_id in self._active_streams:
-                await self.stop_camera_stream(self._current_camera_id)
-            
-            # Limpiar referencias
-            self._current_camera_id = None
-            self._current_config = None
-    
-    @property
-    def on_frame_update(self):
-        """Getter para callback de frames."""
-        return getattr(self, '_on_frame_callback', None)
-    
-    @on_frame_update.setter
-    def on_frame_update(self, callback):
-        """
-        Setter para callback de frames (compatibilidad).
-        
-        Args:
-            callback: Función async que recibe bytes del frame
-        """
-        self._on_frame_callback = callback
-        
-        # Configurar el callback en el servicio
-        if hasattr(self, '_current_camera_id') and self._current_camera_id:
-            self._video_service.set_frame_callback(
-                self._current_camera_id,
-                callback
-            )
-    
-    @property
-    def is_streaming(self) -> bool:
-        """Verifica si hay streaming activo."""
-        if hasattr(self, '_current_camera_id') and self._current_camera_id:
-            stream = self._active_streams.get(self._current_camera_id)
-            return stream and stream.status == StreamStatus.STREAMING
-        return False
     
     # === MÉTODOS DE UTILIDAD ===
     
@@ -507,8 +402,8 @@ class VideoStreamPresenter(BasePresenter):
             for camera_id, stream in self._active_streams.items()
         }
     
-    def is_streaming(self, camera_id: str) -> bool:
-        """Verifica si una cámara está transmitiendo."""
+    def is_camera_streaming(self, camera_id: str) -> bool:
+        """Verifica si una cámara específica está transmitiendo."""
         return camera_id in self._active_streams
     
     async def update_stream_options(self, camera_id: str, options: Dict[str, Any]) -> bool:

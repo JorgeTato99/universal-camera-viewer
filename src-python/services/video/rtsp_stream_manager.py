@@ -95,7 +95,8 @@ class RTSPStreamManager(StreamManager):
             else:
                 # Intentar reconectar si falla
                 if self._is_streaming:
-                    self._attempt_reconnect()
+                    # Crear tarea asíncrona para reconexión
+                    asyncio.create_task(self._attempt_reconnect())
                 return None
                 
         except Exception as e:
@@ -193,8 +194,8 @@ class RTSPStreamManager(StreamManager):
         
         return "unknown"
     
-    def _attempt_reconnect(self) -> None:
-        """Intenta reconectar al stream RTSP."""
+    async def _attempt_reconnect(self) -> None:
+        """Intenta reconectar al stream RTSP de forma asíncrona."""
         self.logger.warning("Intentando reconectar al stream RTSP...")
         
         try:
@@ -202,8 +203,8 @@ class RTSPStreamManager(StreamManager):
             if self._connection:
                 self._connection.release()
             
-            # Esperar un momento
-            time.sleep(1)
+            # Esperar un momento de forma asíncrona
+            await asyncio.sleep(1)
             
             # Reintentar conexión
             rtsp_url = self._build_rtsp_url()

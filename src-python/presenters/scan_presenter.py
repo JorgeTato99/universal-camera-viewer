@@ -74,7 +74,7 @@ class ScanPresenter(BasePresenter):
             True si se inicializó correctamente
         """
         try:
-            self.logger.info("🔍 Inicializando ScanPresenter")
+            self.logger.info("Inicializando ScanPresenter")
             
             # Cargar configuración de escaneo
             await self._load_scan_configuration()
@@ -92,7 +92,7 @@ class ScanPresenter(BasePresenter):
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando ScanPresenter: {str(e)}")
+            self.logger.error(f"Error inicializando ScanPresenter: {str(e)}")
             await self.set_error(f"Error de inicialización: {str(e)}")
             return False
     
@@ -140,10 +140,10 @@ class ScanPresenter(BasePresenter):
                 test_authentication=True
             )
             
-            self.logger.info("📋 Configuración de escaneo cargada")
+            self.logger.info("Configuración de escaneo cargada")
             
         except Exception as e:
-            self.logger.error(f"❌ Error cargando configuración de escaneo: {str(e)}")
+            self.logger.error(f"Error cargando configuración de escaneo: {str(e)}")
             # Usar configuración por defecto
             self._scan_config = ScanConfig(
                 network_ranges=["192.168.1.0/24"],
@@ -169,16 +169,16 @@ class ScanPresenter(BasePresenter):
             # Cargar resultados recientes desde DataService
             # Esta funcionalidad se expandirá cuando se integre completamente DataService
             self.add_metric("cached_results_count", len(self._scan_results))
-            self.logger.info("💾 Resultados de cache cargados")
+            self.logger.info("Resultados de cache cargados")
             
         except Exception as e:
-            self.logger.error(f"❌ Error cargando cache: {str(e)}")
+            self.logger.error(f"Error cargando cache: {str(e)}")
     
     async def _setup_auto_scan(self) -> None:
         """Configura el escaneo automático si está habilitado."""
         if self._auto_scan_enabled:
             self._add_background_task(self._auto_scan_task())
-            self.logger.info(f"🔄 Auto-scan habilitado (cada {self._auto_scan_interval}s)")
+            self.logger.info(f"Auto-scan habilitado (cada {self._auto_scan_interval}s)")
     
     async def _auto_scan_task(self) -> None:
         """Tarea de fondo para escaneo automático."""
@@ -187,12 +187,12 @@ class ScanPresenter(BasePresenter):
                 await asyncio.sleep(self._auto_scan_interval)
                 
                 if not self._shutdown_event.is_set() and self._auto_scan_enabled:
-                    self.logger.info("🔄 Iniciando escaneo automático")
+                    self.logger.info("Iniciando escaneo automático")
                     await self.start_network_scan()
                     
             except Exception as e:
                 if not self._shutdown_event.is_set():
-                    self.logger.error(f"❌ Error en escaneo automático: {str(e)}")
+                    self.logger.error(f"Error en escaneo automático: {str(e)}")
                 break
     
     # === Operaciones de Escaneo ===
@@ -208,7 +208,7 @@ class ScanPresenter(BasePresenter):
             True si el escaneo se inició correctamente
         """
         if self._current_scan and self._current_scan.is_running:
-            self.logger.warning("⚠️ Ya hay un escaneo en progreso")
+            self.logger.warning("Ya hay un escaneo en progreso")
             return False
         
         await self.set_busy(True)
@@ -246,12 +246,12 @@ class ScanPresenter(BasePresenter):
             # Iniciar escaneo a través de tarea de fondo
             self._add_background_task(self._execute_network_scan())
             
-            self.logger.info(f"🔍 Escaneo de red iniciado: {self._current_scan.scan_id}")
+            self.logger.info(f"Escaneo de red iniciado: {self._current_scan.scan_id}")
             return True
             
         except Exception as e:
             error_msg = f"Error iniciando escaneo: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             
             if self._on_scan_error:
                 await self.execute_safely(self._on_scan_error, error_msg)
@@ -312,11 +312,11 @@ class ScanPresenter(BasePresenter):
                 await self.execute_safely(self._on_scan_completed, self._discovered_cameras)
             
             self._set_state(PresenterState.READY)
-            self.logger.info(f"✅ Escaneo completado: {len(self._discovered_cameras)} cámaras en {scan_duration:.2f}s")
+            self.logger.info(f"Escaneo completado: {len(self._discovered_cameras)} cámaras en {scan_duration:.2f}s")
             
         except Exception as e:
             error_msg = f"Error ejecutando escaneo: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             
             if self._current_scan:
                 self._current_scan.status = ScanStatus.ERROR
@@ -336,7 +336,7 @@ class ScanPresenter(BasePresenter):
                 await self.execute_safely(self._on_scan_progress, current, total, message)
                 
         except Exception as e:
-            self.logger.error(f"❌ Error procesando progreso: {str(e)}")
+            self.logger.error(f"Error procesando progreso: {str(e)}")
     
     def _extract_cameras_from_results(self, results: List[ScanResult]) -> List[CameraModel]:
         """
@@ -372,7 +372,7 @@ class ScanPresenter(BasePresenter):
                         )
                         
                 except Exception as e:
-                    self.logger.error(f"❌ Error creando modelo de cámara: {str(e)}")
+                    self.logger.error(f"Error creando modelo de cámara: {str(e)}")
         
         return cameras
     
@@ -387,10 +387,10 @@ class ScanPresenter(BasePresenter):
                 # Guardar datos del escaneo
                 # Esta funcionalidad se expandirá cuando se integre completamente DataService
                 
-                self.logger.info(f"💾 Resultados guardados: {len(self._discovered_cameras)} cámaras")
+                self.logger.info(f"Resultados guardados: {len(self._discovered_cameras)} cámaras")
                 
         except Exception as e:
-            self.logger.error(f"❌ Error guardando resultados: {str(e)}")
+            self.logger.error(f"Error guardando resultados: {str(e)}")
     
     # === Operaciones de Control ===
     
@@ -402,7 +402,7 @@ class ScanPresenter(BasePresenter):
             True si se detuvo exitosamente
         """
         if not self._current_scan or not self._current_scan.is_running:
-            self.logger.warning("⚠️ No hay escaneo en progreso para detener")
+            self.logger.warning("No hay escaneo en progreso para detener")
             return True
         
         try:
@@ -413,12 +413,12 @@ class ScanPresenter(BasePresenter):
                 self._current_scan.status = ScanStatus.CANCELLED
             
             self._set_state(PresenterState.READY)
-            self.logger.info("⏹️ Escaneo detenido por usuario")
+            self.logger.info("Escaneo detenido por usuario")
             return True
             
         except Exception as e:
             error_msg = f"Error deteniendo escaneo: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -444,16 +444,16 @@ class ScanPresenter(BasePresenter):
             if enabled:
                 # Iniciar auto-scan
                 await self._setup_auto_scan()
-                self.logger.info("🔄 Auto-scan habilitado")
+                self.logger.info("Auto-scan habilitado")
             else:
                 # Detener auto-scan (simplemente cambiar flag)
-                self.logger.info("⏹️ Auto-scan deshabilitado")
+                self.logger.info("Auto-scan deshabilitado")
             
             return True
             
         except Exception as e:
             error_msg = f"Error configurando auto-scan: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -478,12 +478,12 @@ class ScanPresenter(BasePresenter):
             await self._config_service.set_config_value("scan.timeout", config.timeout)
             await self._config_service.set_config_value("scan.max_threads", config.max_threads)
             
-            self.logger.info("📋 Configuración de escaneo actualizada")
+            self.logger.info("Configuración de escaneo actualizada")
             return True
             
         except Exception as e:
             error_msg = f"Error actualizando configuración: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -559,7 +559,7 @@ class ScanPresenter(BasePresenter):
             self.logger.info("🧹 ScanPresenter limpiado")
             
         except Exception as e:
-            self.logger.error(f"❌ Error en limpieza de ScanPresenter: {str(e)}")
+            self.logger.error(f"Error en limpieza de ScanPresenter: {str(e)}")
     
     # === Cleanup ===
     

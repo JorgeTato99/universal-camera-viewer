@@ -967,7 +967,7 @@ class MainView:
     async def initialize_async(self):
         """Inicializa la vista de forma asíncrona."""
         try:
-            self.logger.info("🚀 Inicializando MainView")
+            self.logger.info("Inicializando MainView")
             
             # Inicializar presenter
             await self.presenter.initialize()
@@ -984,10 +984,10 @@ class MainView:
             # Cargar estado inicial
             await self._load_initial_state()
             
-            self.logger.info("✅ MainView inicializada")
+            self.logger.info("MainView inicializada")
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando MainView: {str(e)}")
+            self.logger.error(f"Error inicializando MainView: {str(e)}")
             raise
     
     async def _load_initial_state(self):
@@ -1020,7 +1020,7 @@ class MainView:
             # Limpiar presenter
             await self.presenter.destroy()
             
-            self.logger.info("✅ MainView limpiada")
+            self.logger.info("MainView limpiada")
             
         except Exception as e:
-            self.logger.error(f"❌ Error limpiando MainView: {str(e)}") 
+            self.logger.error(f"Error limpiando MainView: {str(e)}") 

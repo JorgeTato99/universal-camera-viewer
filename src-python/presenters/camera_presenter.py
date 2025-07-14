@@ -81,7 +81,7 @@ class CameraPresenter(BasePresenter):
             True si se inicializó correctamente
         """
         try:
-            self.logger.info(f"🎥 Inicializando CameraPresenter para cámara {self.camera_id}")
+            self.logger.info(f"Inicializando CameraPresenter para cámara {self.camera_id}")
             
             # Cargar modelo de cámara desde configuración o datos
             await self._load_camera_model()
@@ -96,7 +96,7 @@ class CameraPresenter(BasePresenter):
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando CameraPresenter: {str(e)}")
+            self.logger.error(f"Error inicializando CameraPresenter: {str(e)}")
             self._set_state(PresenterState.ERROR)
             return False
     
@@ -119,7 +119,7 @@ class CameraPresenter(BasePresenter):
                     display_name=camera_data.camera_id,
                     connection_config=connection_config
                 )
-                self.logger.info(f"📊 Modelo de cámara cargado desde datos: {self.camera_id}")
+                self.logger.info(f"Modelo de cámara cargado desde datos: {self.camera_id}")
             else:
                 # Crear modelo básico si no existe
                 connection_config = ConnectionConfig(
@@ -136,7 +136,7 @@ class CameraPresenter(BasePresenter):
                 self.logger.info(f"🆕 Creado modelo básico para cámara: {self.camera_id}")
                 
         except Exception as e:
-            self.logger.error(f"❌ Error cargando modelo de cámara: {str(e)}")
+            self.logger.error(f"Error cargando modelo de cámara: {str(e)}")
             # Crear modelo de fallback
             connection_config = ConnectionConfig(
                 ip="",
@@ -226,7 +226,7 @@ class CameraPresenter(BasePresenter):
                     await self.start_streaming()
                 
                 self._set_state(PresenterState.READY)
-                self.logger.info(f"✅ Cámara {self.camera_id} conectada exitosamente")
+                self.logger.info(f"Cámara {self.camera_id} conectada exitosamente")
                 
                 # Guardar datos de conexión exitosa
                 await self._save_connection_data()
@@ -237,7 +237,7 @@ class CameraPresenter(BasePresenter):
                 
         except Exception as e:
             error_msg = f"Error conectando cámara: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             
             if self._on_connection_change:
                 await self.execute_safely(self._on_connection_change, False, error_msg)
@@ -274,14 +274,14 @@ class CameraPresenter(BasePresenter):
                     )
                 
                 self._set_state(PresenterState.READY)
-                self.logger.info(f"✅ Cámara {self.camera_id} desconectada")
+                self.logger.info(f"Cámara {self.camera_id} desconectada")
                 return True
             else:
                 raise ConnectionError("Error en desconexión del servicio")
                 
         except Exception as e:
             error_msg = f"Error desconectando cámara: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -313,7 +313,7 @@ class CameraPresenter(BasePresenter):
             return False
         
         if self._is_streaming:
-            self.logger.warning(f"⚠️ Streaming ya está activo para cámara {self.camera_id}")
+            self.logger.warning(f"Streaming ya está activo para cámara {self.camera_id}")
             return True
         
         await self.set_busy(True)
@@ -337,7 +337,7 @@ class CameraPresenter(BasePresenter):
             
         except Exception as e:
             error_msg = f"Error iniciando streaming: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -363,12 +363,12 @@ class CameraPresenter(BasePresenter):
             self.add_metric("current_fps", 0.0)
             
             self._set_state(PresenterState.READY)
-            self.logger.info(f"⏹️ Streaming detenido para cámara {self.camera_id}")
+            self.logger.info(f"Streaming detenido para cámara {self.camera_id}")
             return True
             
         except Exception as e:
             error_msg = f"Error deteniendo streaming: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return False
     
@@ -417,7 +417,7 @@ class CameraPresenter(BasePresenter):
                 
             except Exception as e:
                 if not self._shutdown_event.is_set():
-                    self.logger.error(f"❌ Error en monitoreo de frames: {str(e)}")
+                    self.logger.error(f"Error en monitoreo de frames: {str(e)}")
                 break
     
     # === Operaciones de Captura ===
@@ -452,7 +452,7 @@ class CameraPresenter(BasePresenter):
                 await self._save_snapshot_data(filepath)
                 
                 self._set_state(PresenterState.READY)
-                self.logger.info(f"📸 Snapshot capturado: {filepath}")
+                self.logger.info(f"Snapshot capturado: {filepath}")
                 return filepath
             else:
                 self._set_state(PresenterState.READY)
@@ -460,7 +460,7 @@ class CameraPresenter(BasePresenter):
                 
         except Exception as e:
             error_msg = f"Error capturando snapshot: {str(e)}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"{error_msg}")
             await self.set_error(error_msg)
             return None
     
@@ -470,7 +470,7 @@ class CameraPresenter(BasePresenter):
             # Esta funcionalidad se implementará cuando se integre con DataService
             pass
         except Exception as e:
-            self.logger.error(f"❌ Error guardando datos de snapshot: {str(e)}")
+            self.logger.error(f"Error guardando datos de snapshot: {str(e)}")
     
     async def _save_connection_data(self) -> None:
         """Guarda datos de conexión en el DataService."""
@@ -478,7 +478,7 @@ class CameraPresenter(BasePresenter):
             if self._camera_model:
                 await self._data_service.save_camera_data(self._camera_model)
         except Exception as e:
-            self.logger.error(f"❌ Error guardando datos de conexión: {str(e)}")
+            self.logger.error(f"Error guardando datos de conexión: {str(e)}")
     
     # === Gestión de Estado ===
     
@@ -551,7 +551,7 @@ class CameraPresenter(BasePresenter):
             self.logger.info(f"🧹 CameraPresenter para {self.camera_id} limpiado")
             
         except Exception as e:
-            self.logger.error(f"❌ Error en limpieza de CameraPresenter: {str(e)}")
+            self.logger.error(f"Error en limpieza de CameraPresenter: {str(e)}")
     
     # === Cleanup ===
     

@@ -1,6 +1,6 @@
 # 🎥 Universal Camera Viewer
 
-[![Version](https://img.shields.io/badge/version-0.8.5-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
+[![Version](https://img.shields.io/badge/version-0.9.0-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
 [![Status](https://img.shields.io/badge/status-FUNCIONAL-brightgreen)](CURRENT_STATUS.md)
 [![Python](https://img.shields.io/badge/python-3.8+-green)](https://www.python.org/)
 [![React](https://img.shields.io/badge/react-19-61dafb)](https://react.dev/)
@@ -9,7 +9,7 @@
 
 Sistema profesional de videovigilancia IP con streaming en tiempo real. ¡Ciclo completo funcional implementado!
 
-## 🎉 Nuevo en v0.8.5: Streaming en Tiempo Real
+## 🎉 Nuevo en v0.9.0: Streaming en Tiempo Real
 
 - ✅ **Streaming RTSP funcional** con cámaras Dahua
 - ✅ **WebSocket estable** con heartbeat automático
@@ -20,18 +20,21 @@ Sistema profesional de videovigilancia IP con streaming en tiempo real. ¡Ciclo 
 ## ✨ Características Principales
 
 ### 🎥 Streaming de Video
+
 - **Tiempo real**: Transmisión fluida vía WebSocket con base64 encoding
 - **Multi-protocolo**: ONVIF, RTSP, HTTP/CGI
 - **Alto rendimiento**: 13-15 FPS @ 2880x1620, < 300MB RAM
 - **Reconexión automática**: Sistema inteligente de recuperación
 
 ### 📷 Compatibilidad de Cámaras
+
 - **Dahua**: Probado con modelos Hero-K51H (RTSP puerto 554)
 - **TP-Link**: Soporte ONVIF (puerto 2020)
 - **Steren**: Compatible con ONVIF (puerto 8000)
 - **Genéricas**: Auto-detección con 16+ patrones RTSP
 
 ### 🖥️ Interfaz Moderna
+
 - **React + Material-UI**: Diseño responsivo y elegante
 - **Tema claro/oscuro**: Persistente en localStorage
 - **Grid de cámaras**: Vista optimizada para múltiples streams
@@ -87,7 +90,7 @@ yarn tauri-build    # Genera instalador .exe/.msi
 
 ## 📁 Estructura del Proyecto
 
-```
+```bash
 ├── src/              # Frontend React/TypeScript
 │   ├── features/     # Componentes por funcionalidad
 │   │   ├── cameras/  # Gestión de cámaras
@@ -172,6 +175,7 @@ Distribuido bajo licencia MIT. Ver `LICENSE` para más información.
 ---
 
 > ⚠️ **Notas importantes**:
+>
 > - En Windows, usar siempre `yarn` en lugar de `npm` debido a un bug con dependencias nativas
 > - El streaming requiere que el backend FastAPI esté ejecutándose en `http://localhost:8000`
 > - Para cámaras Dahua, usar la ruta RTSP específica: `/cam/realmonitor?channel=1&subtype=0`

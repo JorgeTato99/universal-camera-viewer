@@ -70,6 +70,24 @@ export const CameraCard: React.FC<CameraCardProps> = ({
   // Estado para el tiempo conectado
   const [connectionTime, setConnectionTime] = React.useState<Date | null>(null);
   const [displayTime, setDisplayTime] = React.useState("--:--:--");
+  
+  // Definir isConnected e isConnecting antes de usarlos
+  const isConnected = status === "connected";
+  const isConnecting = status === "connecting";
+  
+  // Resetear métricas cuando se desconecta
+  React.useEffect(() => {
+    if (!isConnected) {
+      setStreamMetrics({
+        fps: 0,
+        latency: 0,
+        isStreaming: false,
+      });
+      setConnectionTime(null);
+      setDisplayTime("--:--:--");
+    }
+  }, [isConnected]);
+  
   const getStatusColor = () => {
     switch (status) {
       case "connected":
@@ -95,15 +113,13 @@ export const CameraCard: React.FC<CameraCardProps> = ({
         return "Desconectada";
     }
   };
-
-  const isConnected = status === "connected";
-  const isConnecting = status === "connecting";
   
   // Efecto para actualizar el tiempo cuando se conecta/desconecta
   React.useEffect(() => {
     if (streamMetrics.isStreaming && !connectionTime) {
       setConnectionTime(new Date());
-    } else if (!streamMetrics.isStreaming) {
+    } else if (!streamMetrics.isStreaming && connectionTime) {
+      // Solo resetear si había una conexión previa
       setConnectionTime(null);
       setDisplayTime("--:--:--");
     }

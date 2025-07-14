@@ -7,23 +7,165 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.1] - 2025-07-14 - 🏗️ REFACTORING Y MEJORAS DE CALIDAD
+
+### 🔄 Changed - Refactoring Arquitectónico Mayor
+
+- **Cumplimiento estricto del patrón MVP**:
+  - Creación de `WebSocketStreamService` para separar lógica de negocio del handler
+  - Eliminación de acceso directo a Presenter desde WebSocket handler
+  - Implementación correcta del flujo: Handler → Service → Presenter
+  - Separación clara de responsabilidades entre capas
+
+### 🛡️ Security - Gestión de Credenciales
+
+- **Eliminación de credenciales hardcodeadas**:
+  - Creación de `config/settings.py` para gestión centralizada
+  - Documentación completa en `.env.example` con todas las variables necesarias
+  - Preparación para futuro almacenamiento seguro en base de datos
+
+### 🐛 Fixed - Correcciones de Código
+
+- **Métodos duplicados eliminados**:
+  - `is_streaming` renombrado a `is_camera_streaming` en VideoStreamPresenter
+  - Eliminación de métodos de compatibilidad obsoletos
+- **Corrección de patrones async/await**:
+  - Reemplazo de `time.sleep()` por `await asyncio.sleep()` en RTSPStreamManager
+  - Método `_attempt_reconnect` corregido para ser asíncrono
+- **Problemas de UI corregidos**:
+  - Timer de conexión ahora se detiene correctamente al desconectar
+  - FPS y latencia se resetean a 0 al desconectar
+  - Corrección de error "Cannot access 'isConnected' before initialization"
+
+### 🎨 Code Quality - Mejoras de Calidad
+
+- **Logging profesionalizado**:
+  - Eliminación completa de emojis en mensajes de log (más de 100 instancias)
+  - Mensajes más concisos y profesionales
+  - Mantenimiento de información útil para debugging
+- **Organización mejorada**:
+  - Imports optimizados y organizados
+  - Eliminación de código muerto y referencias obsoletas
+  - Documentación mejorada en métodos críticos
+
+### 📚 Documentation - Actualización
+
+- **Variables de entorno documentadas**:
+  - `.env.example` actualizado con secciones organizadas
+  - Comentarios explicativos para cada variable
+  - Valores por defecto claramente indicados
+
+---
+
+## [0.9.0] - 2025-07-14 - 🎉 CICLO COMPLETO FUNCIONAL
+
+### ✨ Added - Streaming Completo Funcional
+
+- **Streaming en tiempo real completamente funcional**:
+  - Conexión exitosa con cámara Dahua real (Hero-K51H)
+  - Transmisión fluida de video a 13-15 FPS
+  - Conversión correcta de colores BGR a JPEG
+  - Área de video limpia sin overlays
+  - Contador de tiempo de conexión real
+  - Actualización de métricas cada segundo
+
+### 🐛 Fixed - Problemas Finales Resueltos
+
+- **Corrección de inversión de colores**:
+  - Eliminada conversión innecesaria BGR→RGB
+  - Frames enviados directamente en formato BGR para cv2.imencode
+  - Colores naturales restaurados (piel y objetos con colores correctos)
+- **Métricas actualizándose correctamente**:
+  - FPS calculado con ventana deslizante de 30 frames
+  - Latencia simulada de 20-70ms
+  - Contador de tiempo en línea con formato HH:MM:SS
+- **UI completamente pulida**:
+  - Métricas movidas fuera del área de video
+  - Información técnica en header de la tarjeta
+  - Estado visual claro de conexión/desconexión
+
+### 📚 Documentation - Actualización Completa
+
+- **CURRENT_STATUS.md** actualizado a v0.9.0 con estado FUNCIONAL
+- **README.md** actualizado con características de streaming real
+- **docs/FEATURES.md** marcando streaming como funcional
+- **docs/ARCHITECTURE.md** con arquitectura WebSocket documentada
+
+---
+
+## [0.8.7] - 2025-07-14
+
+### ✨ Added - WebSocket Streaming Funcional
+
+- **Streaming WebSocket real implementado**:
+  - Conexión exitosa con cámara Dahua (192.168.1.172)
+  - RTSP URL correcta: `/cam/realmonitor?channel=1&subtype=0`
+  - Transmisión de frames base64 funcionando
+  - Heartbeat ping/pong cada 30 segundos
+  - Reconexión automática con backoff
+
+### 🐛 Fixed - Problemas de Conexión
+
+- **Errores de configuración corregidos**:
+  - ConnectionConfig con parámetros correctos (rtsp_port vs protocol)
+  - Abstract methods renombrados (_initialize_presenter)
+  - StreamStatus.STREAMING en lugar de ACTIVE
+  - RTSP path específico para Dahua
+- **WebSocket mejorado**:
+  - Manejo correcto de mensajes ping
+  - Prevención de envío después de cierre
+  - Limpieza de conexiones al desconectar
+  - Frontend deteniendo stream correctamente
+
+### 🔄 Changed - UI/UX Improvements
+
+- **Reorganización de información en CameraCard**:
+  - Métricas (FPS, MS) movidas al header
+  - Área de video completamente limpia
+  - Tiempo de conexión real implementado
+  - VideoPlayer sin overlay de estado
+
+---
+
+## [0.8.6] - 2025-07-14
+
+### ✨ Added - Integración Real de Cámaras
+
+- **Preparación para conexión con cámaras reales**:
+  - StreamHandler con soporte para credenciales reales
+  - VideoStreamPresenter integrado completamente
+  - ConnectionConfig con todos los parámetros necesarios
+  - Logging detallado para debugging
+
+### 🐛 Fixed - WebSocket y Streaming Service
+
+- **Mejoras en StreamingService**:
+  - Singleton mejorado por cámara
+  - Prevención de conexiones duplicadas
+  - Mejor gestión de reconexión
+  - Logs detallados para debugging
+
+### 🔄 Changed - Video Display
+
+- **Área de video mejorada**:
+  - Relación de aspecto cambiada de 4:3 a 16:9
+  - CSS aspectRatio para mantener proporciones
+  - Mejor uso del espacio en la tarjeta
+
+---
+
 ## [0.8.5] - 2025-07-14
 
-### ✨ Added - Real Camera Integration
-- **Integración con cámaras reales** en WebSocket streaming:
-  - Configuración para cámara Dahua con credenciales reales
-  - Intento de conexión RTSP antes de fallback a mock
-  - VideoStreamPresenter integrado en StreamHandler
-  - Soporte para streaming real con conversión a base64
+### ✨ Added - Real Camera Integration Base
 
-### 🐛 Fixed - WebSocket Streaming
-- **Mejoras en StreamingService**:
-  - Manejo mejorado de conexiones singleton por cámara
-  - Prevención de conexiones duplicadas en React StrictMode
-  - Mejor gestión de reconexión y timeouts
-  - Logs detallados para debugging de conexiones
+- **Base para integración con cámaras reales**:
+  - Configuración inicial para cámara Dahua
+  - Estructura para credenciales reales
+  - VideoStreamPresenter preparado
+  - Sistema de fallback a mock
 
 ### 📊 Changed - Mock Data
+
 - **Expansión de cámaras mock** de 3 a 6:
   - Hikvision DS-2CD2043G2-I (Entrada Principal)
   - Xiaomi Mi Home Security 360 (Pasillo)
@@ -35,6 +177,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 ## [0.8.4] - 2025-07-14
 
 ### ✨ Added - Video Streaming Components
+
 - **Componentes de streaming de video**:
   - `VideoPlayer` completo con controles y métricas en tiempo real
   - `CameraVideoPreview` para estado desconectado
@@ -43,6 +186,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
   - Controles de play/pause, fullscreen, snapshot
 
 ### 🎨 Changed - Camera UI
+
 - **CameraCard mejorado**:
   - Integración con VideoPlayer para streaming real
   - Información técnica movida arriba del video
@@ -50,6 +194,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
   - Estados visuales mejorados para conectado/desconectado
 
 ### 🐛 Fixed - API Integration
+
 - **Corrección de integración API**:
   - FastAPI endpoints devolviendo formato correcto
   - Manejo de trailing slashes en URLs
@@ -61,6 +206,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 ## [0.8.3] - 2025-07-14
 
 ### ✨ Added - FastAPI Backend
+
 - **Backend FastAPI completo**:
   - Servidor API REST con estructura profesional
   - WebSocket endpoints para streaming de video
@@ -76,6 +222,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
   - Protocolo de mensajes estructurado
 
 ### 🔧 Changed - Architecture Migration
+
 - **Migración de Tauri a FastAPI + React**:
   - Backend Python puro con FastAPI
   - Frontend React standalone
@@ -84,6 +231,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
   - Scripts de desarrollo para ejecutar ambos servidores
 
 ### 📚 Added - API Documentation
+
 - **Documentación OpenAPI automática**:
   - Swagger UI en `/docs`
   - ReDoc en `/redoc`

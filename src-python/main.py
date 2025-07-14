@@ -59,7 +59,7 @@ class CameraViewerApp:
             ]
         )
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"🚀 Iniciando {self.app_title}")
+        self.logger.info(f"Iniciando {self.app_title}")
     
     async def build(self, page: ft.Page):
         """
@@ -69,7 +69,7 @@ class CameraViewerApp:
             page: Página principal de Flet
         """
         try:
-            self.logger.info("📱 Construyendo aplicación MVP")
+            self.logger.info("Construyendo aplicación MVP")
             
             # Configurar página principal
             self._configure_page(page)
@@ -80,10 +80,10 @@ class CameraViewerApp:
             # Configurar manejo de cierre
             page.window.on_event = self._on_window_event
             
-            self.logger.info("✅ Aplicación MVP inicializada exitosamente")
+            self.logger.info("Aplicación MVP inicializada exitosamente")
             
         except Exception as e:
-            self.logger.error(f"❌ Error construyendo aplicación: {str(e)}")
+            self.logger.error(f"Error construyendo aplicación: {str(e)}")
             await self._show_error_dialog(page, f"Error de inicialización: {str(e)}")
     
     def _configure_page(self, page: ft.Page):
@@ -117,7 +117,7 @@ class CameraViewerApp:
             page.theme_mode = ft.ThemeMode.SYSTEM
             page.bgcolor = ft.Colors.GREY_50
         
-        self.logger.info("🎨 Tema Material Design 3 configurado con ThemeService")
+        self.logger.info("Tema Material Design 3 configurado con ThemeService")
     
     async def _initialize_mvp(self, page: ft.Page):
         """Inicializa la arquitectura MVP completa."""
@@ -139,11 +139,11 @@ class CameraViewerApp:
             # Configurar callback de resize (no disponible en Flet actual)
             # page.on_window_resize = self._on_window_resize
             
-            self.logger.info("🏗️ Arquitectura MVP refactorizada inicializada")
-            self.logger.info("🎯 Navegación horizontal implementada")
+            self.logger.info("Arquitectura MVP refactorizada inicializada")
+            self.logger.info("Navegación horizontal implementada")
             
         except Exception as e:
-            self.logger.error(f"❌ Error inicializando MVP: {str(e)}")
+            self.logger.error(f"Error inicializando MVP: {str(e)}")
             raise
     
     async def _show_error_dialog(self, page: ft.Page, message: str):
@@ -194,10 +194,10 @@ class CameraViewerApp:
             # Limpiar todos los presenters
             await cleanup_all_presenters()
             
-            self.logger.info("✅ Limpieza completada")
+            self.logger.info("Limpieza completada")
             
         except Exception as e:
-            self.logger.error(f"❌ Error durante limpieza: {str(e)}")
+            self.logger.error(f"Error durante limpieza: {str(e)}")
         finally:
             # Cerrar aplicación
             pass  # La página se cerrará automáticamente
@@ -233,9 +233,9 @@ def main():
         asyncio.run(main_async())
         
     except KeyboardInterrupt:
-        print("\\n🛑 Aplicación interrumpida por el usuario")
+        print("\\nAplicación interrumpida por el usuario")
     except Exception as e:
-        print(f"❌ Error fatal en la aplicación: {str(e)}")
+        print(f"Error fatal en la aplicación: {str(e)}")
         logging.error(f"Error fatal: {str(e)}", exc_info=True)
     finally:
         print("👋 Aplicación finalizada")

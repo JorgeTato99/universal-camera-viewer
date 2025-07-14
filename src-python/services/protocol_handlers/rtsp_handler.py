@@ -253,7 +253,7 @@ class RTSPHandler(BaseHandler):
                         await self._cache_frame_properties(frame)
                         
                         quality_desc = qualities.get(stream_type, 'Unknown')
-                        self.logger.info(f"✅ Conexión RTSP exitosa: {quality_desc}")
+                        self.logger.info(f"Conexión RTSP exitosa: {quality_desc}")
                         return True
                     else:
                         cap.release()
@@ -265,7 +265,7 @@ class RTSPHandler(BaseHandler):
                 self.logger.debug(f"Error con stream '{stream_type}': {str(e)}")
                 continue
         
-        self.logger.error("❌ No se pudo establecer conexión RTSP con ninguna URL")
+        self.logger.error("No se pudo establecer conexión RTSP con ninguna URL")
         return False
     
     def _create_video_capture(self, url: str) -> Optional[cv2.VideoCapture]:
@@ -586,7 +586,7 @@ class RTSPHandler(BaseHandler):
                     
                     qualities = self._get_stream_qualities()
                     quality_desc = qualities.get(stream_type, 'Unknown')
-                    self.logger.info(f"✅ Stream cambiado a '{stream_type}': {quality_desc}")
+                    self.logger.info(f"Stream cambiado a '{stream_type}': {quality_desc}")
                     return True
                 else:
                     cap.release()

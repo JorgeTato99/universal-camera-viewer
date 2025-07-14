@@ -1,11 +1,11 @@
-# 📊 Estado Actual del Proyecto - v0.8.5 (14 Enero 2025)
+# 📊 Estado Actual del Proyecto - v0.9.0 (14 Julio 2025)
 
 > **Documento técnico consolidado** - ¡CICLO COMPLETO FUNCIONAL! Streaming en tiempo real implementado.
 
 ![Estado](https://img.shields.io/badge/Estado-FUNCIONAL-brightgreen)
 ![Backend](https://img.shields.io/badge/Backend%20FastAPI-100%25%20Completo-brightgreen)
 ![Frontend](https://img.shields.io/badge/Frontend%20React-100%25%20Streaming-brightgreen)
-![Versión](https://img.shields.io/badge/Versión-0.8.5-blue)
+![Versión](https://img.shields.io/badge/Versión-0.9.0-blue)
 
 ---
 
@@ -294,7 +294,7 @@ yarn tauri-build    # Generar instalador .exe/.msi
 
 ---
 
-> **Ultima Actualización 🎉**  
+> **¡FELICITACIONES! 🎉**  
 > **El Universal Camera Viewer tiene ahora un ciclo completo funcional de streaming en tiempo real.**  
-> **Versión: 0.8.5 - Primera versión con streaming completo**  
+> **Versión: 0.9.0 - Primera versión con streaming completo**  
 > **Última actualización: 14 de Julio 2025**
