@@ -14,18 +14,30 @@ interface Camera {
   name: string;
   status: "connected" | "disconnected" | "connecting" | "error";
   aspectRatio?: "16:9" | "4:3";
+  ip?: string;
+  fps?: number;
+  latency?: number;
+  connectedTime?: string;
 }
 
 interface CameraGridProps {
   cameras: Camera[];
   gridColumns: 2 | 3;
   isLoading?: boolean;
+  onCameraConnect?: (cameraId: string) => void;
+  onCameraDisconnect?: (cameraId: string) => void;
+  onCameraSettings?: (cameraId: string) => void;
+  onCameraCapture?: (cameraId: string) => void;
 }
 
 export const CameraGrid: React.FC<CameraGridProps> = ({
   cameras,
   gridColumns,
   isLoading = false,
+  onCameraConnect,
+  onCameraDisconnect,
+  onCameraSettings,
+  onCameraCapture,
 }) => {
   // Si no hay cámaras, mostrar estado vacío
   if (cameras.length === 0 && !isLoading) {
@@ -157,6 +169,9 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
             // Asegurar que las cards mantengan un aspect ratio consistente
             "& > *": {
               minHeight: "280px",
+              height: "100%", // Asegurar que el wrapper use toda la altura
+              display: "flex", // Para que la card interna se expanda
+              flexDirection: "column",
               // Animación para las cards individuales
               transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               transformOrigin: "center",
@@ -175,6 +190,10 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                 animation: "slideInUp 0.5s ease-out",
                 animationDelay: `${index * 0.1}s`,
                 animationFillMode: "both",
+                // Asegurar que el wrapper ocupe toda la altura disponible
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
                 "@keyframes slideInUp": {
                   "0%": {
                     opacity: 0,
@@ -192,6 +211,14 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
                 name={camera.name}
                 status={camera.status}
                 aspectRatio={camera.aspectRatio}
+                ip={camera.ip}
+                fps={camera.fps}
+                latency={camera.latency}
+                connectedTime={camera.connectedTime}
+                onConnect={() => onCameraConnect?.(camera.id)}
+                onDisconnect={() => onCameraDisconnect?.(camera.id)}
+                onSettings={() => onCameraSettings?.(camera.id)}
+                onCapture={() => onCameraCapture?.(camera.id)}
               />
             </Box>
           ))}

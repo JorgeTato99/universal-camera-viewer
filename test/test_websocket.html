@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test WebSocket Streaming</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        #video {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        #log {
+            height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test WebSocket Streaming</h1>
+        
+        <div class="controls">
+            <input type="text" id="cameraId" value="cam_192.168.1.172" placeholder="Camera ID">
+            <button id="connectBtn" onclick="connect()">Conectar</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Desconectar</button>
+            <button id="startBtn" onclick="startStream()" disabled>Iniciar Stream</button>
+            <button id="stopBtn" onclick="stopStream()" disabled>Detener Stream</button>
+        </div>
+        
+        <div id="status">Estado: Desconectado</div>
+        
+        <img id="video" alt="Video Stream">
+        
+        <h3>Log:</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let frameCount = 0;
+        let startTime = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${time}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(status) {
+            document.getElementById('status').textContent = `Estado: ${status}`;
+        }
+
+        function connect() {
+            const cameraId = document.getElementById('cameraId').value;
+            if (!cameraId) {
+                log('Por favor ingresa un Camera ID', 'error');
+                return;
+            }
+
+            log(`Conectando a WebSocket para cámara ${cameraId}...`);
+            updateStatus('Conectando...');
+
+            ws = new WebSocket(`ws://localhost:8000/ws/stream/${cameraId}`);
+
+            ws.onopen = function() {
+                log('WebSocket conectado', 'success');
+                updateStatus('Conectado');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('startBtn').disabled = false;
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'frame') {
+                        frameCount++;
+                        const video = document.getElementById('video');
+                        video.src = `data:image/jpeg;base64,${data.data}`;
+                        video.style.display = 'block';
+                        
+                        if (!startTime) startTime = Date.now();
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const fps = frameCount / elapsed;
+                        
+                        if (frameCount % 30 === 0) {
+                            log(`Frames recibidos: ${frameCount}, FPS: ${fps.toFixed(2)}`);
+                        }
+                    } else if (data.type === 'status') {
+                        log(`Estado: ${data.status}`);
+                    } else if (data.type === 'error') {
+                        log(`Error: ${data.error}`, 'error');
+                    } else if (data.type === 'connection') {
+                        log(`Conexión establecida con cámara ${data.camera_id}`, 'success');
+                    }
+                } catch (error) {
+                    log(`Error procesando mensaje: ${error.message}`, 'error');
+                }
+            };
+
+            ws.onerror = function(error) {
+                log('Error en WebSocket', 'error');
+                updateStatus('Error');
+            };
+
+            ws.onclose = function() {
+                log('WebSocket desconectado');
+                updateStatus('Desconectado');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('video').style.display = 'none';
+                frameCount = 0;
+                startTime = null;
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                log('Desconectando WebSocket...');
+                ws.close();
+            }
+        }
+
+        function startStream() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Iniciando stream...');
+                ws.send(JSON.stringify({
+                    action: 'start_stream',
+                    params: {
+                        quality: 'medium',
+                        fps: 30,
+                        format: 'jpeg'
+                    }
+                }));
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+            }
+        }
+
+        function stopStream() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Deteniendo stream...');
+                ws.send(JSON.stringify({
+                    action: 'stop_stream'
+                }));
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+            }
+        }
+    </script>
+</body>
+</html>

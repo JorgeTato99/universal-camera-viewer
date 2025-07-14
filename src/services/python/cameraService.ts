@@ -3,12 +3,12 @@
  */
 
 import { apiClient, ApiClient } from '../api/apiClient';
+import { ConnectionStatus } from '../../types/camera.types';
 import { 
-  Camera, 
   ConnectionConfig, 
   CameraInfo,
-  ConnectionStatus 
-} from '../../types/camera.types';
+  Camera 
+} from '../../types/service.types';
 import { ApiResponse } from '../../types/api.types';
 
 export interface ConnectCameraRequest {

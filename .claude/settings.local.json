@@ -11,7 +11,11 @@
       "Bash(find:*)",
       "Bash(python:*)",
       "Bash(pip show:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(touch:*)",
+      "Bash(yarn type-check)",
+      "Bash(yarn tsc:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

@@ -2,8 +2,8 @@
  * Servicio para streaming de video por WebSocket
  */
 
-import { Camera } from '../../types/camera.types';
-import { StreamMetrics, StreamQuality } from '../../types/streaming.types';
+import { StreamMetrics } from '../../types/streaming.types';
+import { StreamQuality, Camera } from '../../types/service.types';
 
 export interface StreamConfig {
   quality: StreamQuality;

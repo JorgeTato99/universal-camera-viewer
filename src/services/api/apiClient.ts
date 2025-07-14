@@ -41,7 +41,9 @@ export class ApiClient {
    * Construir URL completa con parámetros de consulta
    */
   private buildURL(endpoint: string, params?: Record<string, any>): string {
-    const url = new URL(`${this.baseURL}${endpoint}`);
+    // Asegurar que los endpoints terminen con / para evitar redirecciones
+    const normalizedEndpoint = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+    const url = new URL(`${this.baseURL}${normalizedEndpoint}`);
     
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
