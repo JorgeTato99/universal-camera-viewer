@@ -100,21 +100,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           onClick={handleClick}
           size={size}
           sx={{
-            color:
-              effectiveTheme === "dark"
-                ? colorTokens.neutral[300]
-                : colorTokens.neutral[600],
+            color: (theme) => theme.palette.text.secondary,
             "&:hover": {
-              backgroundColor: alpha(
-                effectiveTheme === "dark"
-                  ? colorTokens.neutral[100]
-                  : colorTokens.neutral[900],
-                0.1
-              ),
-              color:
-                effectiveTheme === "dark"
-                  ? colorTokens.neutral[200]
-                  : colorTokens.neutral[700],
+              backgroundColor: (theme) => theme.palette.action.hover,
+              color: (theme) => theme.palette.text.primary,
             },
             transition: "all 0.2s ease",
           }}
@@ -133,15 +122,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           paper: {
             sx: {
               minWidth: 200,
-              backgroundColor:
-                effectiveTheme === "dark"
-                  ? colorTokens.background.darkPaper
-                  : colorTokens.background.paper,
-              border: `1px solid ${
-                effectiveTheme === "dark"
-                  ? colorTokens.neutral[700]
-                  : colorTokens.neutral[200]
-              }`,
+              backgroundColor: (theme) => theme.palette.background.paper,
+              border: (theme) => `1px solid ${theme.palette.divider}`,
               boxShadow:
                 effectiveTheme === "dark"
                   ? "0 8px 32px rgba(0, 0, 0, 0.32)"
@@ -159,17 +141,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
               py: 1.5,
               px: 2,
               gap: 1.5,
-              color:
-                effectiveTheme === "dark"
-                  ? colorTokens.neutral[200]
-                  : colorTokens.neutral[800],
+              color: (theme) => theme.palette.text.primary,
               "&:hover": {
-                backgroundColor: alpha(
-                  effectiveTheme === "dark"
-                    ? colorTokens.neutral[100]
-                    : colorTokens.neutral[900],
-                  0.05
-                ),
+                backgroundColor: (theme) => theme.palette.action.hover,
               },
               "&.Mui-selected": {
                 backgroundColor: alpha(colorTokens.primary[500], 0.1),

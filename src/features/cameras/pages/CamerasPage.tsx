@@ -53,8 +53,8 @@ export const CamerasPage: React.FC = () => {
       <Box
         sx={{
           p: 3,
-          borderBottom: `1px solid ${colorTokens.neutral[200]}`,
-          backgroundColor: colorTokens.background.paper,
+          borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+          backgroundColor: (theme) => theme.palette.background.paper,
           flexShrink: 0,
         }}
       >

@@ -481,52 +481,6 @@ Esta versión marca el inicio de la migración de Flet a Tauri para lograr una a
 
 ## 🔮 Roadmap - Próximas Versiones
 
-### [0.8.0] - Planeado
-
-- **Presenter Layer** completo (MVP 100%)
-- **Event handling** profesional con delegation
-- **Business logic** completamente separado de UI
-- **Testing suite** básico (>85% coverage)
-
-### [0.9.0] - Planeado
-
-- **DuckDB Analytics** integration
-- **Real-time metrics** dashboard
-- **Performance monitoring** avanzado
-- **Export/import** functionality
-
-### [1.0.0] - Release Candidate
-
-- **MVP Architecture** 100% completo
-- **Testing suite** completo (>90% coverage)
-- **Performance optimization** final
-- **Documentation** completa
-
-### [1.1.0] - Native Distribution
-
-- **Flet packaging** nativo
-- **Windows executable** (.exe) + installer
-- **macOS application** (.app) + DMG
-- **Linux executable** (.deb/.AppImage)
-- **Auto-update system** functionality
-
----
-
-## 📋 Notas de Migración
-
-### Tkinter → Flet (0.5.0 → 0.7.0)
-
-- **UI Framework**: Cambio completo de Tkinter a Flet
-- **Architecture**: Evolución de MVC básico a MVP completo
-- **Performance**: Mejora significativa en rendering y responsiveness
-- **Compatibility**: Ejemplos Tkinter mantenidos en `examples/`
-
-### Dependencies Updates
-
-- **Python**: 3.8+ → 3.9+ (required for Flet)
-- **New**: flet>=0.24.1, cryptography>=41.0.0, pandas>=2.0.0
-- **Enhanced**: opencv-python, onvif-zeep con versiones específicas
-
 ---
 
 **Formato**: [Unreleased] para cambios aún no lanzados  

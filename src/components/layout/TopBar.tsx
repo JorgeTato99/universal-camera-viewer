@@ -118,7 +118,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             <Typography
               variant="body2"
               sx={{
-                color: colorTokens.neutral[200],
+                color: (theme) => theme.palette.text.secondary,
                 fontSize: "13px",
                 fontWeight: 500,
                 userSelect: "none",
@@ -139,10 +139,10 @@ export const TopBar: React.FC<TopBarProps> = ({
             size="small"
             sx={{
               p: 0.5,
-              color: colorTokens.neutral[400],
+              color: (theme) => theme.palette.text.secondary,
               "&:hover": {
-                backgroundColor: alpha(colorTokens.neutral[100], 0.1),
-                color: colorTokens.neutral[200],
+                backgroundColor: (theme) => theme.palette.action.hover,
+                color: (theme) => theme.palette.text.primary,
               },
             }}
           >
@@ -155,10 +155,10 @@ export const TopBar: React.FC<TopBarProps> = ({
             size="small"
             sx={{
               p: 0.5,
-              color: colorTokens.neutral[400],
+              color: (theme) => theme.palette.text.secondary,
               "&:hover": {
-                backgroundColor: alpha(colorTokens.neutral[100], 0.1),
-                color: colorTokens.neutral[200],
+                backgroundColor: (theme) => theme.palette.action.hover,
+                color: (theme) => theme.palette.text.primary,
               },
             }}
           >
@@ -169,10 +169,10 @@ export const TopBar: React.FC<TopBarProps> = ({
             size="small"
             sx={{
               p: 0.5,
-              color: colorTokens.neutral[400],
+              color: (theme) => theme.palette.text.secondary,
               "&:hover": {
-                backgroundColor: alpha(colorTokens.neutral[100], 0.1),
-                color: colorTokens.neutral[200],
+                backgroundColor: (theme) => theme.palette.action.hover,
+                color: (theme) => theme.palette.text.primary,
               },
             }}
           >
@@ -195,10 +195,10 @@ export const TopBar: React.FC<TopBarProps> = ({
             onClick={handleMinimize}
             sx={{
               p: 0.5,
-              color: colorTokens.neutral[400],
+              color: (theme) => theme.palette.text.secondary,
               "&:hover": {
-                backgroundColor: alpha(colorTokens.neutral[100], 0.1),
-                color: colorTokens.neutral[200],
+                backgroundColor: (theme) => theme.palette.action.hover,
+                color: (theme) => theme.palette.text.primary,
               },
             }}
           >
@@ -210,10 +210,10 @@ export const TopBar: React.FC<TopBarProps> = ({
             onClick={handleMaximize}
             sx={{
               p: 0.5,
-              color: colorTokens.neutral[400],
+              color: (theme) => theme.palette.text.secondary,
               "&:hover": {
-                backgroundColor: alpha(colorTokens.neutral[100], 0.1),
-                color: colorTokens.neutral[200],
+                backgroundColor: (theme) => theme.palette.action.hover,
+                color: (theme) => theme.palette.text.primary,
               },
             }}
           >
@@ -225,7 +225,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             onClick={handleClose}
             sx={{
               p: 0.5,
-              color: colorTokens.neutral[400],
+              color: (theme) => theme.palette.text.secondary,
               "&:hover": {
                 backgroundColor: alpha("#f44336", 0.8),
                 color: "white",

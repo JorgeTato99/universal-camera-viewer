@@ -98,15 +98,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       sx={{
         width: collapsed ? "48px" : "240px",
         height: "100vh",
-        backgroundColor: colorTokens.neutral[800],
-        borderRight: `1px solid ${colorTokens.neutral[700]}`,
+        backgroundColor:
+          effectiveTheme === "dark"
+            ? colorTokens.neutral[800]
+            : colorTokens.neutral[100],
+        borderRight: `1px solid ${
+          effectiveTheme === "dark"
+            ? colorTokens.neutral[700]
+            : colorTokens.neutral[300]
+        }`,
         display: "flex",
         flexDirection: "column",
         transition: "width 0.2s ease",
         position: "fixed",
         left: 0,
         top: "32px", // Altura del TopBar
-        zIndex: theme.zIndex.drawer,
+        zIndex: muiTheme.zIndex.drawer,
         overflow: "hidden",
       }}
     >
@@ -155,8 +162,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       ? alpha(colorTokens.primary[500], 0.1)
                       : "transparent",
                     color: active
-                      ? colorTokens.primary[400]
-                      : colorTokens.neutral[300],
+                      ? colorTokens.primary[
+                          effectiveTheme === "dark" ? 400 : 600
+                        ]
+                      : effectiveTheme === "dark"
+                      ? colorTokens.neutral[300]
+                      : colorTokens.neutral[600],
                     justifyContent: collapsed ? "center" : "flex-start",
                     px: collapsed ? 0 : 1.5,
                     gap: collapsed ? 0 : 1.5,
@@ -164,10 +175,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     "&:hover": {
                       backgroundColor: active
                         ? alpha(colorTokens.primary[500], 0.15)
-                        : alpha(colorTokens.neutral[100], 0.05),
+                        : alpha(
+                            effectiveTheme === "dark"
+                              ? colorTokens.neutral[100]
+                              : colorTokens.neutral[900],
+                            0.05
+                          ),
                       color: active
-                        ? colorTokens.primary[300]
-                        : colorTokens.neutral[200],
+                        ? colorTokens.primary[
+                            effectiveTheme === "dark" ? 300 : 700
+                          ]
+                        : (theme) => theme.palette.text.primary,
                     },
                     transition: "all 0.2s ease",
                   }}
@@ -214,7 +232,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sección inferior - Controles adicionales */}
       <Box
         sx={{
-          borderTop: `1px solid ${colorTokens.neutral[700]}`,
+          borderTop: `1px solid ${
+            effectiveTheme === "dark"
+              ? colorTokens.neutral[700]
+              : colorTokens.neutral[300]
+          }`,
           p: 1,
           display: "flex",
           flexDirection: "column",
@@ -233,11 +255,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               width: collapsed ? "40px" : "100%",
               height: "32px",
               borderRadius: "4px",
-              color: colorTokens.neutral[400],
+              color:
+                effectiveTheme === "dark"
+                  ? colorTokens.neutral[400]
+                  : colorTokens.neutral[600],
               fontSize: "16px",
               "&:hover": {
-                backgroundColor: alpha(colorTokens.neutral[100], 0.05),
-                color: colorTokens.neutral[200],
+                backgroundColor: alpha(
+                  effectiveTheme === "dark"
+                    ? colorTokens.neutral[100]
+                    : colorTokens.neutral[900],
+                  0.05
+                ),
+                color: (theme) => theme.palette.text.primary,
               },
             }}
           >
@@ -271,10 +301,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               px: 1,
               py: 0.5,
               fontSize: "10px",
-              color: colorTokens.neutral[500],
+              color:
+                effectiveTheme === "dark"
+                  ? colorTokens.neutral[500]
+                  : colorTokens.neutral[600],
               textAlign: "center",
               borderRadius: "4px",
-              backgroundColor: alpha(colorTokens.neutral[600], 0.1),
+              backgroundColor: alpha(
+                effectiveTheme === "dark"
+                  ? colorTokens.neutral[600]
+                  : colorTokens.neutral[400],
+                0.1
+              ),
             }}
           >
             v2.0.0
