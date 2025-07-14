@@ -100,12 +100,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         height: "100vh",
         backgroundColor:
           effectiveTheme === "dark"
-            ? colorTokens.neutral[800]
-            : colorTokens.neutral[100],
+            ? colorTokens.background.darkPaper // Nivel 2: Intermedio
+            : colorTokens.background.lightSidebar, // Nivel 2: Intermedio
         borderRight: `1px solid ${
           effectiveTheme === "dark"
-            ? colorTokens.neutral[700]
-            : colorTokens.neutral[300]
+            ? colorTokens.background.dark // Separador con nivel 3
+            : colorTokens.background.light // Separador con nivel 3
         }`,
         display: "flex",
         flexDirection: "column",

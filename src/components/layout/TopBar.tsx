@@ -60,12 +60,12 @@ export const TopBar: React.FC<TopBarProps> = ({
       sx={{
         backgroundColor:
           effectiveTheme === "dark"
-            ? colorTokens.neutral[900]
-            : colorTokens.neutral[800],
+            ? colorTokens.background.darkSurface // Nivel 1: Más oscuro
+            : colorTokens.background.surface, // Nivel 1: Más claro
         borderBottom: `1px solid ${
           effectiveTheme === "dark"
-            ? colorTokens.neutral[800]
-            : colorTokens.neutral[700]
+            ? colorTokens.background.darkPaper // Separador con nivel 2
+            : colorTokens.background.lightSidebar // Separador con nivel 2
         }`,
         zIndex: muiTheme.zIndex.drawer + 1,
         height: "32px",

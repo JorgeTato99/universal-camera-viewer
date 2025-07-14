@@ -57,14 +57,20 @@ export const colorTokens = {
     900: "#212121",
   },
 
-  // Colores de fondo
+  // Colores de fondo - Jerarquía de 3 niveles
   background: {
-    light: "#fafafa",
-    dark: "#121212",
-    paper: "#ffffff",
-    darkPaper: "#1e1e1e",
-    surface: "#f5f5f5",
-    darkSurface: "#2a2a2a",
+    // Modo claro - Jerarquía de 3 niveles
+    light: "#fafafa", // Nivel 3: Fondo principal claro
+    paper: "#ffffff", // Elementos paper claros
+    surface: "#f8f9fa", // Nivel 1: TopBar (más claro)
+    lightSidebar: "#f5f5f5", // Nivel 2: Sidebar (intermedio)
+    lightElevated: "#ffffff", // Para elementos elevados
+
+    // Modo oscuro - Jerarquía de 3 niveles
+    dark: "#2a2a2a", // Nivel 3: Fondo principal (más claro)
+    darkPaper: "#1a1a1a", // Nivel 2: Sidebar (intermedio)
+    darkSurface: "#121212", // Nivel 1: TopBar (más oscuro)
+    darkElevated: "#363636", // Para elementos elevados sobre fondo principal
   },
 
   // Colores de alerta
@@ -155,13 +161,13 @@ export const shadowTokens = {
 export const borderTokens = {
   radius: {
     none: "0",
-    sm: "0.125rem", // 2px
-    base: "0.25rem", // 4px
-    md: "0.375rem", // 6px
-    lg: "0.5rem", // 8px
-    xl: "0.75rem", // 12px
-    "2xl": "1rem", // 16px
-    full: "9999px",
+    sm: "0.125rem", // 2px - Solo para elementos muy pequeños
+    base: "0.125rem", // 2px - Mínimo redondeado para consistencia
+    md: "0.25rem", // 4px - Solo para elementos especiales
+    lg: "0.25rem", // 4px - Máximo redondeado general
+    xl: "0.375rem", // 6px - Solo para elementos destacados
+    "2xl": "0.5rem", // 8px - Solo para elementos muy especiales
+    full: "9999px", // Para elementos circulares (badges, etc.)
   },
 
   width: {

@@ -140,7 +140,9 @@ export const useAppStore = create<AppState>()(
 
             // Resolver tema inicial basado en configuración guardada
             const { themeMode } = get();
-            const effectiveTheme = resolveEffectiveTheme(themeMode);
+            // Forzar inicio en light si no hay configuración específica
+            const effectiveTheme =
+              themeMode === "system" ? getSystemTheme() : themeMode;
 
             // Escuchar cambios en la preferencia del sistema
             if (typeof window !== "undefined") {
@@ -175,7 +177,7 @@ export const useAppStore = create<AppState>()(
         },
       }),
       {
-        name: "app-store",
+        name: "app-store-v2",
         partialize: (state) => ({
           themeMode: state.themeMode,
           sidebarCollapsed: state.sidebarCollapsed,

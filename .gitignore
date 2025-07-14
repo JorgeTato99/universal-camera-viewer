@@ -268,6 +268,7 @@ sdk/wsdl/cache/
 # Configuraciones de cámaras guardadas
 camera_configs/
 saved_layouts/
+camera_credentials.json
 
 # Archivos de calibración
 calibration_data/

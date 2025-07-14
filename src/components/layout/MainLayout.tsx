@@ -47,7 +47,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       sx={{
         display: "flex",
         height: "100vh",
-        backgroundColor: colorTokens.background.light,
+        backgroundColor: (theme) => theme.palette.background.default,
         overflow: "hidden",
       }}
     >
@@ -97,7 +97,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           flexGrow: 1,
           height: "100vh",
           overflow: "auto",
-          backgroundColor: colorTokens.background.light,
+          backgroundColor: (theme) => theme.palette.background.default,
           marginLeft: {
             xs: 0,
             md: `${sidebarWidth}px`,

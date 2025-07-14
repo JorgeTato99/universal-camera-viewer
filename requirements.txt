@@ -29,6 +29,13 @@ pandas>=2.0.0                  # Manipulación de datos tabulares
 pytest>=7.4.0                  # Framework de pruebas
 pytest-cov>=4.1.0              # Cobertura de código
 
+# API REST y WebSockets
+fastapi>=0.109.0               # Framework web moderno para APIs
+uvicorn[standard]>=0.27.0      # Servidor ASGI para FastAPI
+websockets>=12.0               # Soporte WebSocket
+python-multipart>=0.0.6        # Soporte para form data
+aiofiles>=23.2.1               # Operaciones de archivo asíncronas
+
 # Herramientas de desarrollo básicas
 black>=23.0.0                  # Formateador de código
 flake8>=6.0.0                  # Linter básico 

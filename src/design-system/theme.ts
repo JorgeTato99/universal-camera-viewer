@@ -96,7 +96,7 @@ const baseThemeOptions: ThemeOptions = {
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: borderTokens.radius.lg,
+          borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
           textTransform: "none",
           padding: `${spacingTokens.sm} ${spacingTokens.md}`,
           fontSize: typographyTokens.fontSize.sm,
@@ -114,7 +114,7 @@ const baseThemeOptions: ThemeOptions = {
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: borderTokens.radius.lg,
+          borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
           boxShadow: shadowTokens.base,
           border: `1px solid ${colorTokens.neutral[200]}`,
           "&:hover": {
@@ -128,7 +128,7 @@ const baseThemeOptions: ThemeOptions = {
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: borderTokens.radius.md,
+          borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
           "& .MuiOutlinedInput-notchedOutline": {
             borderColor: colorTokens.neutral[300],
           },
@@ -157,7 +157,7 @@ const baseThemeOptions: ThemeOptions = {
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: borderTokens.radius.lg,
+          borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
           boxShadow: shadowTokens.base,
         },
       },
@@ -229,8 +229,8 @@ export const lightTheme = createTheme({
       contrastText: "#ffffff",
     },
     background: {
-      default: colorTokens.background.light,
-      paper: colorTokens.background.paper,
+      default: colorTokens.background.light, // Nivel 3: Fondo principal
+      paper: colorTokens.background.lightElevated, // Para elementos elevados
     },
     text: {
       primary: colorTokens.neutral[900],
@@ -288,8 +288,8 @@ export const darkTheme = createTheme({
       contrastText: "#ffffff",
     },
     background: {
-      default: colorTokens.background.dark,
-      paper: colorTokens.background.darkPaper,
+      default: colorTokens.background.dark, // Nivel 3: Fondo principal
+      paper: colorTokens.background.darkElevated, // Para elementos elevados
     },
     text: {
       primary: colorTokens.neutral[50],
@@ -298,8 +298,8 @@ export const darkTheme = createTheme({
     },
     divider: colorTokens.neutral[700],
     action: {
-      hover: colorTokens.neutral[800],
-      selected: colorTokens.primary[900],
+      hover: colorTokens.neutral[700], // Más sutil para hover
+      selected: colorTokens.primary[800], // Menos intenso
       disabled: colorTokens.neutral[600],
     },
   },

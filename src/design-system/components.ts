@@ -76,16 +76,19 @@ export const buttonStyles = {
 // === ESTILOS DE CARDS ===
 export const cardStyles = {
   default: {
-    backgroundColor: colorTokens.background.paper,
-    borderRadius: borderTokens.radius.lg,
+    backgroundColor: (theme: any) => theme.palette.background.paper,
+    borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
     boxShadow: shadowTokens.md,
     padding: spacingTokens.md,
-    border: `1px solid ${colorTokens.neutral[200]}`,
+    border: (theme: any) => `1px solid ${theme.palette.divider}`,
   },
 
   elevated: {
-    backgroundColor: colorTokens.background.paper,
-    borderRadius: borderTokens.radius.lg,
+    backgroundColor: (theme: any) =>
+      theme.palette.mode === "dark"
+        ? colorTokens.background.darkElevated
+        : colorTokens.background.lightElevated,
+    borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
     boxShadow: shadowTokens.lg,
     padding: spacingTokens.lg,
     border: "none",
@@ -93,11 +96,14 @@ export const cardStyles = {
 
   // Card específico para cámaras
   camera: {
-    backgroundColor: colorTokens.background.paper,
-    borderRadius: borderTokens.radius.lg,
+    backgroundColor: (theme: any) =>
+      theme.palette.mode === "dark"
+        ? colorTokens.background.darkElevated
+        : colorTokens.background.lightElevated,
+    borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
     boxShadow: shadowTokens.base,
     padding: spacingTokens.sm,
-    border: `1px solid ${colorTokens.neutral[200]}`,
+    border: (theme: any) => `1px solid ${theme.palette.divider}`,
     transition: "all 0.2s ease",
     "&:hover": {
       boxShadow: shadowTokens.lg,
@@ -107,8 +113,8 @@ export const cardStyles = {
 
   // Card con estado de error
   error: {
-    backgroundColor: colorTokens.background.paper,
-    borderRadius: borderTokens.radius.lg,
+    backgroundColor: (theme: any) => theme.palette.background.paper,
+    borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
     boxShadow: shadowTokens.base,
     padding: spacingTokens.md,
     border: `2px solid ${colorTokens.alert.error}`,
@@ -116,8 +122,8 @@ export const cardStyles = {
 
   // Card con estado de éxito
   success: {
-    backgroundColor: colorTokens.background.paper,
-    borderRadius: borderTokens.radius.lg,
+    backgroundColor: (theme: any) => theme.palette.background.paper,
+    borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
     boxShadow: shadowTokens.base,
     padding: spacingTokens.md,
     border: `2px solid ${colorTokens.alert.success}`,
@@ -127,8 +133,11 @@ export const cardStyles = {
 // === ESTILOS DE FORMULARIOS ===
 export const formStyles = {
   container: {
-    backgroundColor: colorTokens.background.paper,
-    borderRadius: borderTokens.radius.lg,
+    backgroundColor: (theme: any) =>
+      theme.palette.mode === "dark"
+        ? colorTokens.background.darkElevated
+        : colorTokens.background.lightElevated,
+    borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
     padding: spacingTokens.lg,
     boxShadow: shadowTokens.base,
   },
@@ -136,22 +145,22 @@ export const formStyles = {
   field: {
     marginBottom: spacingTokens.md,
     "& .MuiOutlinedInput-root": {
-      borderRadius: borderTokens.radius.md,
+      borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
       "& fieldset": {
-        borderColor: colorTokens.neutral[300],
+        borderColor: (theme: any) => theme.palette.divider,
       },
       "&:hover fieldset": {
-        borderColor: colorTokens.neutral[400],
+        borderColor: (theme: any) => theme.palette.text.secondary,
       },
       "&.Mui-focused fieldset": {
-        borderColor: colorTokens.primary[500],
+        borderColor: (theme: any) => theme.palette.primary.main,
         borderWidth: "2px",
       },
     },
   },
 
   label: {
-    color: colorTokens.neutral[700],
+    color: (theme: any) => theme.palette.text.primary,
     fontSize: "0.875rem",
     fontWeight: 500,
     marginBottom: spacingTokens.xs,
@@ -285,7 +294,7 @@ export const modalStyles = {
 
   content: {
     backgroundColor: colorTokens.background.paper,
-    borderRadius: borderTokens.radius.lg,
+    borderRadius: borderTokens.radius.base, // Más cuadrado como VS Code
     padding: spacingTokens.lg,
     maxWidth: "600px",
     width: "90%",

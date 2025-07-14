@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Stream Test - Universal Camera Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        #videoFrame {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .metrics {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 5px;
+        }
+        .log-entry.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .log-entry.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .log-entry.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        select, input {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.connected {
+            background: #28a745;
+            color: white;
+        }
+        .status.disconnected {
+            background: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎥 WebSocket Stream Test</h1>
+    
+    <div class="container">
+        <h2>Controles de Conexión</h2>
+        <div class="controls">
+            <input type="text" id="cameraId" placeholder="Camera ID" value="cam_192.168.1.172">
+            <button id="connectBtn" onclick="connectWebSocket()">Conectar</button>
+            <button id="disconnectBtn" onclick="disconnectWebSocket()" disabled>Desconectar</button>
+            <span id="status" class="status disconnected">Desconectado</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Stream de Video</h2>
+        <div class="controls">
+            <button id="startBtn" onclick="startStream()" disabled>Iniciar Stream</button>
+            <button id="stopBtn" onclick="stopStream()" disabled>Detener Stream</button>
+            
+            <select id="quality" onchange="updateQuality()" disabled>
+                <option value="low">Baja Calidad</option>
+                <option value="medium" selected>Calidad Media</option>
+                <option value="high">Alta Calidad</option>
+            </select>
+            
+            <select id="fps" onchange="updateFPS()" disabled>
+                <option value="10">10 FPS</option>
+                <option value="15">15 FPS</option>
+                <option value="30" selected>30 FPS</option>
+                <option value="60">60 FPS</option>
+            </select>
+        </div>
+        
+        <div class="video-container">
+            <img id="videoFrame" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" alt="Video Stream">
+            <div class="metrics" id="metrics">
+                FPS: -- | Frames: -- | Uptime: --s
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Log de Eventos</h2>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let frameCount = 0;
+        let isStreaming = false;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(connected) {
+            const status = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const streamControls = ['startBtn', 'stopBtn', 'quality', 'fps'];
+            
+            if (connected) {
+                status.textContent = 'Conectado';
+                status.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                document.getElementById('startBtn').disabled = false;
+            } else {
+                status.textContent = 'Desconectado';
+                status.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                streamControls.forEach(id => {
+                    document.getElementById(id).disabled = true;
+                });
+            }
+        }
+        
+        function connectWebSocket() {
+            const cameraId = document.getElementById('cameraId').value;
+            if (!cameraId) {
+                log('Por favor ingresa un Camera ID', 'error');
+                return;
+            }
+            
+            const wsUrl = `ws://localhost:8000/ws/stream/${cameraId}`;
+            log(`Conectando a ${wsUrl}...`);
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                log('Conexión WebSocket establecida', 'success');
+                updateStatus(true);
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+            
+            ws.onerror = (error) => {
+                log(`Error WebSocket: ${error}`, 'error');
+            };
+            
+            ws.onclose = () => {
+                log('Conexión WebSocket cerrada', 'info');
+                updateStatus(false);
+                isStreaming = false;
+                updateStreamControls();
+            };
+        }
+        
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'connection':
+                    log(`Conectado: ${data.client_id}`, 'success');
+                    break;
+                    
+                case 'frame':
+                    displayFrame(data);
+                    break;
+                    
+                case 'status':
+                    log(`Estado: ${data.status}`, 'info');
+                    if (data.status === 'stream_started') {
+                        isStreaming = true;
+                        updateStreamControls();
+                    } else if (data.status === 'stream_stopped') {
+                        isStreaming = false;
+                        updateStreamControls();
+                    }
+                    break;
+                    
+                case 'error':
+                    log(`Error: ${data.error}`, 'error');
+                    break;
+            }
+        }
+        
+        function displayFrame(frameData) {
+            const img = document.getElementById('videoFrame');
+            img.src = `data:image/jpeg;base64,${frameData.data}`;
+            
+            frameCount++;
+            
+            // Actualizar métricas
+            if (frameData.metrics) {
+                const metrics = frameData.metrics;
+                document.getElementById('metrics').innerHTML = 
+                    `FPS: ${metrics.fps} | Target: ${metrics.target_fps} | ` +
+                    `Frames: ${metrics.frames_sent} | Uptime: ${metrics.uptime_seconds}s | ` +
+                    `Quality: ${metrics.quality}`;
+            }
+        }
+        
+        function startStream() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket no conectado', 'error');
+                return;
+            }
+            
+            const quality = document.getElementById('quality').value;
+            const fps = parseInt(document.getElementById('fps').value);
+            
+            ws.send(JSON.stringify({
+                action: 'start_stream',
+                params: {
+                    quality: quality,
+                    fps: fps,
+                    format: 'jpeg'
+                }
+            }));
+            
+            log(`Iniciando stream: ${quality} @ ${fps}fps`);
+        }
+        
+        function stopStream() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket no conectado', 'error');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                action: 'stop_stream'
+            }));
+            
+            log('Deteniendo stream');
+        }
+        
+        function updateQuality() {
+            if (!ws || ws.readyState !== WebSocket.OPEN || !isStreaming) return;
+            
+            const quality = document.getElementById('quality').value;
+            ws.send(JSON.stringify({
+                action: 'update_quality',
+                params: { quality: quality }
+            }));
+            
+            log(`Calidad actualizada a: ${quality}`);
+        }
+        
+        function updateFPS() {
+            if (!ws || ws.readyState !== WebSocket.OPEN || !isStreaming) return;
+            
+            const fps = parseInt(document.getElementById('fps').value);
+            ws.send(JSON.stringify({
+                action: 'update_fps',
+                params: { fps: fps }
+            }));
+            
+            log(`FPS actualizado a: ${fps}`);
+        }
+        
+        function updateStreamControls() {
+            document.getElementById('startBtn').disabled = isStreaming;
+            document.getElementById('stopBtn').disabled = !isStreaming;
+            document.getElementById('quality').disabled = !isStreaming;
+            document.getElementById('fps').disabled = !isStreaming;
+        }
+    </script>
+</body>
+</html>
