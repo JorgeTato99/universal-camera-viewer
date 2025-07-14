@@ -195,18 +195,32 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, []);
 
-  // Auto-play
+  // Auto-play cuando el componente se monta
   useEffect(() => {
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+    
+    // Retrasar el auto-play para evitar problemas con StrictMode
     if (autoPlay && !isPlaying && !isConnecting) {
-      handleConnect();
+      timeoutId = setTimeout(() => {
+        if (mounted && !streamingService.isConnected()) {
+          handleConnect();
+        }
+      }, 100);
     }
     
     return () => {
-      if (isPlaying) {
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // Solo desconectar si el componente realmente está siendo desmontado
+      // y no es un re-render de StrictMode
+      if (isPlaying && !document.querySelector(`[data-camera-id="${cameraId}"]`)) {
         handleDisconnect();
       }
     };
-  }, [autoPlay]);
+  }, []); // Solo ejecutar al montar
 
   // Calcular métricas
   useEffect(() => {
@@ -227,6 +241,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <Box
       ref={containerRef}
+      data-camera-id={cameraId}
       sx={{
         position: 'relative',
         width,

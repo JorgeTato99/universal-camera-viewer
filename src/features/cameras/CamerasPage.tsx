@@ -10,7 +10,7 @@ import { useCameraStore } from "../../stores";
 import { cameraService } from "../../services/python/cameraService";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { Camera, ConnectionStatus, ProtocolType } from "../../types/camera.types";
-import { CameraInfo } from "../../types/service.types";
+import type { CameraInfo } from "../../types/service.types";
 
 // Función para convertir CameraInfo (de la API) a Camera (del store)
 const convertApiCameraToStoreCamera = (apiCamera: CameraInfo): Camera => {
@@ -89,12 +89,15 @@ const CamerasPage: React.FC = () => {
     const loadCameras = async () => {
       try {
         setLoadingCameras(true);
+        console.log('Cargando cámaras desde el backend...');
         const cameraList = await cameraService.listCameras();
+        console.log('Cámaras recibidas:', cameraList);
         
         // Limpiar cámaras existentes y agregar las nuevas
         clearAllCameras();
         cameraList.forEach(apiCamera => {
           const storeCamera = convertApiCameraToStoreCamera(apiCamera);
+          console.log('Agregando cámara al store:', storeCamera);
           addCamera(storeCamera);
         });
       } catch (error) {
@@ -110,10 +113,12 @@ const CamerasPage: React.FC = () => {
     };
 
     loadCameras();
-  }, [addCamera, addNotification]);
+  }, [addCamera, addNotification, clearAllCameras]);
 
   // Obtener cámaras filtradas del store
   const filteredCameras = getFilteredCameras();
+  console.log('Cámaras filtradas del store:', filteredCameras);
+  console.log('Total cámaras en store:', cameras.size);
   
   // Transformar datos de cámaras para el componente
   const cameraData = filteredCameras.map((camera: Camera) => ({
@@ -126,6 +131,7 @@ const CamerasPage: React.FC = () => {
     connectedTime: camera.is_connected ? "02:30:15" : "00:00:00", // Mock por ahora
     aspectRatio: "16:9" as const,
   }));
+  console.log('Datos de cámaras transformados:', cameraData);
 
   // Obtener conteo de cámaras
   const cameraCount = getCameraCount();

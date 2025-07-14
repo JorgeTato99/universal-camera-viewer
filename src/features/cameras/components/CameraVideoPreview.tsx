@@ -3,11 +3,11 @@
  * Componente para mostrar preview de video en las tarjetas de cámara
  */
 
-import React, { useState, useEffect } from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
-import { Videocam as VideocamIcon } from '@mui/icons-material';
-import { VideoPlayer } from '../../streaming/components/VideoPlayer';
-import { colorTokens } from '../../../design-system/tokens';
+import React, { useState, useEffect } from "react";
+import { Box, CircularProgress, Typography } from "@mui/material";
+import { Videocam as VideocamIcon } from "@mui/icons-material";
+import { VideoPlayer } from "../../streaming/components/VideoPlayer";
+import { colorTokens } from "../../../design-system/tokens";
 
 interface CameraVideoPreviewProps {
   cameraId: string;
@@ -20,8 +20,8 @@ interface CameraVideoPreviewProps {
 export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
   cameraId,
   isConnected,
-  aspectRatio = '16:9',
-  height = '180px',
+  aspectRatio = "16:9",
+  height = "180px",
   onError,
 }) => {
   const [showVideo, setShowVideo] = useState(false);
@@ -36,7 +36,7 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
         setShowVideo(true);
         setIsLoading(false);
       }, 500);
-      
+
       return () => clearTimeout(timer);
     } else {
       setShowVideo(false);
@@ -48,33 +48,33 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
     return (
       <Box
         sx={{
-          width: '100%',
+          width: "100%",
           aspectRatio,
           maxHeight: height,
           backgroundColor: (theme) =>
-            theme.palette.mode === 'dark'
+            theme.palette.mode === "dark"
               ? colorTokens.background.dark
               : colorTokens.background.light,
-          borderRadius: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          borderRadius: "6px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           border: (theme) => `1px solid ${theme.palette.divider}`,
-          position: 'relative',
-          overflow: 'hidden',
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <Box
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
             gap: 0.5,
             color: (theme) => theme.palette.text.disabled,
           }}
         >
           <VideocamIcon sx={{ fontSize: 32 }} />
-          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+          <Typography variant="caption" sx={{ fontSize: "0.7rem" }}>
             Sin conexión
           </Typography>
         </Box>
@@ -86,14 +86,14 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
     return (
       <Box
         sx={{
-          width: '100%',
+          width: "100%",
           aspectRatio,
           maxHeight: height,
-          backgroundColor: '#000',
-          borderRadius: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          backgroundColor: "#000",
+          borderRadius: "6px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           border: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >
@@ -106,11 +106,11 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
     return (
       <Box
         sx={{
-          width: '100%',
+          width: "100%",
           aspectRatio,
           maxHeight: height,
-          borderRadius: '6px',
-          overflow: 'hidden',
+          borderRadius: "6px",
+          overflow: "hidden",
           border: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >

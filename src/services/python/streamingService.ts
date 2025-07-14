@@ -64,9 +64,40 @@ export class StreamingService {
    * Conectar al WebSocket de streaming
    */
   async connect(cameraId: string): Promise<void> {
-    if (this.isConnecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
-      console.warn('Ya existe una conexión activa o en proceso');
-      return;
+    // Si ya estamos conectados al mismo cameraId, no hacer nada
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.cameraId === cameraId) {
+      console.log('Ya conectado a esta cámara');
+      return Promise.resolve();
+    }
+    
+    // Si estamos conectando, esperar
+    if (this.isConnecting) {
+      console.log('Conexión en proceso, esperando...');
+      // Esperar hasta que termine la conexión actual
+      return new Promise((resolve, reject) => {
+        const checkInterval = setInterval(() => {
+          if (!this.isConnecting) {
+            clearInterval(checkInterval);
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+              resolve();
+            } else {
+              reject(new Error('Conexión falló'));
+            }
+          }
+        }, 100);
+        
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          reject(new Error('Timeout esperando conexión'));
+        }, 5000);
+      });
+    }
+    
+    // Si hay una conexión existente a otra cámara, desconectar primero
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.cameraId !== cameraId) {
+      console.log('Desconectando de cámara anterior');
+      this.disconnect();
     }
 
     this.cameraId = cameraId;
@@ -214,7 +245,9 @@ export class StreamingService {
    */
   private send(data: any): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(data));
+      const message = JSON.stringify(data);
+      console.log('Enviando mensaje WebSocket:', message);
+      this.ws.send(message);
     }
   }
 

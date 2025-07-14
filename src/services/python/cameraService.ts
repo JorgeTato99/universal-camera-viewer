@@ -46,28 +46,47 @@ export class CameraService {
   /**
    * Listar todas las cámaras
    */
-  async listCameras(): Promise<Camera[]> {
-    const response = await this.api.get<Camera[]>('/cameras');
-    
-    if (response.success && response.data) {
-      // Convertir a objetos Camera con tipos correctos
-      return response.data.map(cam => ({
-        ...cam,
-        is_connected: Boolean(cam.is_connected),
-        is_streaming: Boolean(cam.is_streaming),
-        capabilities: cam.capabilities || [],
-        last_updated: cam.last_updated || new Date().toISOString()
-      }));
+  async listCameras(): Promise<CameraInfo[]> {
+    try {
+      // Temporalmente manejar respuesta directa del array
+      const response = await fetch('http://localhost:8000/api/cameras/');
+      const data = await response.json();
+      
+      // Si es un array directo (bug temporal del backend)
+      if (Array.isArray(data)) {
+        return data.map(cam => ({
+          ...cam,
+          is_connected: Boolean(cam.is_connected),
+          is_streaming: Boolean(cam.is_streaming),
+          capabilities: cam.capabilities || [],
+          last_updated: cam.last_updated || new Date().toISOString()
+        }));
+      }
+      
+      // Si es ApiResponse normal
+      const apiResponse = data as ApiResponse<CameraInfo[]>;
+      if (apiResponse.success && apiResponse.data) {
+        return apiResponse.data.map(cam => ({
+          ...cam,
+          is_connected: Boolean(cam.is_connected),
+          is_streaming: Boolean(cam.is_streaming),
+          capabilities: cam.capabilities || [],
+          last_updated: cam.last_updated || new Date().toISOString()
+        }));
+      }
+      
+      throw new Error(apiResponse.error || 'Error al obtener cámaras');
+    } catch (error) {
+      console.error('Error en listCameras:', error);
+      throw error;
     }
-    
-    throw new Error(response.error || 'Error al obtener cámaras');
   }
 
   /**
    * Obtener información de una cámara específica
    */
-  async getCameraInfo(cameraId: string): Promise<Camera> {
-    const response = await this.api.get<Camera>(`/cameras/${cameraId}`);
+  async getCameraInfo(cameraId: string): Promise<CameraInfo> {
+    const response = await this.api.get<CameraInfo>(`/cameras/${cameraId}`);
     
     if (response.success && response.data) {
       return response.data;
@@ -183,7 +202,7 @@ export class CameraService {
     status?: ConnectionStatus;
     isConnected?: boolean;
     isStreaming?: boolean;
-  }): Promise<Camera[]> {
+  }): Promise<CameraInfo[]> {
     const cameras = await this.listCameras();
     
     return cameras.filter(camera => {

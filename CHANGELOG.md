@@ -7,6 +7,91 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.8.5] - 2025-07-14
+
+### ✨ Added - Real Camera Integration
+- **Integración con cámaras reales** en WebSocket streaming:
+  - Configuración para cámara Dahua con credenciales reales
+  - Intento de conexión RTSP antes de fallback a mock
+  - VideoStreamPresenter integrado en StreamHandler
+  - Soporte para streaming real con conversión a base64
+
+### 🐛 Fixed - WebSocket Streaming
+- **Mejoras en StreamingService**:
+  - Manejo mejorado de conexiones singleton por cámara
+  - Prevención de conexiones duplicadas en React StrictMode
+  - Mejor gestión de reconexión y timeouts
+  - Logs detallados para debugging de conexiones
+
+### 📊 Changed - Mock Data
+- **Expansión de cámaras mock** de 3 a 6:
+  - Hikvision DS-2CD2043G2-I (Entrada Principal)
+  - Xiaomi Mi Home Security 360 (Pasillo)
+  - Reolink RLC-810A (Jardín Trasero)
+  - Todas las cámaras inician en estado desconectado
+
+---
+
+## [0.8.4] - 2025-07-14
+
+### ✨ Added - Video Streaming Components
+- **Componentes de streaming de video**:
+  - `VideoPlayer` completo con controles y métricas en tiempo real
+  - `CameraVideoPreview` para estado desconectado
+  - Integración con WebSocket para streaming base64
+  - Visualización de FPS, latencia y estado de conexión
+  - Controles de play/pause, fullscreen, snapshot
+
+### 🎨 Changed - Camera UI
+- **CameraCard mejorado**:
+  - Integración con VideoPlayer para streaming real
+  - Información técnica movida arriba del video
+  - Botones rebalanceados a 1/3 del ancho cada uno
+  - Estados visuales mejorados para conectado/desconectado
+
+### 🐛 Fixed - API Integration
+- **Corrección de integración API**:
+  - FastAPI endpoints devolviendo formato correcto
+  - Manejo de trailing slashes en URLs
+  - CameraService adaptado para manejar respuestas array y ApiResponse
+  - Solución temporal para formato de respuesta inconsistente
+
+---
+
+## [0.8.3] - 2025-07-14
+
+### ✨ Added - FastAPI Backend
+- **Backend FastAPI completo**:
+  - Servidor API REST con estructura profesional
+  - WebSocket endpoints para streaming de video
+  - Routers para cameras, scanner, config, streaming
+  - Middlewares CORS configurados para desarrollo
+  - Sistema de logging estructurado
+
+- **WebSocket streaming implementado**:
+  - ConnectionManager para gestión de clientes
+  - StreamHandler con soporte para múltiples cámaras
+  - Generación de frames mock con OpenCV
+  - Métricas de streaming en tiempo real
+  - Protocolo de mensajes estructurado
+
+### 🔧 Changed - Architecture Migration
+- **Migración de Tauri a FastAPI + React**:
+  - Backend Python puro con FastAPI
+  - Frontend React standalone
+  - Servicios TypeScript para consumir API REST
+  - WebSocket service para streaming en tiempo real
+  - Scripts de desarrollo para ejecutar ambos servidores
+
+### 📚 Added - API Documentation
+- **Documentación OpenAPI automática**:
+  - Swagger UI en `/docs`
+  - ReDoc en `/redoc`
+  - Schemas Pydantic para validación
+  - Ejemplos de uso en cada endpoint
+
+---
+
 ## [0.8.2] - 2025-07-14
 
 ### ✨ Added - Frontend React Implementation

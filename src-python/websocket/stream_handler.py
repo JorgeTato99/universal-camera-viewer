@@ -13,8 +13,39 @@ import cv2
 
 from fastapi import WebSocket
 from .connection_manager import manager, WebSocketConnection
+# Importaciones para streaming real
+from presenters.streaming.video_stream_presenter import VideoStreamPresenter
+from models.connection_model import ConnectionConfig
+from models.streaming.stream_model import StreamProtocol
 
 logger = logging.getLogger(__name__)
+
+
+class WebSocketEventEmitter:
+    """Emisor de eventos personalizado para WebSocket."""
+    
+    def __init__(self, frame_callback: Callable):
+        self.frame_callback = frame_callback
+    
+    async def emit(self, event: str, data: Dict[str, Any]) -> None:
+        """Emite evento genérico (no usado en este contexto)."""
+        pass
+    
+    async def emit_frame_update(self, camera_id: str, frame_base64: str) -> None:
+        """Emite actualización de frame."""
+        await self.frame_callback(camera_id, frame_base64)
+    
+    async def emit_stream_status(self, camera_id: str, status: str, data: Optional[Dict] = None) -> None:
+        """Emite estado del stream."""
+        logger.info(f"Stream status: {camera_id} - {status}")
+    
+    async def emit_stream_metrics(self, camera_id: str, metrics: Dict[str, Any]) -> None:
+        """Emite métricas del stream."""
+        logger.debug(f"Stream metrics: {camera_id} - {metrics}")
+    
+    async def emit_error(self, camera_id: str, error_type: str, message: str) -> None:
+        """Emite error."""
+        logger.error(f"Stream error: {camera_id} - {error_type}: {message}")
 
 
 class StreamHandler:
@@ -41,6 +72,11 @@ class StreamHandler:
         self.frame_interval = 1.0 / self.fps
         self.last_sent_time = 0
         
+        # Presenter para streaming real
+        self.presenter = None
+        self.use_real_stream = True  # Activar streaming real para cámara Dahua
+        self.real_camera_config = None
+        
     async def handle_message(self, message: dict) -> None:
         """
         Procesar mensaje recibido del cliente.
@@ -48,10 +84,11 @@ class StreamHandler:
         Args:
             message: Mensaje JSON del cliente
         """
+        logger.info(f"[{self.camera_id}] Mensaje recibido: {message}")
         action = message.get("action")
         params = message.get("params", {})
         
-        logger.info(f"Stream handler recibió: {action} para cámara {self.camera_id}")
+        logger.info(f"[{self.camera_id}] Acción: {action}, Params: {params}")
         
         if action == "start_stream":
             await self.start_stream(params)
@@ -140,22 +177,30 @@ class StreamHandler:
     async def stream_loop(self) -> None:
         """Loop principal de streaming."""
         try:
-            while self.is_streaming and self.connection:
-                # Generar frame simulado
-                frame = await self.generate_mock_frame()
-                
-                # Control de FPS
-                current_time = asyncio.get_event_loop().time()
-                time_since_last = current_time - self.last_sent_time
-                
-                if time_since_last < self.frame_interval:
-                    await asyncio.sleep(self.frame_interval - time_since_last)
-                
-                # Enviar frame
-                await self.send_frame(frame)
-                
-                self.last_sent_time = asyncio.get_event_loop().time()
-                self.frame_count += 1
+            # Intentar streaming real para cámara Dahua
+            if self.use_real_stream and self.camera_id == "cam_192.168.1.172":
+                success = await self._try_real_stream()
+                if success:
+                    return
+            
+            # Si no es posible, usar frames simulados
+            logger.info(f"Usando frames simulados para {self.camera_id}")
+            while self.is_streaming and self.connection and self.websocket.client_state.value == 1:
+                    # Generar frame simulado
+                    frame = await self.generate_mock_frame()
+                    
+                    # Control de FPS
+                    current_time = asyncio.get_event_loop().time()
+                    time_since_last = current_time - self.last_sent_time
+                    
+                    if time_since_last < self.frame_interval:
+                        await asyncio.sleep(self.frame_interval - time_since_last)
+                    
+                    # Enviar frame
+                    await self.send_frame(frame)
+                    
+                    self.last_sent_time = asyncio.get_event_loop().time()
+                    self.frame_count += 1
                 
         except Exception as e:
             logger.error(f"Error en stream loop: {e}")
@@ -257,6 +302,67 @@ class StreamHandler:
         }
         
         await self.connection.send_json(message)
+    
+    async def _try_real_stream(self) -> bool:
+        """
+        Intentar streaming real desde la cámara.
+        
+        Returns:
+            True si el streaming real funciona, False si hay que usar mock
+        """
+        try:
+            logger.info(f"Intentando streaming real para {self.camera_id}")
+            
+            # Configuración para cámara Dahua
+            config = ConnectionConfig(
+                ip="192.168.1.172",
+                username="admin",
+                password="3gfwb3ToWfeWNqm22223DGbzcH-4si",  # Password del config
+                protocol=StreamProtocol.RTSP,
+                port=554,
+                channel=1,
+                subtype=0
+            )
+            
+            logger.info(f"Configuración RTSP: {config.ip}:{config.port} - Usuario: {config.username}")
+            
+            # Crear presenter
+            self.presenter = VideoStreamPresenter()
+            
+            # Callback para frames
+            async def on_frame(frame_data: bytes):
+                # Convertir a base64
+                frame_base64 = base64.b64encode(frame_data).decode('utf-8')
+                await self.send_frame(frame_base64)
+                self.frame_count += 1
+            
+            # Configurar callback
+            self.presenter.on_frame_update = on_frame
+            
+            # Conectar
+            success = await self.presenter.connect_camera(config)
+            if not success:
+                logger.error("No se pudo conectar a la cámara real")
+                return False
+            
+            # Iniciar streaming
+            await self.presenter.start_streaming()
+            
+            logger.info("Streaming real iniciado exitosamente")
+            
+            # Mantener el stream activo
+            while self.is_streaming and self.connection:
+                await asyncio.sleep(0.1)
+            
+            # Detener al finalizar
+            await self.presenter.stop_streaming()
+            await self.presenter.disconnect_camera()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error en streaming real: {e}", exc_info=True)
+            return False
     
     def calculate_metrics(self) -> Dict[str, Any]:
         """

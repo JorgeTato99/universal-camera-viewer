@@ -29,6 +29,7 @@ import {
 import { cardStyles, statusStyles } from "../../../design-system/components";
 import { colorTokens } from "../../../design-system/tokens";
 import { CameraVideoPreview } from "./CameraVideoPreview";
+import { VideoPlayer } from "../../streaming/components/VideoPlayer";
 
 interface CameraCardProps {
   cameraId: string;
@@ -256,14 +257,28 @@ export const CameraCard: React.FC<CameraCardProps> = ({
           </Box>
         </Box>
 
-        {/* Área de video con componente CameraVideoPreview */}
-        <CameraVideoPreview
-          cameraId={cameraId}
-          isConnected={isConnected}
-          aspectRatio={aspectRatio}
-          height="200px"
-          onError={(error) => console.error(`Error en cámara ${cameraId}:`, error)}
-        />
+        {/* Área de video con componente VideoPlayer para streaming real */}
+        {isConnected ? (
+          <VideoPlayer
+            cameraId={cameraId}
+            height="200px"
+            autoPlay={true} // Volver a true para que se active cuando la cámara esté conectada
+            showControls={false}
+            onError={(error) =>
+              console.error(`Error en cámara ${cameraId}:`, error)
+            }
+          />
+        ) : (
+          <CameraVideoPreview
+            cameraId={cameraId}
+            isConnected={false}
+            aspectRatio={aspectRatio}
+            height="200px"
+            onError={(error) =>
+              console.error(`Error en cámara ${cameraId}:`, error)
+            }
+          />
+        )}
 
         {/* Botones de acción - REBALANCEADOS A 1/3 CADA UNO */}
         <Box

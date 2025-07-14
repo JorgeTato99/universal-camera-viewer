@@ -41,8 +41,9 @@ export class ApiClient {
    * Construir URL completa con parámetros de consulta
    */
   private buildURL(endpoint: string, params?: Record<string, any>): string {
-    // Asegurar que los endpoints terminen con / para evitar redirecciones
-    const normalizedEndpoint = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+    // FastAPI requiere slash al final para rutas de colección
+    const normalizedEndpoint = endpoint.endsWith('/') ? endpoint : 
+                              endpoint.match(/^\/[^\/]+$/) ? `${endpoint}/` : endpoint;
     const url = new URL(`${this.baseURL}${normalizedEndpoint}`);
     
     if (params) {

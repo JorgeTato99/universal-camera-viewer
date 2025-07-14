@@ -13,6 +13,9 @@ from api.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Forzar recarga - v2
+_FORCE_RELOAD = 2
+
 # Crear router
 router = APIRouter(
     prefix="/cameras",
@@ -103,49 +106,93 @@ class SnapshotResponse(BaseModel):
 
 # === Datos mock para desarrollo ===
 
-MOCK_CAMERAS = {
-    "cam_192.168.1.172": CameraInfo(
-        camera_id="cam_192.168.1.172",
-        display_name="Cámara Dahua Real",
-        brand="Dahua",
-        model="Dahua IP Camera",
-        ip="192.168.1.172",
-        is_connected=True,
-        is_streaming=False,
-        status="connected",
-        last_updated=datetime.utcnow().isoformat() + "Z",
-        capabilities=["ONVIF", "RTSP", "PTZ"]
-    ),
-    "cam_192.168.1.101": CameraInfo(
-        camera_id="cam_192.168.1.101",
-        display_name="Cámara Patio",
-        brand="TP-Link",
-        model="Tapo C200",
-        ip="192.168.1.101",
-        is_connected=False,
-        is_streaming=False,
-        status="disconnected",
-        last_updated=datetime.utcnow().isoformat() + "Z",
-        capabilities=["ONVIF", "RTSP"]
-    ),
-    "cam_192.168.1.102": CameraInfo(
-        camera_id="cam_192.168.1.102",
-        display_name="Cámara Garaje",
-        brand="Steren",
-        model="CCTV-240",
-        ip="192.168.1.102",
-        is_connected=True,
-        is_streaming=True,
-        status="streaming",
-        last_updated=datetime.utcnow().isoformat() + "Z",
-        capabilities=["RTSP", "HTTP"]
-    )
-}
+def get_mock_cameras() -> dict:
+    """
+    Obtener datos mock de cámaras.
+    Retorna una copia nueva cada vez para evitar mutaciones persistentes.
+    """
+    return {
+        "cam_192.168.1.172": CameraInfo(
+            camera_id="cam_192.168.1.172",
+            display_name="Cámara Dahua Real",
+            brand="Dahua",
+            model="Dahua IP Camera",
+            ip="192.168.1.172",
+            is_connected=False,
+            is_streaming=False,
+            status="disconnected",
+            last_updated=datetime.utcnow().isoformat() + "Z",
+            capabilities=["ONVIF", "RTSP", "PTZ"]
+        ),
+        "cam_192.168.1.101": CameraInfo(
+            camera_id="cam_192.168.1.101",
+            display_name="Cámara Patio",
+            brand="TP-Link",
+            model="Tapo C200",
+            ip="192.168.1.101",
+            is_connected=False,
+            is_streaming=False,
+            status="disconnected",
+            last_updated=datetime.utcnow().isoformat() + "Z",
+            capabilities=["ONVIF", "RTSP"]
+        ),
+        "cam_192.168.1.102": CameraInfo(
+            camera_id="cam_192.168.1.102",
+            display_name="Cámara Garaje",
+            brand="Steren",
+            model="CCTV-240",
+            ip="192.168.1.102",
+            is_connected=False,
+            is_streaming=False,
+            status="disconnected",
+            last_updated=datetime.utcnow().isoformat() + "Z",
+            capabilities=["RTSP", "HTTP"]
+        ),
+        "cam_192.168.1.103": CameraInfo(
+            camera_id="cam_192.168.1.103",
+            display_name="Cámara Entrada Principal",
+            brand="Hikvision",
+            model="DS-2CD2043G2-I",
+            ip="192.168.1.103",
+            is_connected=False,
+            is_streaming=False,
+            status="disconnected",
+            last_updated=datetime.utcnow().isoformat() + "Z",
+            capabilities=["ONVIF", "RTSP", "PTZ", "AI"]
+        ),
+        "cam_192.168.1.104": CameraInfo(
+            camera_id="cam_192.168.1.104",
+            display_name="Cámara Pasillo",
+            brand="Xiaomi",
+            model="Mi Home Security 360",
+            ip="192.168.1.104",
+            is_connected=False,
+            is_streaming=False,
+            status="disconnected",
+            last_updated=datetime.utcnow().isoformat() + "Z",
+            capabilities=["RTSP", "HTTP", "MJPEG"]
+        ),
+        "cam_192.168.1.105": CameraInfo(
+            camera_id="cam_192.168.1.105",
+            display_name="Cámara Jardín Trasero",
+            brand="Reolink",
+            model="RLC-810A",
+            ip="192.168.1.105",
+            is_connected=False,
+            is_streaming=False,
+            status="disconnected",
+            last_updated=datetime.utcnow().isoformat() + "Z",
+            capabilities=["ONVIF", "RTSP", "AI", "PoE"]
+        )
+    }
+
+# Cache temporal para simular persistencia durante la sesión
+_camera_states = {}
 
 
 # === Endpoints ===
 
-@router.get("/", response_model=List[CameraInfo])
+@router.get("/")
 async def list_cameras():
     """
     Listar todas las cámaras configuradas.
@@ -153,12 +200,37 @@ async def list_cameras():
     Returns:
         Lista de cámaras con su información actual
     """
-    logger.info("Listando cámaras")
+    logger.info("Listando cámaras - v2 con ApiResponse")
     
-    # TODO: Integrar con CameraPresenter real
-    cameras = list(MOCK_CAMERAS.values())
+    # Obtener cámaras base
+    base_cameras = get_mock_cameras()
+    logger.info(f"Total cámaras en get_mock_cameras: {len(base_cameras)}")
+    logger.info(f"IDs de cámaras: {list(base_cameras.keys())}")
     
-    return cameras
+    # Aplicar estados guardados
+    for camera_id, camera in base_cameras.items():
+        if camera_id in _camera_states:
+            state = _camera_states[camera_id]
+            camera.is_connected = state.get("is_connected", False)
+            camera.is_streaming = state.get("is_streaming", False)
+            camera.status = state.get("status", "disconnected")
+            camera.last_updated = state.get("last_updated", camera.last_updated)
+    
+    cameras = list(base_cameras.values())
+    
+    # Log para debug
+    logger.info(f"Total cámaras a devolver: {len(cameras)}")
+    
+    # Devolver con el formato ApiResponse que espera el frontend
+    response = create_response(
+        success=True,
+        data=[camera.model_dump() for camera in cameras]
+    )
+    
+    # Verificar tamaño de respuesta
+    logger.info(f"Tamaño de data en respuesta: {len(response['data']) if 'data' in response else 0}")
+    
+    return response
 
 
 @router.get("/{camera_id}", response_model=CameraInfo)
@@ -177,14 +249,25 @@ async def get_camera_info(camera_id: str):
     """
     logger.info(f"Obteniendo información de cámara: {camera_id}")
     
-    # TODO: Integrar con CameraPresenter real
-    if camera_id not in MOCK_CAMERAS:
+    base_cameras = get_mock_cameras()
+    
+    if camera_id not in base_cameras:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cámara {camera_id} no encontrada"
         )
     
-    return MOCK_CAMERAS[camera_id]
+    camera = base_cameras[camera_id]
+    
+    # Aplicar estado guardado si existe
+    if camera_id in _camera_states:
+        state = _camera_states[camera_id]
+        camera.is_connected = state.get("is_connected", False)
+        camera.is_streaming = state.get("is_streaming", False)
+        camera.status = state.get("status", "disconnected")
+        camera.last_updated = state.get("last_updated", camera.last_updated)
+    
+    return camera
 
 
 @router.post("/connect")
@@ -200,28 +283,13 @@ async def connect_camera(request: ConnectCameraRequest):
     """
     logger.info(f"Conectando a cámara: {request.camera_id}")
     
-    # TODO: Integrar con CameraPresenter real
-    # Simulación de conexión
-    camera = MOCK_CAMERAS.get(request.camera_id)
-    if not camera:
-        # Crear nueva cámara
-        camera = CameraInfo(
-            camera_id=request.camera_id,
-            display_name=f"Cámara {request.connection_config.ip}",
-            brand="Unknown",
-            ip=request.connection_config.ip,
-            is_connected=True,
-            is_streaming=False,
-            status="connected",
-            last_updated=datetime.utcnow().isoformat() + "Z",
-            capabilities=[]
-        )
-        MOCK_CAMERAS[request.camera_id] = camera
-    else:
-        # Actualizar estado
-        camera.is_connected = True
-        camera.status = "connected"
-        camera.last_updated = datetime.utcnow().isoformat() + "Z"
+    # Guardar estado de conexión
+    _camera_states[request.camera_id] = {
+        "is_connected": True,
+        "is_streaming": False,
+        "status": "connected",
+        "last_updated": datetime.utcnow().isoformat() + "Z"
+    }
     
     return create_response(
         success=True,
@@ -246,18 +314,21 @@ async def disconnect_camera(camera_id: str):
     """
     logger.info(f"Desconectando cámara: {camera_id}")
     
-    # TODO: Integrar con CameraPresenter real
-    if camera_id not in MOCK_CAMERAS:
+    base_cameras = get_mock_cameras()
+    
+    if camera_id not in base_cameras:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cámara {camera_id} no encontrada"
         )
     
-    camera = MOCK_CAMERAS[camera_id]
-    camera.is_connected = False
-    camera.is_streaming = False
-    camera.status = "disconnected"
-    camera.last_updated = datetime.utcnow().isoformat() + "Z"
+    # Actualizar estado guardado
+    _camera_states[camera_id] = {
+        "is_connected": False,
+        "is_streaming": False,
+        "status": "disconnected",
+        "last_updated": datetime.utcnow().isoformat() + "Z"
+    }
     
     return create_response(
         success=True,
@@ -282,15 +353,20 @@ async def capture_snapshot(camera_id: str):
     """
     logger.info(f"Capturando snapshot de cámara: {camera_id}")
     
-    # TODO: Integrar con VideoStreamPresenter real
-    if camera_id not in MOCK_CAMERAS:
+    base_cameras = get_mock_cameras()
+    
+    if camera_id not in base_cameras:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cámara {camera_id} no encontrada"
         )
     
-    camera = MOCK_CAMERAS[camera_id]
-    if not camera.is_connected:
+    # Verificar si está conectada
+    is_connected = False
+    if camera_id in _camera_states:
+        is_connected = _camera_states[camera_id].get("is_connected", False)
+    
+    if not is_connected:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La cámara no está conectada"
@@ -324,26 +400,50 @@ async def get_stream_status(camera_id: str):
     """
     logger.info(f"Obteniendo estado de stream: {camera_id}")
     
-    # TODO: Integrar con VideoStreamPresenter real
-    if camera_id not in MOCK_CAMERAS:
+    base_cameras = get_mock_cameras()
+    
+    if camera_id not in base_cameras:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cámara {camera_id} no encontrada"
         )
     
-    camera = MOCK_CAMERAS[camera_id]
+    # Obtener estado actual
+    is_streaming = False
+    if camera_id in _camera_states:
+        is_streaming = _camera_states[camera_id].get("is_streaming", False)
     
     return create_response(
         success=True,
         data={
             "camera_id": camera_id,
-            "is_streaming": camera.is_streaming,
-            "status": "streaming" if camera.is_streaming else "idle",
+            "is_streaming": is_streaming,
+            "status": "streaming" if is_streaming else "idle",
             "metrics": {
-                "fps": 30 if camera.is_streaming else 0,
-                "resolution": "1920x1080" if camera.is_streaming else None,
-                "bitrate_kbps": 2048 if camera.is_streaming else 0,
-                "latency_ms": 45 if camera.is_streaming else 0
+                "fps": 30 if is_streaming else 0,
+                "resolution": "1920x1080" if is_streaming else None,
+                "bitrate_kbps": 2048 if is_streaming else 0,
+                "latency_ms": 45 if is_streaming else 0
             }
+        }
+    )
+
+
+@router.post("/reset-states")
+async def reset_camera_states():
+    """
+    Resetear todos los estados de las cámaras (útil para desarrollo).
+    
+    Returns:
+        Confirmación del reset
+    """
+    global _camera_states
+    _camera_states = {}
+    logger.info("Estados de cámaras reseteados")
+    
+    return create_response(
+        success=True,
+        data={
+            "message": "Estados de cámaras reseteados exitosamente"
         }
     )
