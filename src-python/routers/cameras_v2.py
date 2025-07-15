@@ -19,6 +19,7 @@ from api.models.camera_models import (
     ProtocolType,
     CredentialsResponse,
     ProtocolResponse,
+    EndpointRequest,
     EndpointResponse,
     StreamProfileResponse,
     CameraStatisticsResponse,

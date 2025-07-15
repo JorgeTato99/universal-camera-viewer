@@ -38,12 +38,12 @@ async def test_api_endpoints():
         try:
             async with session.get(f"{base_url}/") as resp:
                 if resp.status == 200:
-                    print(f"   {GREEN}✓ Servidor respondiendo correctamente{RESET}")
+                    print(f"   {GREEN}OK - Servidor respondiendo correctamente{RESET}")
                 else:
-                    print(f"   {RED}✗ Servidor respondió con código {resp.status}{RESET}")
+                    print(f"   {RED}ERROR - Servidor respondió con código {resp.status}{RESET}")
                     return False
         except aiohttp.ClientConnectorError:
-            print(f"   {RED}✗ No se puede conectar al servidor{RESET}")
+            print(f"   {RED}ERROR - No se puede conectar al servidor{RESET}")
             print(f"   {YELLOW}Asegúrese de ejecutar: python run_api.py{RESET}")
             return False
         
@@ -51,9 +51,9 @@ async def test_api_endpoints():
         print(f"\n2. Verificando documentación API...")
         async with session.get(f"{base_url}/docs") as resp:
             if resp.status == 200:
-                print(f"   {GREEN}✓ Documentación Swagger disponible en {base_url}/docs{RESET}")
+                print(f"   {GREEN}OK Documentación Swagger disponible en {base_url}/docs{RESET}")
             else:
-                print(f"   {RED}✗ Documentación no disponible{RESET}")
+                print(f"   {RED}ERROR Documentación no disponible{RESET}")
         
         # 3. Listar cámaras
         print(f"\n3. Listando cámaras desde /api/cameras...")
@@ -62,15 +62,15 @@ async def test_api_endpoints():
                 data = await resp.json()
                 if data.get('success'):
                     cameras = data.get('data', [])
-                    print(f"   {GREEN}✓ Encontradas {len(cameras)} cámaras{RESET}")
+                    print(f"   {GREEN}OK Encontradas {len(cameras)} cámaras{RESET}")
                     for i, cam in enumerate(cameras[:3]):
                         print(f"     - {cam.get('name', 'Sin nombre')} ({cam.get('brand', 'N/A')}) - {cam.get('ip_address', 'N/A')}")
                     if len(cameras) > 3:
                         print(f"     ... y {len(cameras) - 3} más")
                 else:
-                    print(f"   {YELLOW}⚠ Respuesta sin éxito{RESET}")
+                    print(f"   {YELLOW}ADVERTENCIA Respuesta sin éxito{RESET}")
             else:
-                print(f"   {RED}✗ Error al listar cámaras: {resp.status}{RESET}")
+                print(f"   {RED}ERROR Error al listar cámaras: {resp.status}{RESET}")
         
         # 4. Obtener cámara específica
         print(f"\n4. Obteniendo detalle de cámara...")
@@ -80,11 +80,11 @@ async def test_api_endpoints():
                 async with session.get(f"{base_url}/api/cameras/{camera_id}") as resp:
                     if resp.status == 200:
                         cam = await resp.json()
-                        print(f"   {GREEN}✓ Cámara obtenida: {cam.get('name')}{RESET}")
+                        print(f"   {GREEN}OK Cámara obtenida: {cam.get('name')}{RESET}")
                         print(f"     - Estado: {cam.get('status', 'N/A')}")
                         print(f"     - Protocolo: {cam.get('protocol', 'N/A')}")
                     else:
-                        print(f"   {RED}✗ Error obteniendo cámara: {resp.status}{RESET}")
+                        print(f"   {RED}ERROR Error obteniendo cámara: {resp.status}{RESET}")
         
         # 5. Probar API v2 (nueva estructura)
         print(f"\n5. Probando API v2 con nueva estructura 3FN...")
@@ -92,18 +92,18 @@ async def test_api_endpoints():
             if resp.status == 200:
                 v2_data = await resp.json()
                 v2_cameras = v2_data.get('data', [])
-                print(f"   {GREEN}✓ API v2: {len(v2_cameras)} cámaras desde DB{RESET}")
+                print(f"   {GREEN}OK API v2: {len(v2_cameras)} cámaras desde DB{RESET}")
             else:
-                print(f"   {YELLOW}⚠ API v2 no disponible o sin datos{RESET}")
+                print(f"   {YELLOW}ADVERTENCIA API v2 no disponible o sin datos{RESET}")
         
         # 6. Probar scanner
         print(f"\n6. Verificando endpoint de scanner...")
         async with session.get(f"{base_url}/api/scanner/status") as resp:
             if resp.status == 200:
                 scanner_data = await resp.json()
-                print(f"   {GREEN}✓ Scanner status: {scanner_data.get('status', 'N/A')}{RESET}")
+                print(f"   {GREEN}OK Scanner status: {scanner_data.get('status', 'N/A')}{RESET}")
             else:
-                print(f"   {YELLOW}⚠ Scanner no disponible{RESET}")
+                print(f"   {YELLOW}ADVERTENCIA Scanner no disponible{RESET}")
         
         return True
 
@@ -117,7 +117,7 @@ async def test_websocket_connection():
     try:
         import websockets
     except ImportError:
-        print(f"   {YELLOW}⚠ Instalando websockets...{RESET}")
+        print(f"   {YELLOW}ADVERTENCIA Instalando websockets...{RESET}")
         os.system(f"{sys.executable} -m pip install websockets")
         import websockets
     
@@ -125,7 +125,7 @@ async def test_websocket_connection():
     
     try:
         async with websockets.connect(ws_url) as websocket:
-            print(f"   {GREEN}✓ Conectado exitosamente{RESET}")
+            print(f"   {GREEN}OK Conectado exitosamente{RESET}")
             
             # Enviar mensaje de inicio
             start_msg = {
@@ -137,7 +137,7 @@ async def test_websocket_connection():
                 }
             }
             await websocket.send(json.dumps(start_msg))
-            print(f"   {GREEN}✓ Mensaje de inicio enviado{RESET}")
+            print(f"   {GREEN}OK Mensaje de inicio enviado{RESET}")
             
             # Recibir algunos frames
             print("\n2. Recibiendo frames...")
@@ -148,16 +148,16 @@ async def test_websocket_connection():
                     if data.get('type') == 'frame':
                         frames_received += 1
                         if frames_received <= 3:
-                            print(f"   {GREEN}✓ Frame {frames_received} recibido - {len(data.get('data', ''))} bytes{RESET}")
+                            print(f"   {GREEN}OK Frame {frames_received} recibido - {len(data.get('data', ''))} bytes{RESET}")
                         if frames_received >= 5:
                             break
                 except json.JSONDecodeError:
                     pass
             
-            print(f"   {GREEN}✓ Total frames recibidos: {frames_received}{RESET}")
+            print(f"   {GREEN}OK Total frames recibidos: {frames_received}{RESET}")
             
     except Exception as e:
-        print(f"   {RED}✗ Error en WebSocket: {e}{RESET}")
+        print(f"   {RED}ERROR Error en WebSocket: {e}{RESET}")
         print(f"   {YELLOW}Nota: El streaming WebSocket requiere que el servidor esté ejecutándose{RESET}")
 
 
@@ -177,13 +177,13 @@ async def test_database_operations():
         
         print("\n1. Verificando cámaras en base de datos...")
         camera_ids = await data_service.get_all_camera_ids()
-        print(f"   {GREEN}✓ Encontradas {len(camera_ids)} cámaras en DB{RESET}")
+        print(f"   {GREEN}OK Encontradas {len(camera_ids)} cámaras en DB{RESET}")
         
         print("\n2. Obteniendo configuración completa de una cámara...")
         if camera_ids:
             config = await data_service.get_camera_full_config(camera_ids[0])
             if config:
-                print(f"   {GREEN}✓ Configuración obtenida exitosamente{RESET}")
+                print(f"   {GREEN}OK Configuración obtenida exitosamente{RESET}")
                 print(f"     - Cámara: {config.get('camera', {}).get('display_name', 'N/A')}")
                 print(f"     - Protocolos: {len(config.get('protocols', []))}")
                 print(f"     - Endpoints: {len(config.get('endpoints', []))}")
@@ -191,7 +191,7 @@ async def test_database_operations():
         
         print("\n3. Verificando estadísticas...")
         stats = data_service.get_statistics()
-        print(f"   {GREEN}✓ Estadísticas del servicio:{RESET}")
+        print(f"   {GREEN}OK Estadísticas del servicio:{RESET}")
         print(f"     - Cámaras rastreadas: {stats.get('cameras_tracked', 0)}")
         print(f"     - Cache hits: {stats.get('cache_hits', 0)}")
         print(f"     - Cache misses: {stats.get('cache_misses', 0)}")
@@ -199,7 +199,7 @@ async def test_database_operations():
         await data_service.cleanup()
         
     except Exception as e:
-        print(f"   {RED}✗ Error accediendo a base de datos: {e}{RESET}")
+        print(f"   {RED}ERROR Error accediendo a base de datos: {e}{RESET}")
         import traceback
         traceback.print_exc()
 
@@ -213,13 +213,13 @@ async def main():
     # Verificar que existe la base de datos
     db_path = Path("data/camera_data.db")
     if not db_path.exists():
-        print(f"\n{RED}✗ ERROR: No se encuentra la base de datos{RESET}")
+        print(f"\n{RED}ERROR ERROR: No se encuentra la base de datos{RESET}")
         print(f"{YELLOW}Ejecute los siguientes comandos:{RESET}")
         print("  1. python src-python/services/create_database.py")
         print("  2. python src-python/seed_database.py")
         return
     
-    print(f"\n{GREEN}✓ Base de datos encontrada en {db_path}{RESET}")
+    print(f"\n{GREEN}OK Base de datos encontrada en {db_path}{RESET}")
     
     # Ejecutar pruebas
     tests_passed = 0
@@ -234,14 +234,14 @@ async def main():
         await test_websocket_connection()
         tests_passed += 1
     except Exception as e:
-        print(f"{RED}✗ Error en prueba WebSocket: {e}{RESET}")
+        print(f"{RED}ERROR Error en prueba WebSocket: {e}{RESET}")
     
     # 3. Probar base de datos
     try:
         await test_database_operations()
         tests_passed += 1
     except Exception as e:
-        print(f"{RED}✗ Error en prueba de base de datos: {e}{RESET}")
+        print(f"{RED}ERROR Error en prueba de base de datos: {e}{RESET}")
     
     # Resumen
     print(f"\n{BLUE}{'='*60}{RESET}")
@@ -249,9 +249,9 @@ async def main():
     print(f"{BLUE}{'='*60}{RESET}")
     
     if tests_passed == total_tests:
-        print(f"\n{GREEN}✓ TODAS LAS PRUEBAS PASARON ({tests_passed}/{total_tests}){RESET}")
+        print(f"\n{GREEN}OK TODAS LAS PRUEBAS PASARON ({tests_passed}/{total_tests}){RESET}")
     else:
-        print(f"\n{YELLOW}⚠ Pruebas completadas: {tests_passed}/{total_tests}{RESET}")
+        print(f"\n{YELLOW}ADVERTENCIA Pruebas completadas: {tests_passed}/{total_tests}{RESET}")
     
     print(f"\n{BLUE}Próximos pasos:{RESET}")
     print("1. Si el servidor no está corriendo, ejecute: python run_api.py")
