@@ -7,6 +7,7 @@ Este documento describe la estructura de la base de datos siguiendo las mejores 
 ## Convenciones Utilizadas
 
 ### 1. **Identificadores (Primary Keys)**
+
 - **UUID v4** para entidades principales (`camera_id`, `scan_id`, `snapshot_id`)
   - Formato: `XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`
   - Únicos globalmente, inmutables, distribuibles
@@ -15,6 +16,7 @@ Este documento describe la estructura de la base de datos siguiendo las mejores 
   - Menor espacio en índices
 
 ### 2. **Nomenclatura**
+
 - **Primary Keys**: `tabla_id` (ej: `camera_id`, `credential_id`)
 - **Foreign Keys**: Mismo nombre que el PK referenciado
 - **Booleanos**: Prefijo `is_` o `has_` (ej: `is_active`, `has_audio`)
@@ -22,6 +24,7 @@ Este documento describe la estructura de la base de datos siguiendo las mejores 
 - **Contadores**: Prefijo según contexto (ej: `total_`, `max_`, `average_`)
 
 ### 3. **Tipos de Datos**
+
 - **TEXT**: Strings, UUIDs, JSONs
 - **INTEGER**: Números enteros, booleanos (0/1)
 - **REAL**: Números decimales
@@ -30,7 +33,7 @@ Este documento describe la estructura de la base de datos siguiendo las mejores 
 
 ## Diagrama de Relaciones
 
-```
+```bash
 cameras (1) ─────┬──── (N) camera_credentials
                  ├──── (N) camera_protocols  
                  ├──── (N) camera_endpoints

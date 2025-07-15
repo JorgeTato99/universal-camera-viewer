@@ -4,14 +4,16 @@
 
 ### 1. **Nuevo Sistema de IDs**
 
-#### Antes:
+#### Antes
+
 - IDs con formato: `Dahua_IPC-HDW1200SP_192_168_1_100`
 - Problemático: No único globalmente, mutable, difícil de manejar
 
-#### Ahora:
+#### Ahora
+
 - **camera_id**: UUID v4 (ej: `550e8400-e29b-41d4-a716-446655440000`)
 - **code**: Campo opcional único para identificador legible
-- **Ventajas**: 
+- **Ventajas**:
   - Único globalmente
   - Inmutable
   - Compatible con sistemas distribuidos
@@ -30,7 +32,8 @@
 
 Total de **16 tablas principales**:
 
-#### Tablas de Entidades:
+#### Tablas de Entidades
+
 1. `cameras` - Info principal con campo `code` único
 2. `camera_credentials` - Múltiples credenciales por cámara
 3. `camera_protocols` - Protocolos configurados
@@ -38,7 +41,8 @@ Total de **16 tablas principales**:
 5. `camera_capabilities` - Features soportadas
 6. `stream_profiles` - Perfiles de streaming
 
-#### Tablas de Operación:
+#### Tablas de Operación
+
 7. `camera_statistics` - Métricas agregadas
 8. `connection_logs` - Historial de conexiones
 9. `camera_events` - Eventos importantes
@@ -47,11 +51,13 @@ Total de **16 tablas principales**:
 12. `snapshots` - Capturas guardadas
 13. `recordings` - Grabaciones de video
 
-#### Tablas de Configuración:
+#### Tablas de Configuración
+
 14. `system_config` - Configuración global
 15. `config_templates` - Plantillas por marca
 
-#### Vistas:
+#### Vistas
+
 16. `camera_overview` - Vista consolidada
 17. `verified_endpoints` - Endpoints verificados
 
@@ -79,17 +85,20 @@ Total de **16 tablas principales**:
 
 ## Uso
 
-### Crear Base de Datos Nueva:
+### Crear Base de Datos Nueva
+
 ```bash
 python src-python/services/create_database.py
 ```
 
-### Forzar Recreación:
+### Forzar Recreación
+
 ```bash
 python src-python/services/create_database.py --force
 ```
 
-### Verificar Estructura:
+### Verificar Estructura
+
 ```bash
 sqlite3 data/camera_data.db ".schema cameras"
 ```

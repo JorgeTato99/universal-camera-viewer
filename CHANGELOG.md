@@ -7,6 +7,61 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.3] - 2025-07-14 - 🗄️ BASE DE DATOS PROFESIONAL 3FN
+
+### ✨ Added - Nueva Estructura de Base de Datos
+
+- **Base de datos completamente rediseñada** siguiendo Tercera Forma Normal (3FN):
+  - 16 tablas normalizadas con relaciones claras
+  - Sistema de IDs con UUID v4 para unicidad global
+  - Campo `code` único para referencias legibles (ej: "CAM-DAHUA-REAL-172")
+  - Índices optimizados para búsquedas frecuentes
+  - Triggers para actualización automática de timestamps
+  - Vistas precalculadas para consultas complejas
+
+- **Scripts de gestión de datos**:
+  - `create_database.py` - Crea base de datos desde cero con verificación
+  - `seed_database.py` - Pobla con 6 cámaras de prueba reales
+  - Eliminación de migración (no necesaria, setup limpio)
+
+- **Seguridad mejorada**:
+  - `EncryptionService` con AES-256 Fernet
+  - Credenciales siempre encriptadas en DB
+  - Múltiples credenciales por cámara soportadas
+  - Auditoría con campos `created_by`/`updated_by`
+
+### 📚 Documentation
+
+- **DATABASE_SCHEMA_3FN.md** - Documentación completa del esquema
+- **DATABASE_REDESIGN_SUMMARY.md** - Resumen del rediseño
+- README actualizado con nuevos comandos de DB
+
+---
+
+## [0.9.2] - 2025-07-14 - 🏗️ API V2 Y COMPONENTES FRONTEND
+
+### ✨ Added - API v2 Completa
+
+- **Backend API v2**:
+  - `CameraManagerService` - Servicio de alto nivel para gestión de cámaras
+  - Modelos Pydantic completos para request/response
+  - Router `/api/v2` con todos los endpoints CRUD
+  - Integración con nueva estructura de DB
+
+- **Frontend Components v2**:
+  - Tipos TypeScript actualizados (`camera.types.v2.ts`)
+  - Servicio API v2 (`cameraService.v2.ts`)
+  - Store Zustand v2 con filtrado avanzado (`cameraStore.v2.ts`)
+  - `CameraDetailsCard` - Vista detallada con tabs
+  - `CameraFormDialog` - Formulario crear/editar con validación
+
+### 📚 Documentation
+
+- **V2_INTEGRATION_GUIDE.md** - Guía completa de integración
+- Ejemplos de uso y mejores prácticas
+
+---
+
 ## [0.9.1] - 2025-07-14 - 🏗️ REFACTORING Y MEJORAS DE CALIDAD
 
 ### 🔄 Changed - Refactoring Arquitectónico Mayor

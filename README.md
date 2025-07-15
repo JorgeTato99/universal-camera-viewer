@@ -1,6 +1,6 @@
 # 🎥 Universal Camera Viewer
 
-[![Version](https://img.shields.io/badge/version-0.9.0-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
+[![Version](https://img.shields.io/badge/version-0.9.3-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
 [![Status](https://img.shields.io/badge/status-FUNCIONAL-brightgreen)](CURRENT_STATUS.md)
 [![Python](https://img.shields.io/badge/python-3.8+-green)](https://www.python.org/)
 [![React](https://img.shields.io/badge/react-19-61dafb)](https://react.dev/)
@@ -9,15 +9,15 @@
 
 Sistema profesional de videovigilancia IP con streaming en tiempo real. ¡Ciclo completo funcional implementado!
 
-## 🎉 Nuevo en v0.10.0: Base de Datos Mejorada
+## 🎉 Nuevo en v0.9.3: Base de Datos Profesional
 
-- ✅ **Nueva estructura 3FN**: Base de datos normalizada y escalable
-- ✅ **URLs persistidas**: Las URLs RTSP descubiertas se guardan automáticamente
-- ✅ **Credenciales encriptadas**: Mayor seguridad con encriptación AES
-- ✅ **Migración automática**: Script incluido para actualizar DB existente
-- ✅ **Estadísticas detalladas**: Historial completo de conexiones
+- ✅ **Estructura 3FN completa**: 16 tablas normalizadas siguiendo mejores prácticas
+- ✅ **IDs con UUID v4**: Únicos globalmente + campo `code` para referencia legible
+- ✅ **Credenciales encriptadas**: Seguridad con AES-256 Fernet
+- ✅ **Script de creación**: `create_database.py` para setup limpio
+- ✅ **Datos SEED incluidos**: 6 cámaras de prueba listas para usar
 
-### También en v0.9.0: Streaming en Tiempo Real
+### En v0.9.0-0.9.2: Streaming en Tiempo Real
 
 - ✅ **Streaming RTSP funcional** con cámaras Dahua
 - ✅ **WebSocket estable** con heartbeat automático
@@ -96,19 +96,27 @@ yarn tauri-dev      # Desarrollo con hot reload
 yarn tauri-build    # Genera instalador .exe/.msi
 ```
 
-## 🔄 Migración de Base de Datos (v0.10.0)
+## 🗄️ Base de Datos
 
-Si está actualizando desde una versión anterior:
+El proyecto utiliza SQLite con estructura normalizada 3FN:
 
 ```bash
-# Ejecutar migración
-python src-python/migrate_database.py
+# Crear/recrear base de datos limpia
+python src-python/services/create_database.py
 
-# Con información detallada
-python src-python/migrate_database.py --verbose
+# Poblar con 6 cámaras de prueba
+python src-python/seed_database.py
 ```
 
-Ver [Guía de Migración](docs/MIGRATION_GUIDE.md) para más detalles.
+**Estructura principal**:
+- `cameras` - Información principal con UUID y código único
+- `camera_credentials` - Credenciales encriptadas (múltiples por cámara)
+- `camera_protocols` - Configuración de protocolos
+- `camera_endpoints` - URLs descubiertas/configuradas
+- `stream_profiles` - Perfiles de streaming
+- `camera_statistics` - Métricas y estadísticas
+
+Ver [Esquema completo](docs/DATABASE_SCHEMA_3FN.md) para detalles.
 
 ## 📁 Estructura del Proyecto
 
