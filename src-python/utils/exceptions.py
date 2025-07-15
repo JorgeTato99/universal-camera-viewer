@@ -179,6 +179,28 @@ class InvalidConfigurationError(ConfigurationError):
         )
 
 
+class InvalidCredentialsError(ConfigurationError):
+    """Error por credenciales inválidas."""
+    
+    def __init__(self, username: str, context: str = ""):
+        """
+        Inicializa error de credenciales inválidas.
+        
+        Args:
+            username: Nombre de usuario inválido
+            context: Contexto adicional del error
+        """
+        message = f"Credenciales inválidas para usuario '{username}'"
+        if context:
+            message += f": {context}"
+        
+        super().__init__(
+            message=message,
+            error_code="INVALID_CREDENTIALS",
+            context={'username': username}
+        )
+
+
 # === Excepciones de Validación ===
 
 class ValidationError(CameraViewerError):
@@ -327,6 +349,13 @@ class RTSPAuthenticationError(RTSPError):
         )
 
 
+# === Excepciones de Servicio ===
+
+class ServiceError(CameraViewerError):
+    """Error genérico de servicio."""
+    pass
+
+
 # === Excepciones de Streaming ===
 
 class StreamingError(CameraViewerError):
@@ -375,6 +404,40 @@ class StreamDecodingError(StreamingError):
 class PersistenceError(CameraViewerError):
     """Errores relacionados con persistencia de datos."""
     pass
+
+
+class CameraNotFoundError(PersistenceError):
+    """Error cuando no se encuentra una cámara en la base de datos."""
+    
+    def __init__(self, camera_id: str):
+        """
+        Inicializa error de cámara no encontrada.
+        
+        Args:
+            camera_id: ID de la cámara que no se encontró
+        """
+        super().__init__(
+            message=f"Cámara con ID '{camera_id}' no encontrada",
+            error_code="CAMERA_NOT_FOUND",
+            context={'camera_id': camera_id}
+        )
+
+
+class CameraAlreadyExistsError(PersistenceError):
+    """Error cuando se intenta crear una cámara que ya existe."""
+    
+    def __init__(self, camera_id: str):
+        """
+        Inicializa error de cámara ya existente.
+        
+        Args:
+            camera_id: ID de la cámara que ya existe
+        """
+        super().__init__(
+            message=f"Cámara con ID '{camera_id}' ya existe",
+            error_code="CAMERA_ALREADY_EXISTS",
+            context={'camera_id': camera_id}
+        )
 
 
 class DatabaseError(PersistenceError):
@@ -477,6 +540,7 @@ __all__ = [
     'ConfigurationError',
     'MissingConfigurationError',
     'InvalidConfigurationError',
+    'InvalidCredentialsError',
     
     # Validación
     'ValidationError',
@@ -493,6 +557,9 @@ __all__ = [
     'RTSPConnectionError',
     'RTSPAuthenticationError',
     
+    # Servicio
+    'ServiceError',
+    
     # Streaming
     'StreamingError',
     'StreamNotAvailableError',
@@ -500,6 +567,8 @@ __all__ = [
     
     # Persistencia
     'PersistenceError',
+    'CameraNotFoundError',
+    'CameraAlreadyExistsError',
     'DatabaseError',
     'FileAccessError',
     

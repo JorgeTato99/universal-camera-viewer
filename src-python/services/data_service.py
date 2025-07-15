@@ -352,34 +352,49 @@ class DataService:
         self.logger.info(f"🧠 Cache inicializado: {len(self._camera_cache)} cámaras, {len(self._scan_cache)} escaneos")
     
     async def _load_recent_cameras_to_cache(self) -> None:
-        """Carga cámaras recientes al cache."""
+        """Carga cámaras recientes al cache usando la nueva estructura 3FN."""
         if not self._db_connection:
             return
             
         try:
             with self._db_lock:
                 cursor = self._db_connection.cursor()
+                # Query actualizada para nueva estructura
                 cursor.execute("""
-                    SELECT * FROM cameras 
-                    WHERE last_seen > datetime('now', '-1 day')
-                    ORDER BY last_seen DESC 
+                    SELECT 
+                        c.camera_id, c.brand, c.model, c.ip_address,
+                        cs.last_connection_at, cs.total_connections,
+                        cs.successful_connections, cs.failed_connections,
+                        cs.total_uptime_seconds
+                    FROM cameras c
+                    LEFT JOIN camera_statistics cs ON c.camera_id = cs.camera_id
+                    WHERE cs.last_connection_at > datetime('now', '-1 day')
+                       OR c.created_at > datetime('now', '-1 day')
+                    ORDER BY COALESCE(cs.last_connection_at, c.created_at) DESC 
                     LIMIT 50
                 """)
                 
                 for row in cursor.fetchall():
+                    # Obtener protocolos de la cámara
+                    cursor.execute("""
+                        SELECT protocol_type FROM camera_protocols 
+                        WHERE camera_id = ? AND is_enabled = 1
+                    """, (row[0],))
+                    protocols = [p[0] for p in cursor.fetchall()]
+                    
                     camera_data = CameraData(
-                        camera_id=row['camera_id'],
-                        brand=row['brand'],
-                        model=row['model'],
-                        ip=row['ip'],
-                        last_seen=datetime.fromisoformat(row['last_seen']),
-                        connection_count=row['connection_count'],
-                        successful_connections=row['successful_connections'],
-                        failed_connections=row['failed_connections'],
-                        total_uptime_minutes=row['total_uptime_minutes'],
-                        snapshots_count=row['snapshots_count'],
-                        protocols=json.loads(row['protocols'] or '[]'),
-                        metadata=json.loads(row['metadata'] or '{}')
+                        camera_id=row[0],
+                        brand=row[1],
+                        model=row[2],
+                        ip=row[3],
+                        last_seen=datetime.fromisoformat(row[4]) if row[4] else datetime.now(),
+                        connection_count=row[5] or 0,
+                        successful_connections=row[6] or 0,
+                        failed_connections=row[7] or 0,
+                        total_uptime_minutes=int((row[8] or 0) / 60),
+                        snapshots_count=0,  # Campo no existe en nueva estructura
+                        protocols=protocols,
+                        metadata={}
                     )
                     
                     with self._cache_lock:
@@ -387,7 +402,7 @@ class DataService:
                         self._cache_timestamps[f"camera_{camera_data.camera_id}"] = datetime.now()
                         
         except Exception as e:
-            self.logger.error(f"Error cargando cámaras al cache: {e}")
+            self.logger.error(f"Error cargando cámaras al cache desde nueva estructura: {e}")
     
     async def _load_recent_scans_to_cache(self) -> None:
         """Carga escaneos recientes al cache."""
@@ -397,12 +412,9 @@ class DataService:
         try:
             with self._db_lock:
                 cursor = self._db_connection.cursor()
-                cursor.execute("""
-                    SELECT * FROM scans 
-                    WHERE timestamp > datetime('now', '-1 hour')
-                    ORDER BY timestamp DESC 
-                    LIMIT 20
-                """)
+                # Por ahora omitir carga de escaneos ya que la tabla se llama network_scans
+                # y tiene estructura diferente. Necesita adaptación completa.
+                pass  # TODO: Adaptar a nueva estructura network_scans
                 
                 for row in cursor.fetchall():
                     scan_data = ScanData(
@@ -429,7 +441,10 @@ class DataService:
     
     async def save_camera_data(self, camera: CameraModel) -> bool:
         """
+        DEPRECATED: Use save_camera_with_config() para la nueva estructura 3FN.
+        
         Guarda o actualiza datos de una cámara.
+        Este método es un wrapper de compatibilidad para código legacy.
         
         Args:
             camera: Modelo de cámara a guardar
@@ -437,77 +452,80 @@ class DataService:
         Returns:
             True si se guardó correctamente
         """
+        self.logger.warning(
+            f"DEPRECATED: save_camera_data() llamado para {camera.camera_id}. "
+            "Use save_camera_with_config() para la nueva estructura 3FN."
+        )
+        
         try:
-            # Obtener protocolos soportados de manera segura
-            protocols = []
-            if hasattr(camera, 'capabilities') and camera.capabilities and hasattr(camera.capabilities, 'supported_protocols'):
-                protocols = [p.value if hasattr(p, 'value') else str(p) for p in camera.capabilities.supported_protocols]
-            elif hasattr(camera, 'get_available_protocols'):
-                available_protocols = camera.get_available_protocols()
-                protocols = [p.value if hasattr(p, 'value') else str(p) for p in available_protocols]
-            elif hasattr(camera, 'protocol') and camera.protocol:
-                protocols = [camera.protocol.value] if hasattr(camera.protocol, 'value') else [str(camera.protocol)]
+            # Extraer credenciales del modelo si están disponibles
+            credentials = {}
+            if hasattr(camera, 'connection_config') and camera.connection_config:
+                credentials = {
+                    'username': getattr(camera.connection_config, 'username', 'admin'),
+                    'password': getattr(camera.connection_config, 'password', '')
+                }
+            
+            # Extraer endpoints si están disponibles
+            endpoints = []
+            if hasattr(camera, 'stream_url') and camera.stream_url:
+                endpoints.append({
+                    'type': 'rtsp_main',
+                    'url': camera.stream_url,
+                    'protocol': 'RTSP',
+                    'verified': True
+                })
+            
+            # Llamar al nuevo método
+            result = await self.save_camera_with_config(camera, credentials, endpoints)
+            
+            if result:
+                self._stats["cameras_tracked"] += 1
                 
-            camera_data = CameraData(
-                camera_id=camera.camera_id,
-                brand=camera.brand,
-                model=camera.model,
-                ip=camera.ip,
-                last_seen=datetime.now(),
-                protocols=protocols
-            )
-            
-            # Actualizar cache
-            with self._cache_lock:
-                if camera.camera_id in self._camera_cache:
-                    existing = self._camera_cache[camera.camera_id]
-                    camera_data.connection_count = existing.connection_count
-                    camera_data.successful_connections = existing.successful_connections
-                    camera_data.failed_connections = existing.failed_connections
-                    camera_data.total_uptime_minutes = existing.total_uptime_minutes
-                    camera_data.snapshots_count = existing.snapshots_count
-                
-                self._camera_cache[camera.camera_id] = camera_data
-                self._cache_timestamps[f"camera_{camera.camera_id}"] = datetime.now()
-            
-            # Guardar en base de datos
-            await self._save_camera_to_db(camera_data)
-            
-            self._stats["cameras_tracked"] += 1
-            return True
+            return result
             
         except Exception as e:
-            self.logger.error(f"Error guardando cámara {camera.camera_id}: {e}")
+            self.logger.error(f"Error en wrapper save_camera_data para {camera.camera_id}: {e}")
             return False
     
     async def _save_camera_to_db(self, camera_data: CameraData) -> None:
-        """Guarda cámara en base de datos."""
+        """
+        DEPRECATED: Método interno para compatibilidad con estructura antigua.
+        
+        Este método mapea la estructura antigua a la nueva estructura 3FN.
+        """
         if not self._db_connection:
             raise RuntimeError("Base de datos no inicializada")
             
-        with self._db_lock:
-            cursor = self._db_connection.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO cameras 
-                (camera_id, brand, model, ip, last_seen, connection_count, 
-                 successful_connections, failed_connections, total_uptime_minutes,
-                 snapshots_count, protocols, metadata, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (
+        self.logger.warning(
+            "DEPRECATED: _save_camera_to_db() usa estructura antigua. "
+            "Migrando automáticamente a nueva estructura 3FN."
+        )
+        
+        # Crear un modelo temporal para usar el método nuevo
+        temp_model = CameraModel(
+            brand=camera_data.brand,
+            model=camera_data.model,
+            display_name=f"{camera_data.brand} {camera_data.model}",
+            connection_config=ConnectionConfig(
+                ip=camera_data.ip,
+                username="admin",
+                password=""
+            )
+        )
+        temp_model.camera_id = camera_data.camera_id
+        
+        # Usar el método nuevo con credenciales vacías
+        await self.save_camera_with_config(temp_model, {'username': 'admin', 'password': ''})
+        
+        # Actualizar estadísticas si es necesario
+        if any([camera_data.connection_count, camera_data.successful_connections, 
+                camera_data.failed_connections, camera_data.total_uptime_minutes]):
+            await self.update_connection_stats(
                 camera_data.camera_id,
-                camera_data.brand,
-                camera_data.model,
-                camera_data.ip,
-                camera_data.last_seen.isoformat(),
-                camera_data.connection_count,
-                camera_data.successful_connections,
-                camera_data.failed_connections,
-                camera_data.total_uptime_minutes,
-                camera_data.snapshots_count,
-                json.dumps(camera_data.protocols),
-                json.dumps(camera_data.metadata)
-            ))
-            self._db_connection.commit()
+                success=camera_data.successful_connections > 0,
+                connection_time=camera_data.total_uptime_minutes * 60 if camera_data.total_uptime_minutes else 0
+            )
     
     async def get_camera_data(self, camera_id: str) -> Optional[CameraData]:
         """
@@ -534,48 +552,54 @@ class DataService:
         return await self._get_camera_from_db(camera_id)
     
     async def _get_camera_from_db(self, camera_id: str) -> Optional[CameraData]:
-        """Obtiene cámara desde base de datos."""
+        """
+        DEPRECATED: Método que mapea la nueva estructura 3FN a la estructura antigua.
+        
+        Este método mantiene compatibilidad con código que espera CameraData.
+        """
         if not self._db_connection:
             return None
             
         try:
-            with self._db_lock:
-                cursor = self._db_connection.cursor()
-                cursor.execute("SELECT * FROM cameras WHERE camera_id = ?", (camera_id,))
-                row = cursor.fetchone()
-                
-                if row:
-                    # Acceso seguro a los campos de la row
-                    def safe_get(field_name: str, default: Any = None) -> Any:
-                        try:
-                            return row[field_name] if row else default
-                        except (KeyError, TypeError, IndexError):
-                            return default
-                    
-                    camera_data = CameraData(
-                        camera_id=safe_get('camera_id', ''),
-                        brand=safe_get('brand', ''),
-                        model=safe_get('model', ''),
-                        ip=safe_get('ip', ''),
-                        last_seen=datetime.fromisoformat(safe_get('last_seen', datetime.now().isoformat())),
-                        connection_count=safe_get('connection_count', 0),
-                        successful_connections=safe_get('successful_connections', 0),
-                        failed_connections=safe_get('failed_connections', 0),
-                        total_uptime_minutes=safe_get('total_uptime_minutes', 0),
-                        snapshots_count=safe_get('snapshots_count', 0),
-                        protocols=json.loads(safe_get('protocols') or '[]'),
-                        metadata=json.loads(safe_get('metadata') or '{}')
-                    )
-                    
-                    # Actualizar cache
-                    with self._cache_lock:
-                        self._camera_cache[camera_id] = camera_data
-                        self._cache_timestamps[f"camera_{camera_id}"] = datetime.now()
-                    
-                    return camera_data
+            # Usar el método nuevo para obtener configuración completa
+            full_config = await self.get_camera_full_config(camera_id)
+            
+            if not full_config:
+                return None
+            
+            # Mapear a estructura antigua
+            camera = full_config.get('camera', {})
+            stats = full_config.get('statistics', {})
+            protocols = [p['type'] for p in full_config.get('protocols', [])]
+            
+            camera_data = CameraData(
+                camera_id=camera.get('camera_id', ''),
+                brand=camera.get('brand', ''),
+                model=camera.get('model', ''),
+                ip=camera.get('ip_address', ''),
+                last_seen=datetime.fromisoformat(stats.get('last_connection_at', datetime.now().isoformat())),
+                connection_count=stats.get('total_connections', 0),
+                successful_connections=stats.get('successful_connections', 0),
+                failed_connections=stats.get('failed_connections', 0),
+                total_uptime_minutes=int(stats.get('total_uptime_seconds', 0) / 60),
+                snapshots_count=stats.get('snapshots_taken', 0),
+                protocols=protocols,
+                metadata=camera.get('metadata', {})
+            )
+            
+            # Actualizar cache
+            with self._cache_lock:
+                self._camera_cache[camera_id] = camera_data
+                self._cache_timestamps[f"camera_{camera_id}"] = datetime.now()
+            
+            self.logger.debug(
+                f"Mapeado cámara {camera_id} de nueva estructura 3FN a CameraData legacy"
+            )
+            
+            return camera_data
                     
         except Exception as e:
-            self.logger.error(f"Error obteniendo cámara {camera_id}: {e}")
+            self.logger.error(f"Error obteniendo cámara {camera_id} desde nueva estructura: {e}")
         
         return None
     
@@ -732,37 +756,54 @@ class DataService:
             htmlfile.write(html_content)
     
     async def _get_filtered_cameras(self, filter_params: Optional[Dict[str, Any]] = None) -> List[CameraData]:
-        """Obtiene cámaras con filtros aplicados."""
+        """Obtiene cámaras con filtros aplicados usando nueva estructura 3FN."""
         if not self._db_connection:
             return []
             
-        # Implementación simplificada - obtener todas las cámaras
         cameras = []
         
         try:
             with self._db_lock:
                 cursor = self._db_connection.cursor()
-                cursor.execute("SELECT * FROM cameras ORDER BY last_seen DESC")
+                # Query actualizada para nueva estructura
+                cursor.execute("""
+                    SELECT 
+                        c.camera_id, c.brand, c.model, c.ip_address,
+                        cs.last_connection_at, cs.total_connections,
+                        cs.successful_connections, cs.failed_connections,
+                        cs.total_uptime_seconds
+                    FROM cameras c
+                    LEFT JOIN camera_statistics cs ON c.camera_id = cs.camera_id
+                    WHERE c.is_active = 1
+                    ORDER BY COALESCE(cs.last_connection_at, c.created_at) DESC
+                """)
                 
                 for row in cursor.fetchall():
+                    # Obtener protocolos de la cámara
+                    cursor.execute("""
+                        SELECT protocol_type FROM camera_protocols 
+                        WHERE camera_id = ? AND is_enabled = 1
+                    """, (row[0],))
+                    protocols = [p[0] for p in cursor.fetchall()]
+                    
                     camera_data = CameraData(
-                        camera_id=row['camera_id'],
-                        brand=row['brand'],
-                        model=row['model'],
-                        ip=row['ip'],
-                        last_seen=datetime.fromisoformat(row['last_seen']),
-                        connection_count=row['connection_count'],
-                        successful_connections=row['successful_connections'],
-                        failed_connections=row['failed_connections'],
-                        total_uptime_minutes=row['total_uptime_minutes'],
-                        snapshots_count=row['snapshots_count'],
-                        protocols=json.loads(row['protocols'] or '[]'),
-                        metadata=json.loads(row['metadata'] or '{}')
+                        camera_id=row[0],
+                        brand=row[1],
+                        model=row[2],
+                        ip=row[3],
+                        last_seen=datetime.fromisoformat(row[4]) if row[4] else datetime.now(),
+                        connection_count=row[5] or 0,
+                        successful_connections=row[6] or 0,
+                        failed_connections=row[7] or 0,
+                        total_uptime_minutes=int((row[8] or 0) / 60),
+                        snapshots_count=0,  # Campo no existe en nueva estructura
+                        protocols=protocols,
+                        metadata={}
                     )
                     cameras.append(camera_data)
                     
         except Exception as e:
-            self.logger.error(f"Error obteniendo cámaras filtradas: {e}")
+            self.logger.error(f"Error obteniendo cámaras filtradas desde nueva estructura: {e}")
         
         return cameras
     
@@ -943,8 +984,8 @@ class DataService:
                 cursor = self._db_connection.cursor()
                 
                 # Limpiar escaneos antiguos
-                cursor.execute("DELETE FROM scans WHERE timestamp < ?", (cutoff_date.isoformat(),))
-                scans_deleted = cursor.rowcount
+                # TODO: Adaptar a nueva estructura network_scans
+                scans_deleted = 0  # cursor.execute("DELETE FROM network_scans WHERE start_time < ?", (cutoff_date.isoformat(),))
                 
                 # Limpiar snapshots antiguos
                 cursor.execute("DELETE FROM snapshots WHERE timestamp < ?", (cutoff_date.isoformat(),))
@@ -1006,11 +1047,12 @@ class DataService:
                     
                     cursor.execute("""
                         INSERT OR REPLACE INTO camera_credentials (
-                            camera_id, username, password_encrypted, 
+                            camera_id, credential_name, username, password_encrypted, 
                             auth_type, is_default
-                        ) VALUES (?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?)
                     """, (
                         camera.camera_id,
+                        'Credencial Principal',  # Nombre por defecto
                         credentials.get('username', 'admin'),
                         encryption_service.encrypt(credentials.get('password', '')),
                         'basic',
@@ -1055,7 +1097,7 @@ class DataService:
                 cursor.execute("""
                     INSERT OR IGNORE INTO camera_statistics (
                         camera_id, total_connections, successful_connections,
-                        failed_connections, total_uptime_minutes
+                        failed_connections, total_uptime_seconds
                     ) VALUES (?, ?, ?, ?, ?)
                 """, (camera.camera_id, 0, 0, 0, 0))
                 
@@ -1288,17 +1330,54 @@ class DataService:
             return False
     
     def _get_port_for_protocol(self, camera: CameraModel, protocol: str) -> int:
-        """Obtiene el puerto para un protocolo específico."""
+        """Obtiene el puerto para un protocolo específico considerando la marca."""
         protocol_lower = protocol.lower()
+        brand_lower = camera.brand.lower() if hasattr(camera, 'brand') else ''
         
-        if protocol_lower == 'rtsp' and hasattr(camera, 'rtsp_port'):
-            return camera.rtsp_port
-        elif protocol_lower == 'onvif' and hasattr(camera, 'onvif_port'):
-            return camera.onvif_port
-        elif protocol_lower == 'http' and hasattr(camera, 'http_port'):
-            return camera.http_port
+        # Verificar si la cámara tiene puertos específicos definidos
+        if hasattr(camera, 'connection_config') and camera.connection_config:
+            config = camera.connection_config
+            if protocol_lower == 'rtsp' and hasattr(config, 'rtsp_port'):
+                return config.rtsp_port
+            elif protocol_lower == 'onvif' and hasattr(config, 'onvif_port'):
+                return config.onvif_port
+            elif protocol_lower == 'http' and hasattr(config, 'http_port'):
+                return config.http_port
         
-        # Puertos por defecto
+        # Puertos específicos por marca según documentación
+        brand_ports = {
+            'dahua': {
+                'rtsp': 554,
+                'onvif': 80,
+                'http': 80
+            },
+            'tplink': {
+                'rtsp': 554,
+                'onvif': 2020,  # Puerto ONVIF específico de TP-Link
+                'http': 80
+            },
+            'steren': {
+                'rtsp': 5543,   # Puerto RTSP específico de Steren
+                'onvif': 8000,  # Puerto ONVIF específico de Steren
+                'http': 80
+            },
+            'hikvision': {
+                'rtsp': 554,
+                'onvif': 80,
+                'http': 80
+            },
+            'reolink': {
+                'rtsp': 554,
+                'onvif': 8000,  # Puerto ONVIF específico de Reolink
+                'http': 80
+            }
+        }
+        
+        # Buscar puerto específico por marca
+        if brand_lower in brand_ports:
+            return brand_ports[brand_lower].get(protocol_lower, 80)
+        
+        # Puertos por defecto genéricos
         default_ports = {
             'rtsp': 554,
             'onvif': 80,
@@ -1336,6 +1415,32 @@ class DataService:
             with self._db_lock:
                 self._db_connection.close()
                 self._db_connection = None
+    
+    async def cleanup(self) -> None:
+        """
+        Limpia y cierra todos los recursos del servicio.
+        """
+        self.logger.info("Limpiando DataService...")
+        
+        # Detener tareas de fondo
+        for task in self._background_tasks:
+            if not task.done():
+                task.cancel()
+        
+        # Esperar a que terminen
+        if self._background_tasks:
+            await asyncio.gather(*self._background_tasks, return_exceptions=True)
+        
+        # Cerrar base de datos
+        await self._close_database()
+        
+        # Limpiar cache
+        with self._cache_lock:
+            self._camera_cache.clear()
+            self._scan_cache.clear()
+            self._cache_timestamps.clear()
+        
+        self.logger.info("DataService limpiado correctamente")
 
 
 # Función global para obtener instancia del servicio

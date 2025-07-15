@@ -200,12 +200,48 @@ async def list_cameras():
     Returns:
         Lista de cámaras con su información actual
     """
-    logger.info("Listando cámaras - v2 con ApiResponse")
+    logger.info("Listando cámaras desde base de datos")
     
-    # Obtener cámaras base
+    try:
+        # Intentar obtener datos reales de la base de datos
+        from services.camera_manager_service import camera_manager_service
+        
+        db_cameras = await camera_manager_service.list_cameras()
+        
+        if db_cameras:
+            # Convertir a formato esperado por el frontend
+            cameras = []
+            for cam in db_cameras:
+                # Buscar estado actual en memoria
+                state = _camera_states.get(cam.camera_id, {})
+                
+                camera_info = CameraInfo(
+                    id=cam.camera_id,
+                    name=cam.display_name,
+                    brand=cam.brand,
+                    ip_address=cam.ip,
+                    port=cam.connection_config.rtsp_port if hasattr(cam.connection_config, 'rtsp_port') else 554,
+                    protocol=cam.protocol.value if hasattr(cam, 'protocol') and cam.protocol else "RTSP",
+                    status=state.get("status", "disconnected"),
+                    is_connected=state.get("is_connected", False),
+                    is_streaming=state.get("is_streaming", False),
+                    last_updated=state.get("last_updated", datetime.now())
+                )
+                cameras.append(camera_info)
+            
+            logger.info(f"Devolviendo {len(cameras)} cámaras desde base de datos")
+            
+            return create_response(
+                success=True,
+                data=[camera.model_dump() for camera in cameras]
+            )
+            
+    except Exception as e:
+        logger.warning(f"Error obteniendo cámaras de DB, usando mock: {e}")
+    
+    # Fallback a datos mock si no hay DB o hay error
     base_cameras = get_mock_cameras()
-    logger.info(f"Total cámaras en get_mock_cameras: {len(base_cameras)}")
-    logger.info(f"IDs de cámaras: {list(base_cameras.keys())}")
+    logger.info(f"Usando datos mock: {len(base_cameras)} cámaras")
     
     # Aplicar estados guardados
     for camera_id, camera in base_cameras.items():
@@ -218,19 +254,10 @@ async def list_cameras():
     
     cameras = list(base_cameras.values())
     
-    # Log para debug
-    logger.info(f"Total cámaras a devolver: {len(cameras)}")
-    
-    # Devolver con el formato ApiResponse que espera el frontend
-    response = create_response(
+    return create_response(
         success=True,
         data=[camera.model_dump() for camera in cameras]
     )
-    
-    # Verificar tamaño de respuesta
-    logger.info(f"Tamaño de data en respuesta: {len(response['data']) if 'data' in response else 0}")
-    
-    return response
 
 
 @router.get("/{camera_id}", response_model=CameraInfo)
@@ -249,6 +276,36 @@ async def get_camera_info(camera_id: str):
     """
     logger.info(f"Obteniendo información de cámara: {camera_id}")
     
+    try:
+        # Intentar obtener de base de datos primero
+        from services.camera_manager_service import camera_manager_service
+        
+        db_camera = await camera_manager_service.get_camera(camera_id)
+        
+        if db_camera:
+            # Buscar estado actual en memoria
+            state = _camera_states.get(camera_id, {})
+            
+            camera_info = CameraInfo(
+                id=db_camera.camera_id,
+                name=db_camera.display_name,
+                brand=db_camera.brand,
+                ip_address=db_camera.ip,
+                port=db_camera.connection_config.rtsp_port if hasattr(db_camera.connection_config, 'rtsp_port') else 554,
+                protocol=db_camera.protocol.value if hasattr(db_camera, 'protocol') and db_camera.protocol else "RTSP",
+                status=state.get("status", "disconnected"),
+                is_connected=state.get("is_connected", False),
+                is_streaming=state.get("is_streaming", False),
+                last_updated=state.get("last_updated", datetime.now())
+            )
+            
+            logger.info(f"Devolviendo cámara {camera_id} desde base de datos")
+            return camera_info
+            
+    except Exception as e:
+        logger.warning(f"Error obteniendo cámara {camera_id} de DB: {e}")
+    
+    # Fallback a datos mock
     base_cameras = get_mock_cameras()
     
     if camera_id not in base_cameras:

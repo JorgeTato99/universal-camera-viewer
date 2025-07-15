@@ -103,37 +103,47 @@ class CameraPresenter(BasePresenter):
     async def _load_camera_model(self) -> None:
         """Carga el modelo de cámara desde datos persistidos o configuración."""
         try:
-            # Intentar cargar desde DataService
-            camera_data = await self._data_service.get_camera_data(self.camera_id)
+            # Usar CameraManagerService para mejor integración con estructura 3FN
+            from services.camera_manager_service import camera_manager_service
             
-            if camera_data:
-                # Convertir datos persistidos a modelo
-                connection_config = ConnectionConfig(
-                    ip=camera_data.ip,
-                    username="admin",  # Valor por defecto
-                    password=""  # Se obtendrá del ConfigService
-                )
-                self._camera_model = CameraModel(
-                    brand=camera_data.brand,
-                    model=camera_data.model,
-                    display_name=camera_data.camera_id,
-                    connection_config=connection_config
-                )
-                self.logger.info(f"Modelo de cámara cargado desde datos: {self.camera_id}")
+            # Intentar obtener cámara completa desde el servicio
+            full_camera = await camera_manager_service.get_camera(self.camera_id)
+            
+            if full_camera:
+                self._camera_model = full_camera
+                self.logger.info(f"Modelo de cámara cargado desde CameraManagerService: {self.camera_id}")
             else:
-                # Crear modelo básico si no existe
-                connection_config = ConnectionConfig(
-                    ip="",
-                    username="admin",
-                    password=""
-                )
-                self._camera_model = CameraModel(
-                    brand="Unknown",
-                    model="Unknown", 
-                    display_name=self.camera_id,
-                    connection_config=connection_config
-                )
-                self.logger.info(f"🆕 Creado modelo básico para cámara: {self.camera_id}")
+                # Si no existe, intentar con DataService para compatibilidad
+                camera_data = await self._data_service.get_camera_data(self.camera_id)
+                
+                if camera_data:
+                    # Convertir datos persistidos a modelo
+                    connection_config = ConnectionConfig(
+                        ip=camera_data.ip,
+                        username="admin",  # Valor por defecto
+                        password=""  # Se obtendrá del ConfigService
+                    )
+                    self._camera_model = CameraModel(
+                        brand=camera_data.brand,
+                        model=camera_data.model,
+                        display_name=camera_data.camera_id,
+                        connection_config=connection_config
+                    )
+                    self.logger.info(f"Modelo de cámara cargado desde DataService legacy: {self.camera_id}")
+                else:
+                    # Crear modelo básico si no existe
+                    connection_config = ConnectionConfig(
+                        ip="",
+                        username="admin",
+                        password=""
+                    )
+                    self._camera_model = CameraModel(
+                        brand="Unknown",
+                        model="Unknown", 
+                        display_name=self.camera_id,
+                        connection_config=connection_config
+                    )
+                    self.logger.info(f"Creado modelo básico para cámara nueva: {self.camera_id}")
                 
         except Exception as e:
             self.logger.error(f"Error cargando modelo de cámara: {str(e)}")

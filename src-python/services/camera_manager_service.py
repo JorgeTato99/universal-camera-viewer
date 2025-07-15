@@ -112,6 +112,30 @@ class CameraManagerService(BaseService):
             self.logger.error(f"Error cargando cámara {camera_id} desde DB: {e}")
             return None
     
+    async def list_cameras(self) -> List[CameraModel]:
+        """
+        Lista todas las cámaras activas.
+        
+        Returns:
+            Lista de CameraModel
+        """
+        try:
+            # Obtener IDs de todas las cámaras
+            camera_ids = await self._data_service.get_all_camera_ids()
+            
+            cameras = []
+            for camera_id in camera_ids:
+                camera = await self.get_camera(camera_id)
+                if camera:
+                    cameras.append(camera)
+            
+            self.logger.info(f"Listadas {len(cameras)} cámaras desde base de datos")
+            return cameras
+            
+        except Exception as e:
+            self.logger.error(f"Error listando cámaras: {e}")
+            return []
+    
     def _build_camera_model_from_db(self, data: Dict[str, Any]) -> CameraModel:
         """
         Construye un CameraModel desde datos de la DB.
@@ -521,6 +545,29 @@ class CameraManagerService(BaseService):
             'discovered_endpoints': len(camera.discovered_endpoints),
             'verified_endpoints': len(camera.get_verified_endpoints())
         }
+    
+    async def update_connection_stats(self, camera_id: str, success: bool, connection_time: float = 0) -> bool:
+        """
+        Actualiza las estadísticas de conexión de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            success: Si la conexión fue exitosa
+            connection_time: Tiempo de conexión en segundos
+            
+        Returns:
+            bool: True si se actualizó correctamente
+        """
+        try:
+            # Delegar al DataService
+            return await self._data_service.update_connection_stats(
+                camera_id=camera_id,
+                success=success,
+                connection_time=connection_time
+            )
+        except Exception as e:
+            self.logger.error(f"Error actualizando estadísticas de {camera_id}: {e}")
+            return False
     
     async def cleanup(self) -> None:
         """Limpia recursos del servicio."""
