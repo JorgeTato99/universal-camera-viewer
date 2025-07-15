@@ -9,7 +9,15 @@
 
 Sistema profesional de videovigilancia IP con streaming en tiempo real. ¡Ciclo completo funcional implementado!
 
-## 🎉 Nuevo en v0.9.0: Streaming en Tiempo Real
+## 🎉 Nuevo en v0.10.0: Base de Datos Mejorada
+
+- ✅ **Nueva estructura 3FN**: Base de datos normalizada y escalable
+- ✅ **URLs persistidas**: Las URLs RTSP descubiertas se guardan automáticamente
+- ✅ **Credenciales encriptadas**: Mayor seguridad con encriptación AES
+- ✅ **Migración automática**: Script incluido para actualizar DB existente
+- ✅ **Estadísticas detalladas**: Historial completo de conexiones
+
+### También en v0.9.0: Streaming en Tiempo Real
 
 - ✅ **Streaming RTSP funcional** con cámaras Dahua
 - ✅ **WebSocket estable** con heartbeat automático
@@ -87,6 +95,20 @@ yarn dev
 yarn tauri-dev      # Desarrollo con hot reload
 yarn tauri-build    # Genera instalador .exe/.msi
 ```
+
+## 🔄 Migración de Base de Datos (v0.10.0)
+
+Si está actualizando desde una versión anterior:
+
+```bash
+# Ejecutar migración
+python src-python/migrate_database.py
+
+# Con información detallada
+python src-python/migrate_database.py --verbose
+```
+
+Ver [Guía de Migración](docs/MIGRATION_GUIDE.md) para más detalles.
 
 ## 📁 Estructura del Proyecto
 

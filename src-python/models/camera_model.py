@@ -28,6 +28,7 @@ from utils.exceptions import (
     InvalidPortError
 )
 from utils.constants import DefaultPorts, DefaultCredentials, SystemLimits
+from utils.id_generator import generate_camera_id
 
 
 class ConnectionStatus(Enum):
@@ -61,6 +62,7 @@ class ConnectionConfig:
     timeout: int = 10
     max_retries: int = 3
     retry_delay: float = 1.0
+    auth_type: str = "basic"  # basic, digest, etc.
     
     def __post_init__(self):
         """Validación post-inicialización."""
@@ -177,7 +179,7 @@ class CameraModel:
         self.brand = brand
         self.model = model
         self.display_name = display_name
-        self.camera_id = f"{brand}_{model}_{connection_config.ip.replace('.', '_')}"
+        self.camera_id = generate_camera_id()  # UUID único e inmutable
         
         # Configuración
         self.connection_config = connection_config
@@ -197,6 +199,25 @@ class CameraModel:
         self.created_at = datetime.now()
         self.last_updated = datetime.now()
         self.metadata: Dict[str, Any] = {}
+        
+        # Nuevos campos para persistencia 3FN
+        self.mac_address: Optional[str] = None
+        self.firmware_version: Optional[str] = None
+        self.hardware_version: Optional[str] = None
+        self.serial_number: Optional[str] = None
+        self.location: Optional[str] = None
+        self.description: Optional[str] = None
+        self.is_active: bool = True
+        
+        # URLs descubiertas/configuradas
+        self.discovered_endpoints: Dict[str, Dict[str, Any]] = {}
+        # Formato: {'rtsp_main': {'url': 'rtsp://...', 'verified': True, 'priority': 0}}
+        
+        # Perfiles de streaming disponibles
+        self.stream_profiles: List[Dict[str, Any]] = []
+        
+        # Protocolos configurados
+        self.protocol_configs: Dict[str, Dict[str, Any]] = {}
         
         self.logger.info(f"Camera model initialized: {self.display_name}")
     
@@ -334,6 +355,75 @@ class CameraModel:
     
     # === URLs y Endpoints ===
     
+    def add_discovered_endpoint(self, endpoint_type: str, url: str, 
+                              verified: bool = False, priority: int = 0) -> None:
+        """
+        Agrega un endpoint descubierto.
+        
+        Args:
+            endpoint_type: Tipo de endpoint (rtsp_main, snapshot, etc)
+            url: URL completa
+            verified: Si fue verificada exitosamente
+            priority: Prioridad de uso (0 = mayor prioridad)
+        """
+        self.discovered_endpoints[endpoint_type] = {
+            'url': url,
+            'verified': verified,
+            'priority': priority,
+            'discovered_at': datetime.now().isoformat()
+        }
+        self.last_updated = datetime.now()
+        self.logger.info(f"Endpoint agregado: {endpoint_type} = {url}")
+    
+    def get_endpoint_url(self, endpoint_type: str) -> Optional[str]:
+        """
+        Obtiene URL de un endpoint específico.
+        
+        Args:
+            endpoint_type: Tipo de endpoint
+            
+        Returns:
+            URL si existe, None si no
+        """
+        endpoint = self.discovered_endpoints.get(endpoint_type)
+        return endpoint['url'] if endpoint else None
+    
+    def get_verified_endpoints(self) -> Dict[str, str]:
+        """
+        Obtiene solo los endpoints verificados.
+        
+        Returns:
+            Dict con endpoints verificados {tipo: url}
+        """
+        return {
+            ep_type: ep_data['url']
+            for ep_type, ep_data in self.discovered_endpoints.items()
+            if ep_data.get('verified', False)
+        }
+    
+    def add_stream_profile(self, profile_name: str, **kwargs) -> None:
+        """
+        Agrega un perfil de streaming.
+        
+        Args:
+            profile_name: Nombre del perfil
+            **kwargs: Configuración del perfil
+        """
+        profile = {
+            'profile_name': profile_name,
+            'stream_type': kwargs.get('stream_type', 'main'),
+            'resolution': kwargs.get('resolution'),
+            'fps': kwargs.get('fps'),
+            'bitrate': kwargs.get('bitrate'),
+            'codec': kwargs.get('codec'),
+            'channel': kwargs.get('channel', 1),
+            'subtype': kwargs.get('subtype', 0),
+            'is_default': kwargs.get('is_default', False)
+        }
+        self.stream_profiles.append(profile)
+        self.last_updated = datetime.now()
+        self.logger.info(f"Perfil de streaming agregado: {profile_name}")
+    
     def get_rtsp_url(self, url_pattern: Optional[str] = None) -> str:
         """
         Construye URL RTSP para esta cámara.
@@ -344,6 +434,12 @@ class CameraModel:
         Returns:
             URL RTSP completa
         """
+        # Primero intentar con endpoint descubierto
+        discovered_url = self.get_endpoint_url('rtsp_main')
+        if discovered_url:
+            return discovered_url
+            
+        # Si no, construir URL
         if not url_pattern:
             url_pattern = "/stream1"  # Patrón genérico
         
@@ -521,7 +617,22 @@ class CameraModel:
                 'created_at': self.created_at.isoformat(),
                 'last_updated': self.last_updated.isoformat(),
                 'custom_metadata': self.metadata,
-            }
+            },
+            # Nuevos campos para persistencia 3FN
+            'hardware_info': {
+                'mac_address': self.mac_address,
+                'firmware_version': self.firmware_version,
+                'hardware_version': self.hardware_version,
+                'serial_number': self.serial_number,
+            },
+            'location_info': {
+                'location': self.location,
+                'description': self.description,
+                'is_active': self.is_active,
+            },
+            'discovered_endpoints': self.discovered_endpoints,
+            'stream_profiles': self.stream_profiles,
+            'protocol_configs': self.protocol_configs,
         }
     
     @classmethod

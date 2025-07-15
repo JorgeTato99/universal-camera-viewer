@@ -19,6 +19,7 @@ from api.dependencies import cleanup_services, create_response
 
 # Importar routers
 from routers import cameras, scanner, config, streaming
+from routers.cameras_v2 import router as cameras_v2_router
 
 # Configurar logging
 logging.basicConfig(
@@ -233,6 +234,9 @@ async def internal_error_handler(request: Request, exc):
 app.include_router(cameras.router, prefix=settings.api_prefix)
 app.include_router(scanner.router, prefix=settings.api_prefix)
 app.include_router(config.router, prefix=settings.api_prefix)
+
+# API v2 routers
+app.include_router(cameras_v2_router, prefix="/api/v2")
 
 # WebSocket routers (sin prefijo API)
 app.include_router(streaming.router, prefix="/ws")

@@ -1,0 +1,727 @@
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
+import { 
+  CameraResponse,
+  ConnectionStatus,
+  CameraGridItem,
+  ProtocolType,
+  isConnected,
+  hasCredentials,
+  getPrimaryProtocol,
+  getVerifiedEndpoint,
+} from "../types/camera.types.v2";
+import { cameraServiceV2 } from "../services/python/cameraService.v2";
+import { notificationStore } from "./notificationStore";
+
+interface CameraStateV2 {
+  // Camera Data
+  cameras: Map<string, CameraResponse>;
+  selectedCamera: CameraResponse | null;
+  cameraGridItems: Map<string, CameraGridItem>;
+
+  // UI State
+  gridColumns: number;
+  viewMode: "grid" | "list" | "detail";
+  sortBy: "name" | "status" | "lastUpdated" | "location" | "brand";
+  sortDirection: "asc" | "desc";
+  filterStatus: ConnectionStatus | "all";
+  filterBrand: string | "all";
+  filterLocation: string | "all";
+  searchQuery: string;
+  showInactiveCameras: boolean;
+
+  // Loading States
+  isLoading: boolean;
+  isLoadingCamera: Map<string, boolean>;
+  isConnecting: Map<string, boolean>;
+  isSaving: Map<string, boolean>;
+
+  // Error States
+  errors: Map<string, string>;
+
+  // Actions - Data Management
+  loadCameras: () => Promise<void>;
+  reloadCamera: (cameraId: string) => Promise<void>;
+  addCamera: (camera: CameraResponse) => void;
+  updateCamera: (cameraId: string, updates: Partial<CameraResponse>) => void;
+  removeCamera: (cameraId: string) => void;
+  setSelectedCamera: (camera: CameraResponse | null) => void;
+
+  // Actions - Frame Management
+  updateCameraFrame: (cameraId: string, frameData: string) => void;
+  updateCameraError: (cameraId: string, error: string | null) => void;
+  updateStreamingUrl: (cameraId: string, url: string | null) => void;
+
+  // Actions - Connection Management
+  connectCamera: (cameraId: string) => Promise<void>;
+  disconnectCamera: (cameraId: string) => Promise<void>;
+  updateCredentials: (cameraId: string, username: string, password: string) => Promise<void>;
+  saveDiscoveredEndpoint: (cameraId: string, type: string, url: string) => Promise<void>;
+
+  // Actions - UI
+  setGridColumns: (columns: number) => void;
+  setViewMode: (mode: "grid" | "list" | "detail") => void;
+  setSorting: (sortBy: string, direction: "asc" | "desc") => void;
+  setFilterStatus: (status: ConnectionStatus | "all") => void;
+  setFilterBrand: (brand: string | "all") => void;
+  setFilterLocation: (location: string | "all") => void;
+  setSearchQuery: (query: string) => void;
+  toggleShowInactive: () => void;
+
+  // Computed Properties
+  getFilteredCameras: () => CameraResponse[];
+  getConnectedCameras: () => CameraResponse[];
+  getCamerasByLocation: (location: string) => CameraResponse[];
+  getCamerasByBrand: (brand: string) => CameraResponse[];
+  getCameraStats: () => {
+    total: number;
+    active: number;
+    connected: number;
+    streaming: number;
+    withCredentials: number;
+    byBrand: Record<string, number>;
+    byLocation: Record<string, number>;
+  };
+  getUniqueLocations: () => string[];
+  getUniqueBrands: () => string[];
+
+  // Bulk Actions
+  connectAllCameras: () => Promise<void>;
+  disconnectAllCameras: () => Promise<void>;
+  connectCamerasByLocation: (location: string) => Promise<void>;
+  
+  // Persistence
+  exportConfiguration: () => object;
+  importConfiguration: (config: object) => Promise<void>;
+}
+
+export const useCameraStoreV2 = create<CameraStateV2>()(
+  subscribeWithSelector((set, get) => ({
+    // Initial State
+    cameras: new Map(),
+    selectedCamera: null,
+    cameraGridItems: new Map(),
+
+    // UI State
+    gridColumns: 3,
+    viewMode: "grid",
+    sortBy: "name",
+    sortDirection: "asc",
+    filterStatus: "all",
+    filterBrand: "all",
+    filterLocation: "all",
+    searchQuery: "",
+    showInactiveCameras: false,
+
+    // Loading States
+    isLoading: false,
+    isLoadingCamera: new Map(),
+    isConnecting: new Map(),
+    isSaving: new Map(),
+
+    // Error States
+    errors: new Map(),
+
+    // Load all cameras from backend
+    loadCameras: async () => {
+      set({ isLoading: true });
+      try {
+        const cameras = await cameraServiceV2.listCameras(
+          !get().showInactiveCameras
+        );
+        
+        const camerasMap = new Map<string, CameraResponse>();
+        const gridItems = new Map<string, CameraGridItem>();
+        
+        cameras.forEach(camera => {
+          camerasMap.set(camera.camera_id, camera);
+          gridItems.set(camera.camera_id, {
+            camera,
+            streaming_url: getVerifiedEndpoint(camera, 'rtsp_main')?.url,
+          });
+        });
+        
+        set({
+          cameras: camerasMap,
+          cameraGridItems: gridItems,
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error('Error loading cameras:', error);
+        notificationStore.addNotification({
+          type: 'error',
+          message: 'Error loading cameras',
+        });
+        set({ isLoading: false });
+      }
+    },
+
+    // Reload single camera
+    reloadCamera: async (cameraId: string) => {
+      const loadingMap = new Map(get().isLoadingCamera);
+      loadingMap.set(cameraId, true);
+      set({ isLoadingCamera: loadingMap });
+
+      try {
+        const camera = await cameraServiceV2.getCamera(cameraId);
+        get().updateCamera(cameraId, camera);
+      } catch (error) {
+        console.error(`Error reloading camera ${cameraId}:`, error);
+      } finally {
+        const loadingMap = new Map(get().isLoadingCamera);
+        loadingMap.delete(cameraId);
+        set({ isLoadingCamera: loadingMap });
+      }
+    },
+
+    // Add camera
+    addCamera: (camera) =>
+      set((state) => {
+        const newCameras = new Map(state.cameras);
+        newCameras.set(camera.camera_id, camera);
+
+        const newGridItems = new Map(state.cameraGridItems);
+        newGridItems.set(camera.camera_id, {
+          camera,
+          streaming_url: getVerifiedEndpoint(camera, 'rtsp_main')?.url,
+        });
+
+        return {
+          cameras: newCameras,
+          cameraGridItems: newGridItems,
+        };
+      }),
+
+    // Update camera
+    updateCamera: (cameraId, updates) =>
+      set((state) => {
+        const newCameras = new Map(state.cameras);
+        const existingCamera = newCameras.get(cameraId);
+
+        if (existingCamera) {
+          const updatedCamera = {
+            ...existingCamera,
+            ...updates,
+            updated_at: new Date().toISOString(),
+          };
+          newCameras.set(cameraId, updatedCamera);
+
+          // Update grid item
+          const newGridItems = new Map(state.cameraGridItems);
+          const existingGridItem = newGridItems.get(cameraId);
+          if (existingGridItem) {
+            newGridItems.set(cameraId, {
+              ...existingGridItem,
+              camera: updatedCamera,
+              streaming_url: getVerifiedEndpoint(updatedCamera, 'rtsp_main')?.url,
+            });
+          }
+
+          // Update selected camera if it's the same
+          const newSelectedCamera = 
+            state.selectedCamera?.camera_id === cameraId 
+              ? updatedCamera 
+              : state.selectedCamera;
+
+          return {
+            cameras: newCameras,
+            cameraGridItems: newGridItems,
+            selectedCamera: newSelectedCamera,
+          };
+        }
+        return state;
+      }),
+
+    // Remove camera
+    removeCamera: (cameraId) =>
+      set((state) => {
+        const newCameras = new Map(state.cameras);
+        newCameras.delete(cameraId);
+
+        const newGridItems = new Map(state.cameraGridItems);
+        newGridItems.delete(cameraId);
+
+        const newConnecting = new Map(state.isConnecting);
+        newConnecting.delete(cameraId);
+
+        const newErrors = new Map(state.errors);
+        newErrors.delete(cameraId);
+
+        return {
+          cameras: newCameras,
+          cameraGridItems: newGridItems,
+          isConnecting: newConnecting,
+          errors: newErrors,
+          selectedCamera:
+            state.selectedCamera?.camera_id === cameraId
+              ? null
+              : state.selectedCamera,
+        };
+      }),
+
+    setSelectedCamera: (camera) => set({ selectedCamera: camera }),
+
+    // Frame management
+    updateCameraFrame: (cameraId, frameData) =>
+      set((state) => {
+        const newGridItems = new Map(state.cameraGridItems);
+        const existingItem = newGridItems.get(cameraId);
+
+        if (existingItem) {
+          newGridItems.set(cameraId, {
+            ...existingItem,
+            last_frame: frameData,
+            error_message: undefined,
+          });
+        }
+
+        return { cameraGridItems: newGridItems };
+      }),
+
+    updateCameraError: (cameraId, error) =>
+      set((state) => {
+        const newGridItems = new Map(state.cameraGridItems);
+        const existingItem = newGridItems.get(cameraId);
+
+        if (existingItem) {
+          newGridItems.set(cameraId, {
+            ...existingItem,
+            error_message: error || undefined,
+          });
+        }
+
+        const newErrors = new Map(state.errors);
+        if (error) {
+          newErrors.set(cameraId, error);
+        } else {
+          newErrors.delete(cameraId);
+        }
+
+        return { cameraGridItems: newGridItems, errors: newErrors };
+      }),
+
+    updateStreamingUrl: (cameraId, url) =>
+      set((state) => {
+        const newGridItems = new Map(state.cameraGridItems);
+        const existingItem = newGridItems.get(cameraId);
+
+        if (existingItem) {
+          newGridItems.set(cameraId, {
+            ...existingItem,
+            streaming_url: url || undefined,
+          });
+        }
+
+        return { cameraGridItems: newGridItems };
+      }),
+
+    // Connection management
+    connectCamera: async (cameraId) => {
+      const connectingMap = new Map(get().isConnecting);
+      connectingMap.set(cameraId, true);
+      set({ isConnecting: connectingMap });
+
+      try {
+        await cameraServiceV2.connectCamera(cameraId);
+        
+        // Update status
+        get().updateCamera(cameraId, {
+          status: ConnectionStatus.CONNECTING,
+          is_connected: false,
+        });
+
+        notificationStore.addNotification({
+          type: 'info',
+          message: 'Connecting to camera...',
+        });
+
+        // Reload camera after a delay to get updated status
+        setTimeout(() => {
+          get().reloadCamera(cameraId);
+        }, 2000);
+      } catch (error) {
+        console.error(`Error connecting camera ${cameraId}:`, error);
+        get().updateCameraError(cameraId, String(error));
+        notificationStore.addNotification({
+          type: 'error',
+          message: `Failed to connect: ${error}`,
+        });
+      } finally {
+        const connectingMap = new Map(get().isConnecting);
+        connectingMap.delete(cameraId);
+        set({ isConnecting: connectingMap });
+      }
+    },
+
+    disconnectCamera: async (cameraId) => {
+      try {
+        await cameraServiceV2.disconnectCamera(cameraId);
+        
+        get().updateCamera(cameraId, {
+          status: ConnectionStatus.DISCONNECTED,
+          is_connected: false,
+          is_streaming: false,
+        });
+
+        notificationStore.addNotification({
+          type: 'success',
+          message: 'Camera disconnected',
+        });
+      } catch (error) {
+        console.error(`Error disconnecting camera ${cameraId}:`, error);
+        notificationStore.addNotification({
+          type: 'error',
+          message: `Failed to disconnect: ${error}`,
+        });
+      }
+    },
+
+    updateCredentials: async (cameraId, username, password) => {
+      const savingMap = new Map(get().isSaving);
+      savingMap.set(cameraId, true);
+      set({ isSaving: savingMap });
+
+      try {
+        const updatedCamera = await cameraServiceV2.updateCredentials(
+          cameraId,
+          username,
+          password
+        );
+        
+        get().updateCamera(cameraId, updatedCamera);
+        
+        notificationStore.addNotification({
+          type: 'success',
+          message: 'Credentials updated',
+        });
+      } catch (error) {
+        console.error(`Error updating credentials:`, error);
+        notificationStore.addNotification({
+          type: 'error',
+          message: `Failed to update credentials: ${error}`,
+        });
+      } finally {
+        const savingMap = new Map(get().isSaving);
+        savingMap.delete(cameraId);
+        set({ isSaving: savingMap });
+      }
+    },
+
+    saveDiscoveredEndpoint: async (cameraId, type, url) => {
+      try {
+        await cameraServiceV2.addCameraEndpoint(cameraId, {
+          type,
+          url,
+          verified: true,
+        });
+
+        // Reload camera to get updated endpoints
+        await get().reloadCamera(cameraId);
+        
+        notificationStore.addNotification({
+          type: 'success',
+          message: 'Endpoint saved',
+        });
+      } catch (error) {
+        console.error(`Error saving endpoint:`, error);
+        notificationStore.addNotification({
+          type: 'error',
+          message: `Failed to save endpoint: ${error}`,
+        });
+      }
+    },
+
+    // UI Actions
+    setGridColumns: (columns) =>
+      set({ gridColumns: Math.max(1, Math.min(6, columns)) }),
+    setViewMode: (mode) => set({ viewMode: mode }),
+    setSorting: (sortBy, direction) =>
+      set({ sortBy: sortBy as any, sortDirection: direction }),
+    setFilterStatus: (status) => set({ filterStatus: status }),
+    setFilterBrand: (brand) => set({ filterBrand: brand }),
+    setFilterLocation: (location) => set({ filterLocation: location }),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    toggleShowInactive: () => set(state => ({ 
+      showInactiveCameras: !state.showInactiveCameras 
+    })),
+
+    // Computed Properties
+    getFilteredCameras: () => {
+      const { 
+        cameras, 
+        filterStatus, 
+        filterBrand,
+        filterLocation,
+        searchQuery, 
+        sortBy, 
+        sortDirection,
+        showInactiveCameras 
+      } = get();
+      
+      let filtered = Array.from(cameras.values());
+
+      // Filter inactive if needed
+      if (!showInactiveCameras) {
+        filtered = filtered.filter(camera => camera.is_active);
+      }
+
+      // Apply status filter
+      if (filterStatus !== "all") {
+        filtered = filtered.filter(camera => camera.status === filterStatus);
+      }
+
+      // Apply brand filter
+      if (filterBrand !== "all") {
+        filtered = filtered.filter(camera => camera.brand === filterBrand);
+      }
+
+      // Apply location filter
+      if (filterLocation !== "all") {
+        filtered = filtered.filter(camera => camera.location === filterLocation);
+      }
+
+      // Apply search
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          camera =>
+            camera.display_name.toLowerCase().includes(query) ||
+            camera.ip_address.includes(query) ||
+            camera.brand.toLowerCase().includes(query) ||
+            camera.model.toLowerCase().includes(query) ||
+            camera.location?.toLowerCase().includes(query) ||
+            camera.description?.toLowerCase().includes(query)
+        );
+      }
+
+      // Sort
+      filtered.sort((a, b) => {
+        let compareValue = 0;
+        
+        switch (sortBy) {
+          case "name":
+            compareValue = a.display_name.localeCompare(b.display_name);
+            break;
+          case "status":
+            compareValue = a.status.localeCompare(b.status);
+            break;
+          case "lastUpdated":
+            compareValue = new Date(b.updated_at).getTime() - 
+                          new Date(a.updated_at).getTime();
+            break;
+          case "location":
+            compareValue = (a.location || "").localeCompare(b.location || "");
+            break;
+          case "brand":
+            compareValue = a.brand.localeCompare(b.brand);
+            break;
+        }
+
+        return sortDirection === "asc" ? compareValue : -compareValue;
+      });
+
+      return filtered;
+    },
+
+    getConnectedCameras: () => {
+      const { cameras } = get();
+      return Array.from(cameras.values()).filter(camera => 
+        isConnected(camera)
+      );
+    },
+
+    getCamerasByLocation: (location) => {
+      const { cameras } = get();
+      return Array.from(cameras.values()).filter(
+        camera => camera.location === location
+      );
+    },
+
+    getCamerasByBrand: (brand) => {
+      const { cameras } = get();
+      return Array.from(cameras.values()).filter(
+        camera => camera.brand === brand
+      );
+    },
+
+    getCameraStats: () => {
+      const { cameras } = get();
+      const cameraList = Array.from(cameras.values());
+      
+      const byBrand: Record<string, number> = {};
+      const byLocation: Record<string, number> = {};
+      
+      let active = 0;
+      let connected = 0;
+      let streaming = 0;
+      let withCredentials = 0;
+      
+      cameraList.forEach(camera => {
+        if (camera.is_active) active++;
+        if (camera.is_connected) connected++;
+        if (camera.is_streaming) streaming++;
+        if (hasCredentials(camera)) withCredentials++;
+        
+        // Count by brand
+        byBrand[camera.brand] = (byBrand[camera.brand] || 0) + 1;
+        
+        // Count by location
+        if (camera.location) {
+          byLocation[camera.location] = (byLocation[camera.location] || 0) + 1;
+        }
+      });
+      
+      return {
+        total: cameraList.length,
+        active,
+        connected,
+        streaming,
+        withCredentials,
+        byBrand,
+        byLocation,
+      };
+    },
+
+    getUniqueLocations: () => {
+      const { cameras } = get();
+      const locations = new Set<string>();
+      
+      cameras.forEach(camera => {
+        if (camera.location) {
+          locations.add(camera.location);
+        }
+      });
+      
+      return Array.from(locations).sort();
+    },
+
+    getUniqueBrands: () => {
+      const { cameras } = get();
+      const brands = new Set<string>();
+      
+      cameras.forEach(camera => {
+        brands.add(camera.brand);
+      });
+      
+      return Array.from(brands).sort();
+    },
+
+    // Bulk Actions
+    connectAllCameras: async () => {
+      const cameras = get().getFilteredCameras();
+      const disconnected = cameras.filter(
+        c => c.status === ConnectionStatus.DISCONNECTED
+      );
+      
+      if (disconnected.length === 0) {
+        notificationStore.addNotification({
+          type: 'info',
+          message: 'No disconnected cameras to connect',
+        });
+        return;
+      }
+      
+      notificationStore.addNotification({
+        type: 'info',
+        message: `Connecting ${disconnected.length} cameras...`,
+      });
+      
+      // Connect in batches to avoid overwhelming the system
+      const batchSize = 5;
+      for (let i = 0; i < disconnected.length; i += batchSize) {
+        const batch = disconnected.slice(i, i + batchSize);
+        await Promise.allSettled(
+          batch.map(camera => get().connectCamera(camera.camera_id))
+        );
+        
+        // Small delay between batches
+        if (i + batchSize < disconnected.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    },
+
+    disconnectAllCameras: async () => {
+      const connected = get().getConnectedCameras();
+      
+      if (connected.length === 0) {
+        notificationStore.addNotification({
+          type: 'info',
+          message: 'No connected cameras to disconnect',
+        });
+        return;
+      }
+      
+      notificationStore.addNotification({
+        type: 'info',
+        message: `Disconnecting ${connected.length} cameras...`,
+      });
+      
+      await Promise.allSettled(
+        connected.map(camera => get().disconnectCamera(camera.camera_id))
+      );
+    },
+
+    connectCamerasByLocation: async (location) => {
+      const cameras = get().getCamerasByLocation(location);
+      const disconnected = cameras.filter(
+        c => c.status === ConnectionStatus.DISCONNECTED
+      );
+      
+      if (disconnected.length === 0) {
+        notificationStore.addNotification({
+          type: 'info',
+          message: `No disconnected cameras in ${location}`,
+        });
+        return;
+      }
+      
+      notificationStore.addNotification({
+        type: 'info',
+        message: `Connecting ${disconnected.length} cameras in ${location}...`,
+      });
+      
+      await Promise.allSettled(
+        disconnected.map(camera => get().connectCamera(camera.camera_id))
+      );
+    },
+
+    // Configuration export/import
+    exportConfiguration: () => {
+      const { cameras } = get();
+      const config = {
+        version: '2.0',
+        timestamp: new Date().toISOString(),
+        cameras: Array.from(cameras.values()).map(camera => ({
+          brand: camera.brand,
+          model: camera.model,
+          display_name: camera.display_name,
+          ip_address: camera.ip_address,
+          location: camera.location,
+          description: camera.description,
+          protocols: camera.protocols,
+          endpoints: camera.endpoints.filter(e => e.is_verified),
+          stream_profiles: camera.stream_profiles,
+          capabilities: camera.capabilities,
+        })),
+      };
+      
+      return config;
+    },
+
+    importConfiguration: async (config: any) => {
+      if (config.version !== '2.0') {
+        throw new Error('Incompatible configuration version');
+      }
+      
+      // Import logic would go here
+      notificationStore.addNotification({
+        type: 'info',
+        message: 'Configuration import not yet implemented',
+      });
+    },
+  }))
+);
+
+// Auto-load cameras on store creation
+useCameraStoreV2.getState().loadCameras();

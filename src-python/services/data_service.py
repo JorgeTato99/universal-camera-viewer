@@ -303,85 +303,40 @@ class DataService:
         self.logger.info(f"🦆 Base de datos DuckDB inicializada: {self.config.database_path}")
     
     async def _create_tables_sqlite(self) -> None:
-        """Crea las tablas necesarias en SQLite."""
+        """Crea las tablas necesarias en SQLite con diseño normalizado 3FN."""
         if not self._db_connection:
             raise RuntimeError("Base de datos no inicializada")
             
+        # Usar el script create_database.py para crear la estructura
+        from services.create_database import DatabaseCreator
+        
+        # Verificar si necesita crear las tablas
         cursor = self._db_connection.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cameras'")
         
-        # Tabla de cámaras
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cameras (
-                camera_id TEXT PRIMARY KEY,
-                brand TEXT NOT NULL,
-                model TEXT NOT NULL,
-                ip TEXT NOT NULL,
-                last_seen TIMESTAMP NOT NULL,
-                connection_count INTEGER DEFAULT 0,
-                successful_connections INTEGER DEFAULT 0,
-                failed_connections INTEGER DEFAULT 0,
-                total_uptime_minutes INTEGER DEFAULT 0,
-                snapshots_count INTEGER DEFAULT 0,
-                protocols TEXT,
-                metadata TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        if not cursor.fetchone():
+            self.logger.info("Base de datos no existe, creando estructura...")
+            
+            # Cerrar conexión actual
+            self._db_connection.close()
+            self._db_connection = None
+            
+            # Crear base de datos usando el script dedicado
+            creator = DatabaseCreator(self.config.database_path)
+            if not creator.create_database():
+                raise RuntimeError("Error creando estructura de base de datos")
+            
+            # Reconectar a la nueva base de datos
+            self._db_connection = sqlite3.connect(
+                self.config.database_path,
+                check_same_thread=False
             )
-        """)
-        
-        # Tabla de escaneos
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS scans (
-                scan_id TEXT PRIMARY KEY,
-                target_ip TEXT NOT NULL,
-                timestamp TIMESTAMP NOT NULL,
-                duration_seconds REAL NOT NULL,
-                ports_scanned INTEGER NOT NULL,
-                ports_found INTEGER NOT NULL,
-                authentication_tested BOOLEAN DEFAULT FALSE,
-                successful_auths INTEGER DEFAULT 0,
-                protocols_detected TEXT,
-                results TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Tabla de snapshots
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS snapshots (
-                snapshot_id TEXT PRIMARY KEY,
-                camera_id TEXT NOT NULL,
-                file_path TEXT NOT NULL,
-                timestamp TIMESTAMP NOT NULL,
-                file_size_bytes INTEGER NOT NULL,
-                resolution TEXT,
-                format TEXT,
-                metadata TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (camera_id) REFERENCES cameras (camera_id)
-            )
-        """)
-        
-        # Tabla de configuraciones
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS configurations (
-                config_key TEXT PRIMARY KEY,
-                config_value TEXT NOT NULL,
-                config_type TEXT DEFAULT 'string',
-                description TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Índices para performance
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_cameras_ip ON cameras(ip)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_cameras_brand ON cameras(brand)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_ip ON scans(target_ip)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_timestamp ON scans(timestamp)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_camera ON snapshots(camera_id)")
-        
-        self._db_connection.commit()
+            self._db_connection.row_factory = sqlite3.Row
+            
+            # Habilitar claves foráneas
+            self._db_connection.execute("PRAGMA foreign_keys = ON")
+            
+            self.logger.info("Base de datos creada y reconectada exitosamente")
     
     async def _create_tables_duckdb(self) -> None:
         """Crea las tablas necesarias en DuckDB."""
@@ -1002,6 +957,378 @@ class DataService:
                     
         except Exception as e:
             self.logger.error(f"Error limpiando datos antiguos: {e}")
+    
+    # ================== NUEVOS MÉTODOS CRUD PARA ESTRUCTURA 3FN ==================
+    
+    async def save_camera_with_config(self, camera: CameraModel, credentials: Dict[str, str],
+                                    endpoints: List[Dict[str, Any]] = None) -> bool:
+        """
+        Guarda una cámara con su configuración completa en la nueva estructura.
+        
+        Args:
+            camera: Modelo de cámara
+            credentials: Diccionario con username y password
+            endpoints: Lista de endpoints/URLs descubiertas
+            
+        Returns:
+            bool: True si se guardó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                
+                # Iniciar transacción
+                cursor.execute("BEGIN TRANSACTION")
+                
+                # 1. Guardar cámara básica
+                cursor.execute("""
+                    INSERT OR REPLACE INTO cameras (
+                        camera_id, brand, model, display_name, ip_address,
+                        is_active, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    camera.camera_id,
+                    camera.brand,
+                    camera.model,
+                    camera.display_name or f"{camera.brand} {camera.model}",
+                    camera.ip,
+                    True,
+                    datetime.now(),
+                    datetime.now()
+                ))
+                
+                # 2. Guardar credenciales encriptadas
+                if credentials:
+                    from .encryption_service import encryption_service
+                    
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO camera_credentials (
+                            camera_id, username, password_encrypted, 
+                            auth_type, is_default
+                        ) VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        camera.camera_id,
+                        credentials.get('username', 'admin'),
+                        encryption_service.encrypt(credentials.get('password', '')),
+                        'basic',
+                        True
+                    ))
+                
+                # 3. Guardar protocolos
+                protocols = camera.protocols if hasattr(camera, 'protocols') else ['ONVIF', 'RTSP']
+                for idx, protocol in enumerate(protocols):
+                    port = self._get_port_for_protocol(camera, protocol)
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO camera_protocols (
+                            camera_id, protocol_type, port, 
+                            is_enabled, is_primary
+                        ) VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        camera.camera_id,
+                        protocol.upper(),
+                        port,
+                        True,
+                        idx == 0
+                    ))
+                
+                # 4. Guardar endpoints si se proporcionan
+                if endpoints:
+                    for endpoint in endpoints:
+                        cursor.execute("""
+                            INSERT INTO camera_endpoints (
+                                camera_id, endpoint_type, url, protocol,
+                                is_verified, priority
+                            ) VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            camera.camera_id,
+                            endpoint.get('type', 'rtsp_main'),
+                            endpoint.get('url'),
+                            endpoint.get('protocol', 'RTSP'),
+                            endpoint.get('verified', False),
+                            endpoint.get('priority', 0)
+                        ))
+                
+                # 5. Crear registro de estadísticas
+                cursor.execute("""
+                    INSERT OR IGNORE INTO camera_statistics (
+                        camera_id, total_connections, successful_connections,
+                        failed_connections, total_uptime_minutes
+                    ) VALUES (?, ?, ?, ?, ?)
+                """, (camera.camera_id, 0, 0, 0, 0))
+                
+                # Confirmar transacción
+                self._db_connection.commit()
+                
+                # Actualizar cache
+                self._camera_cache[camera.camera_id] = CameraData(
+                    camera_id=camera.camera_id,
+                    brand=camera.brand,
+                    model=camera.model,
+                    ip=camera.ip,
+                    last_seen=datetime.now(),
+                    connection_count=0,
+                    successful_connections=0,
+                    failed_connections=0,
+                    total_uptime_minutes=0,
+                    snapshots_count=0,
+                    protocols=protocols,
+                    metadata={}
+                )
+                
+                self.logger.info(f"Cámara {camera.camera_id} guardada con configuración completa")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Error guardando cámara con configuración: {e}")
+            if self._db_connection:
+                self._db_connection.rollback()
+            return False
+    
+    async def get_camera_full_config(self, camera_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene la configuración completa de una cámara desde la nueva estructura.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            Dict con toda la configuración o None si no existe
+        """
+        if not self._db_connection:
+            return None
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                
+                # Obtener datos básicos
+                cursor.execute("""
+                    SELECT * FROM cameras WHERE camera_id = ?
+                """, (camera_id,))
+                camera_row = cursor.fetchone()
+                
+                if not camera_row:
+                    return None
+                
+                # Convertir a diccionario
+                camera_data = dict(zip([col[0] for col in cursor.description], camera_row))
+                
+                # Obtener credenciales
+                cursor.execute("""
+                    SELECT username, password_encrypted 
+                    FROM camera_credentials 
+                    WHERE camera_id = ? AND is_default = 1
+                """, (camera_id,))
+                cred_row = cursor.fetchone()
+                
+                if cred_row:
+                    from .encryption_service import encryption_service
+                    camera_data['credentials'] = {
+                        'username': cred_row[0],
+                        'password': encryption_service.decrypt(cred_row[1]) if cred_row[1] else ''
+                    }
+                
+                # Obtener protocolos
+                cursor.execute("""
+                    SELECT protocol_type, port, is_primary 
+                    FROM camera_protocols 
+                    WHERE camera_id = ? AND is_enabled = 1
+                    ORDER BY is_primary DESC
+                """, (camera_id,))
+                protocols = []
+                for row in cursor.fetchall():
+                    protocols.append({
+                        'type': row[0],
+                        'port': row[1],
+                        'is_primary': bool(row[2])
+                    })
+                camera_data['protocols'] = protocols
+                
+                # Obtener endpoints
+                cursor.execute("""
+                    SELECT endpoint_type, url, is_verified, priority 
+                    FROM camera_endpoints 
+                    WHERE camera_id = ?
+                    ORDER BY priority ASC, is_verified DESC
+                """, (camera_id,))
+                endpoints = []
+                for row in cursor.fetchall():
+                    endpoints.append({
+                        'type': row[0],
+                        'url': row[1],
+                        'verified': bool(row[2]),
+                        'priority': row[3]
+                    })
+                camera_data['endpoints'] = endpoints
+                
+                # Obtener estadísticas
+                cursor.execute("""
+                    SELECT * FROM camera_statistics WHERE camera_id = ?
+                """, (camera_id,))
+                stats_row = cursor.fetchone()
+                if stats_row:
+                    camera_data['statistics'] = dict(zip(
+                        [col[0] for col in cursor.description], stats_row
+                    ))
+                
+                return camera_data
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo configuración completa: {e}")
+            return None
+    
+    async def save_discovered_endpoint(self, camera_id: str, endpoint_type: str, 
+                                     url: str, verified: bool = False) -> bool:
+        """
+        Guarda un endpoint/URL descubierto para una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            endpoint_type: Tipo de endpoint (rtsp_main, snapshot, etc)
+            url: URL completa
+            verified: Si fue verificada exitosamente
+            
+        Returns:
+            bool: True si se guardó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                
+                # Verificar si ya existe
+                cursor.execute("""
+                    SELECT endpoint_id FROM camera_endpoints 
+                    WHERE camera_id = ? AND endpoint_type = ? AND url = ?
+                """, (camera_id, endpoint_type, url))
+                
+                if cursor.fetchone():
+                    # Actualizar verificación
+                    cursor.execute("""
+                        UPDATE camera_endpoints 
+                        SET is_verified = ?, last_verified = ?
+                        WHERE camera_id = ? AND endpoint_type = ? AND url = ?
+                    """, (verified, datetime.now() if verified else None,
+                         camera_id, endpoint_type, url))
+                else:
+                    # Insertar nuevo
+                    cursor.execute("""
+                        INSERT INTO camera_endpoints (
+                            camera_id, endpoint_type, url, 
+                            is_verified, last_verified, priority
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (camera_id, endpoint_type, url, verified,
+                         datetime.now() if verified else None, 0))
+                
+                self._db_connection.commit()
+                
+                self.logger.info(f"Endpoint {endpoint_type} guardado para {camera_id}")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Error guardando endpoint: {e}")
+            return False
+    
+    async def update_connection_stats(self, camera_id: str, success: bool, 
+                                    duration_ms: int = 0) -> bool:
+        """
+        Actualiza las estadísticas de conexión de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            success: Si la conexión fue exitosa
+            duration_ms: Duración de la conexión en ms
+            
+        Returns:
+            bool: True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                
+                # Actualizar estadísticas
+                if success:
+                    cursor.execute("""
+                        UPDATE camera_statistics 
+                        SET total_connections = total_connections + 1,
+                            successful_connections = successful_connections + 1,
+                            last_connection_at = ?
+                        WHERE camera_id = ?
+                    """, (datetime.now(), camera_id))
+                else:
+                    cursor.execute("""
+                        UPDATE camera_statistics 
+                        SET total_connections = total_connections + 1,
+                            failed_connections = failed_connections + 1,
+                            last_error_at = ?
+                        WHERE camera_id = ?
+                    """, (datetime.now(), camera_id))
+                
+                # Insertar log de conexión
+                cursor.execute("""
+                    INSERT INTO connection_logs (
+                        camera_id, status, duration_ms, timestamp
+                    ) VALUES (?, ?, ?, ?)
+                """, (camera_id, 'success' if success else 'failed', 
+                     duration_ms, datetime.now()))
+                
+                self._db_connection.commit()
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Error actualizando estadísticas: {e}")
+            return False
+    
+    def _get_port_for_protocol(self, camera: CameraModel, protocol: str) -> int:
+        """Obtiene el puerto para un protocolo específico."""
+        protocol_lower = protocol.lower()
+        
+        if protocol_lower == 'rtsp' and hasattr(camera, 'rtsp_port'):
+            return camera.rtsp_port
+        elif protocol_lower == 'onvif' and hasattr(camera, 'onvif_port'):
+            return camera.onvif_port
+        elif protocol_lower == 'http' and hasattr(camera, 'http_port'):
+            return camera.http_port
+        
+        # Puertos por defecto
+        default_ports = {
+            'rtsp': 554,
+            'onvif': 80,
+            'http': 80,
+            'https': 443
+        }
+        return default_ports.get(protocol_lower, 80)
+    
+    async def get_all_camera_ids(self) -> List[str]:
+        """
+        Obtiene todos los IDs de cámaras activas.
+        
+        Returns:
+            Lista de camera_ids
+        """
+        if not self._db_connection:
+            return []
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT camera_id FROM cameras WHERE is_active = 1
+                """)
+                
+                return [row[0] for row in cursor.fetchall()]
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo IDs de cámaras: {e}")
+            return []
     
     async def _close_database(self) -> None:
         """Cierra la conexión a la base de datos."""
