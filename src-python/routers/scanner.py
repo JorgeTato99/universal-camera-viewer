@@ -130,10 +130,14 @@ class DetectProtocolsRequest(BaseModel):
             raise ValueError(f"IP inválida: {v}")
 
 
-# === Estado global de escaneos (mock) ===
+# === Importar servicios reales ===
+import sys
+from pathlib import Path
+# Agregar src-python al path si es necesario
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-ACTIVE_SCANS: Dict[str, Dict[str, Any]] = {}
-
+from services.scan_service import scan_service
+from models.scan_model import ScanMethod, ScanRange as ScanRangeModel
 
 # === Funciones auxiliares ===
 
@@ -147,55 +151,6 @@ def calculate_total_ips(ranges: List[ScanRange]) -> int:
             start, end = end, start
         total += int(end) - int(start) + 1
     return total
-
-
-async def mock_scan_process(scan_id: str, request: ScanRequest):
-    """Proceso mock de escaneo."""
-    scan_data = ACTIVE_SCANS[scan_id]
-    scan_data["status"] = "scanning"
-    scan_data["start_time"] = datetime.utcnow()
-    
-    total_ips = scan_data["total_ips"]
-    
-    # Simular escaneo
-    for i in range(total_ips):
-        if scan_data["status"] == "cancelled":
-            break
-            
-        # Actualizar progreso
-        scan_data["scanned_ips"] = i + 1
-        scan_data["progress"] = ((i + 1) / total_ips) * 100
-        
-        # Simular encontrar cámaras aleatoriamente
-        if i % 15 == 0 and i > 0:  # ~6.7% de probabilidad
-            scan_data["found_cameras"] += 1
-            scan_data["cameras"].append({
-                "camera_id": f"cam_192.168.1.{i}",
-                "display_name": f"Cámara {i}",
-                "brand": "Unknown",
-                "ip": f"192.168.1.{i}",
-                "is_connected": False,
-                "is_streaming": False,
-                "status": "discovered",
-                "last_updated": datetime.utcnow().isoformat() + "Z"
-            })
-        
-        # Simular delay
-        await asyncio.sleep(0.1)  # 0.1 segundos por IP
-        
-        # Actualizar tiempo estimado
-        elapsed = (datetime.utcnow() - scan_data["start_time"]).total_seconds()
-        scan_data["elapsed_time"] = elapsed
-        if scan_data["scanned_ips"] > 0:
-            avg_time_per_ip = elapsed / scan_data["scanned_ips"]
-            remaining_ips = total_ips - scan_data["scanned_ips"]
-            scan_data["estimated_time_remaining"] = avg_time_per_ip * remaining_ips
-    
-    # Finalizar escaneo
-    if scan_data["status"] != "cancelled":
-        scan_data["status"] = "completed"
-    scan_data["end_time"] = datetime.utcnow()
-    scan_data["duration_seconds"] = (scan_data["end_time"] - scan_data["start_time"]).total_seconds()
 
 
 # === Endpoints ===
@@ -216,39 +171,51 @@ async def start_scan(
     """
     logger.info("Iniciando nuevo escaneo de red")
     
-    # Generar ID único
-    scan_id = str(uuid.uuid4())
-    
-    # Calcular total de IPs
-    total_ips = calculate_total_ips(request.ranges)
-    
-    # Crear estado inicial
-    scan_data = {
-        "scan_id": scan_id,
-        "status": "idle",
-        "progress": 0.0,
-        "total_ips": total_ips,
-        "scanned_ips": 0,
-        "found_cameras": 0,
-        "elapsed_time": 0.0,
-        "estimated_time_remaining": None,
-        "current_ip": None,
-        "cameras": [],
-        "request": request.dict(),
-        "start_time": None,
-        "end_time": None,
-        "duration_seconds": 0.0
-    }
-    
-    ACTIVE_SCANS[scan_id] = scan_data
-    
-    # Iniciar escaneo en background
-    background_tasks.add_task(mock_scan_process, scan_id, request)
-    
-    return create_response(
-        success=True,
-        data={"scan_id": scan_id}
-    )
+    try:
+        # Configurar rangos de escaneo
+        scan_ranges = []
+        for range_obj in request.ranges:
+            # Determinar puertos a escanear
+            if range_obj.port:
+                ports = [range_obj.port]
+            else:
+                # Puertos por defecto para cámaras IP
+                ports = [80, 554, 8080, 8000, 2020, 5543, 443, 37777]
+            
+            scan_range = ScanRangeModel(
+                start_ip=range_obj.start_ip,
+                end_ip=range_obj.end_ip,
+                ports=ports,
+                timeout=request.timeout
+            )
+            scan_ranges.append(scan_range)
+        
+        # Determinar métodos de escaneo
+        methods = [ScanMethod.PORT_SCAN]
+        if request.protocols and "ONVIF" in request.protocols:
+            methods.append(ScanMethod.PROTOCOL_DETECTION)
+        
+        # Iniciar escaneo usando el servicio real
+        scan_id = await scan_service.start_scan(
+            ranges=scan_ranges,
+            methods=methods,
+            max_concurrent=request.max_threads,
+            include_offline=False
+        )
+        
+        logger.info(f"Escaneo iniciado con ID: {scan_id}")
+        
+        return create_response(
+            success=True,
+            data={"scan_id": scan_id}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error iniciando escaneo: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error iniciando escaneo: {str(e)}"
+        )
 
 
 @router.get("/scan/{scan_id}/progress")
@@ -262,30 +229,63 @@ async def get_scan_progress(scan_id: str):
     Returns:
         Estado actual del escaneo
     """
-    if scan_id not in ACTIVE_SCANS:
+    try:
+        # Obtener estado desde el servicio real
+        scan_status = await scan_service.get_scan_status(scan_id)
+        
+        if not scan_status:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Escaneo {scan_id} no encontrado"
+            )
+        
+        # Obtener el modelo de escaneo para acceder al progreso
+        if scan_id in scan_service.active_scans:
+            scan_model = scan_service.active_scans[scan_id]
+            progress_data = scan_model.progress
+            
+            # Construir respuesta de progreso
+            progress = ScanProgress(
+                scan_id=scan_id,
+                status=scan_status["status"],
+                progress=progress_data.overall_progress_percentage,
+                total_ips=progress_data.total_ips,
+                scanned_ips=progress_data.scanned_ips,
+                found_cameras=progress_data.cameras_found,
+                elapsed_time=progress_data.elapsed_time,
+                estimated_time_remaining=progress_data.estimated_remaining,
+                current_ip=progress_data.current_ip
+            )
+            
+            return create_response(
+                success=True,
+                data=progress.dict()
+            )
+        else:
+            # Si el escaneo terminó, devolver estado final
+            return create_response(
+                success=True,
+                data={
+                    "scan_id": scan_id,
+                    "status": scan_status["status"],
+                    "progress": 100.0,
+                    "total_ips": scan_status.get("total_ips", 0),
+                    "scanned_ips": scan_status.get("scanned_ips", 0),
+                    "found_cameras": scan_status.get("cameras_found", 0),
+                    "elapsed_time": scan_status.get("elapsed_time", 0),
+                    "estimated_time_remaining": 0,
+                    "current_ip": None
+                }
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obteniendo progreso: {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Escaneo {scan_id} no encontrado"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error obteniendo progreso: {str(e)}"
         )
-    
-    scan_data = ACTIVE_SCANS[scan_id]
-    
-    progress = ScanProgress(
-        scan_id=scan_id,
-        status=scan_data["status"],
-        progress=scan_data["progress"],
-        total_ips=scan_data["total_ips"],
-        scanned_ips=scan_data["scanned_ips"],
-        found_cameras=scan_data["found_cameras"],
-        elapsed_time=scan_data["elapsed_time"],
-        estimated_time_remaining=scan_data.get("estimated_time_remaining"),
-        current_ip=scan_data.get("current_ip")
-    )
-    
-    return create_response(
-        success=True,
-        data=progress.dict()
-    )
 
 
 @router.post("/scan/{scan_id}/stop")
@@ -299,30 +299,49 @@ async def stop_scan(scan_id: str):
     Returns:
         Confirmación de detención
     """
-    if scan_id not in ACTIVE_SCANS:
+    try:
+        # Verificar si el escaneo existe
+        scan_status = await scan_service.get_scan_status(scan_id)
+        
+        if not scan_status:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Escaneo {scan_id} no encontrado"
+            )
+        
+        # Verificar estado actual
+        if scan_status["status"] not in ["idle", "scanning", "preparing", "processing"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El escaneo ya está en estado: {scan_status['status']}"
+            )
+        
+        # Detener el escaneo
+        success = await scan_service.stop_scan(scan_id)
+        
+        if success:
+            return create_response(
+                success=True,
+                data={
+                    "scan_id": scan_id,
+                    "status": "cancelled",
+                    "message": "Escaneo detenido exitosamente"
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudo detener el escaneo"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deteniendo escaneo: {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Escaneo {scan_id} no encontrado"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deteniendo escaneo: {str(e)}"
         )
-    
-    scan_data = ACTIVE_SCANS[scan_id]
-    
-    if scan_data["status"] not in ["idle", "scanning"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"El escaneo ya está en estado: {scan_data['status']}"
-        )
-    
-    scan_data["status"] = "cancelled"
-    
-    return create_response(
-        success=True,
-        data={
-            "scan_id": scan_id,
-            "status": "cancelled",
-            "message": "Escaneo detenido exitosamente"
-        }
-    )
 
 
 @router.get("/scan/{scan_id}/results")
@@ -336,30 +355,97 @@ async def get_scan_results(scan_id: str):
     Returns:
         Resultados del escaneo
     """
-    if scan_id not in ACTIVE_SCANS:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Escaneo {scan_id} no encontrado"
+    try:
+        # Obtener estado del escaneo
+        scan_status = await scan_service.get_scan_status(scan_id)
+        
+        if not scan_status:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Escaneo {scan_id} no encontrado"
+            )
+        
+        # Verificar que el escaneo haya terminado
+        if scan_status["status"] not in ["completed", "cancelled", "error"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El escaneo aún está en progreso: {scan_status['status']}"
+            )
+        
+        # Obtener resultados
+        results = await scan_service.get_scan_results(scan_id)
+        
+        if not results:
+            # Si no hay resultados guardados, intentar obtener del modelo activo
+            if scan_id in scan_service.active_scans:
+                scan_model = scan_service.active_scans[scan_id]
+                camera_results = scan_model.get_camera_results()
+                
+                # Formatear resultados para el frontend
+                cameras = []
+                for camera_data in camera_results:
+                    cameras.append({
+                        "camera_id": f"cam_{camera_data['ip']}",
+                        "display_name": f"Cámara {camera_data['ip']}",
+                        "brand": "Unknown",  # Se detectará después
+                        "ip": camera_data['ip'],
+                        "open_ports": camera_data['open_ports'],
+                        "protocols": camera_data['all_protocols'],
+                        "best_protocol": camera_data['best_protocol'],
+                        "is_connected": False,
+                        "is_streaming": False,
+                        "status": "discovered",
+                        "last_updated": datetime.utcnow().isoformat() + "Z"
+                    })
+                
+                results = {
+                    "cameras": cameras,
+                    "total_scanned": scan_model.progress.scanned_ips,
+                    "duration_seconds": scan_model.duration_seconds
+                }
+        else:
+            # Formatear resultados guardados
+            cameras = []
+            for ip, scan_result in results.items():
+                if scan_result.get('has_camera_protocols'):
+                    cameras.append({
+                        "camera_id": f"cam_{ip}",
+                        "display_name": f"Cámara {ip}",
+                        "brand": "Unknown",
+                        "ip": ip,
+                        "open_ports": scan_result.get('open_ports', []),
+                        "protocols": scan_result.get('camera_protocols', []),
+                        "is_connected": False,
+                        "is_streaming": False,
+                        "status": "discovered",
+                        "last_updated": datetime.utcnow().isoformat() + "Z"
+                    })
+            
+            results = {
+                "cameras": cameras,
+                "total_scanned": len(results),
+                "duration_seconds": scan_status.get('elapsed_time', 0)
+            }
+        
+        return create_response(
+            success=True,
+            data={
+                "scan_id": scan_id,
+                "cameras": results["cameras"],
+                "total_scanned": results["total_scanned"],
+                "duration_seconds": results["duration_seconds"],
+                "completed_at": datetime.utcnow().isoformat() + "Z"
+            }
         )
-    
-    scan_data = ACTIVE_SCANS[scan_id]
-    
-    if scan_data["status"] not in ["completed", "cancelled"]:
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obteniendo resultados: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"El escaneo aún está en progreso: {scan_data['status']}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error obteniendo resultados: {str(e)}"
         )
-    
-    return create_response(
-        success=True,
-        data={
-            "scan_id": scan_id,
-            "cameras": scan_data["cameras"],
-            "total_scanned": scan_data["scanned_ips"],
-            "duration_seconds": scan_data["duration_seconds"],
-            "completed_at": scan_data["end_time"].isoformat() + "Z" if scan_data["end_time"] else None
-        }
-    )
 
 
 @router.post("/quick-scan")
@@ -375,26 +461,70 @@ async def quick_scan(request: QuickScanRequest):
     """
     logger.info(f"Escaneo rápido de {request.ip}")
     
-    # Mock: simular encontrar una cámara si la IP termina en .172
-    cameras = []
-    if request.ip.endswith(".172"):
-        cameras.append({
-            "camera_id": f"cam_{request.ip}",
-            "display_name": f"Cámara {request.ip}",
-            "brand": "Dahua",
-            "model": "Dahua IP Camera",
-            "ip": request.ip,
-            "is_connected": False,
-            "is_streaming": False,
-            "status": "discovered",
-            "last_updated": datetime.utcnow().isoformat() + "Z",
-            "capabilities": ["ONVIF", "RTSP"]
-        })
-    
-    return create_response(
-        success=True,
-        data={"cameras": cameras}
-    )
+    try:
+        # Crear rango de escaneo para una sola IP
+        scan_range = ScanRangeModel(
+            start_ip=request.ip,
+            end_ip=request.ip,
+            ports=request.ports,
+            timeout=3.0  # Timeout más corto para escaneo rápido
+        )
+        
+        # Iniciar escaneo usando el servicio real
+        scan_id = await scan_service.start_scan(
+            ranges=[scan_range],
+            methods=[ScanMethod.PORT_SCAN, ScanMethod.PROTOCOL_DETECTION],
+            max_concurrent=len(request.ports),  # Un thread por puerto
+            include_offline=True  # Incluir resultados aunque no responda ping
+        )
+        
+        # Esperar a que termine (máximo 10 segundos)
+        max_wait = 10.0
+        wait_interval = 0.5
+        elapsed = 0.0
+        
+        while elapsed < max_wait:
+            status = await scan_service.get_scan_status(scan_id)
+            if status and status["status"] in ["completed", "cancelled", "error"]:
+                break
+            await asyncio.sleep(wait_interval)
+            elapsed += wait_interval
+        
+        # Obtener resultados
+        results = await scan_service.get_scan_results(scan_id)
+        
+        cameras = []
+        if results and request.ip in results:
+            scan_result = results[request.ip]
+            if scan_result.get('open_ports'):
+                # Se encontraron puertos abiertos, es posible que sea una cámara
+                cameras.append({
+                    "camera_id": f"cam_{request.ip}",
+                    "display_name": f"Cámara {request.ip}",
+                    "brand": "Unknown",
+                    "model": "IP Camera",
+                    "ip": request.ip,
+                    "open_ports": scan_result.get('open_ports', []),
+                    "protocols": scan_result.get('camera_protocols', []),
+                    "is_connected": False,
+                    "is_streaming": False,
+                    "status": "discovered",
+                    "last_updated": datetime.utcnow().isoformat() + "Z",
+                    "capabilities": scan_result.get('camera_protocols', [])
+                })
+        
+        return create_response(
+            success=True,
+            data={"cameras": cameras}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error en escaneo rápido: {e}")
+        # Devolver lista vacía en caso de error
+        return create_response(
+            success=True,
+            data={"cameras": []}
+        )
 
 
 @router.post("/detect-protocols")
@@ -410,25 +540,83 @@ async def detect_protocols(request: DetectProtocolsRequest):
     """
     logger.info(f"Detectando protocolos en {request.ip}")
     
-    # Mock: devolver protocolos basados en el puerto
-    protocols = []
-    port = request.port or 80
-    
-    if port == 80:
-        protocols = ["ONVIF", "HTTP"]
-    elif port == 554:
-        protocols = ["RTSP"]
-    elif port == 8000:
-        protocols = ["ONVIF", "HTTP"]
-    elif port == 2020:
-        protocols = ["ONVIF"]
-    else:
-        protocols = ["HTTP"]
-    
-    return create_response(
-        success=True,
-        data={"protocols": protocols}
-    )
+    try:
+        # Si se especifica un puerto, escanear solo ese puerto
+        # Si no, escanear puertos comunes de cámaras
+        if request.port:
+            ports = [request.port]
+        else:
+            ports = [80, 554, 8080, 8000, 2020, 5543, 443, 37777]
+        
+        # Crear rango de escaneo
+        scan_range = ScanRangeModel(
+            start_ip=request.ip,
+            end_ip=request.ip,
+            ports=ports,
+            timeout=5.0
+        )
+        
+        # Ejecutar escaneo con detección de protocolos
+        scan_id = await scan_service.start_scan(
+            ranges=[scan_range],
+            methods=[ScanMethod.PORT_SCAN, ScanMethod.PROTOCOL_DETECTION],
+            max_concurrent=len(ports),
+            include_offline=True
+        )
+        
+        # Esperar resultados (máximo 15 segundos)
+        max_wait = 15.0
+        wait_interval = 0.5
+        elapsed = 0.0
+        
+        while elapsed < max_wait:
+            status = await scan_service.get_scan_status(scan_id)
+            if status and status["status"] in ["completed", "cancelled", "error"]:
+                break
+            await asyncio.sleep(wait_interval)
+            elapsed += wait_interval
+        
+        # Obtener resultados
+        results = await scan_service.get_scan_results(scan_id)
+        
+        protocols = []
+        if results and request.ip in results:
+            scan_result = results[request.ip]
+            # Obtener protocolos detectados
+            protocols = scan_result.get('camera_protocols', [])
+            
+            # Si no se detectaron protocolos pero hay puertos abiertos,
+            # inferir protocolos basados en los puertos
+            if not protocols and scan_result.get('open_ports'):
+                for port in scan_result['open_ports']:
+                    if port == 80 or port == 8080:
+                        protocols.extend(["HTTP", "ONVIF"])
+                    elif port == 554:
+                        protocols.append("RTSP")
+                    elif port == 8000:
+                        protocols.extend(["HTTP", "ONVIF"])
+                    elif port == 2020:
+                        protocols.append("ONVIF")
+                    elif port == 443:
+                        protocols.append("HTTPS")
+                    elif port == 37777:
+                        protocols.append("AMCREST")
+                
+                # Eliminar duplicados
+                protocols = list(set(protocols))
+        
+        return create_response(
+            success=True,
+            data={"protocols": protocols}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error detectando protocolos: {e}")
+        # Devolver lista vacía en caso de error
+        return create_response(
+            success=True,
+            data={"protocols": []}
+        )
 
 
 @router.get("/recommended-config")

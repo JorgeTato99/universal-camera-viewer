@@ -1,25 +1,27 @@
 """
-Script de prueba interactivo para conexiones de cámaras.
+Script de prueba interactivo para conexiones de cámaras usando los servicios del proyecto.
 
-Permite probar conexiones ONVIF y RTSP de forma manual.
+Utiliza los servicios internos del proyecto para:
+- Auto-detectar protocolos soportados
+- Descubrir URLs RTSP automáticamente
+- Probar streaming en vivo
 """
 
 import asyncio
 import sys
 from pathlib import Path
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import cv2
-import numpy as np
 
 # Agregar src-python al path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src-python"))
 
 from models import ConnectionConfig
-from services.protocol_handlers.onvif_handler import ONVIFHandler
-from services.protocol_handlers.rtsp_handler import RTSPHandler
-from services.protocol_service import StreamingConfig
-from onvif import ONVIFCamera
+from services.protocol_service import ProtocolService, ProtocolType, StreamingConfig
+from services.scan_service import ScanService, ScanRange, ScanMethod
+from services.camera_manager_service import CameraManagerService
+from services.data_service import DataService
 
 # Configurar logging
 logging.basicConfig(
@@ -30,17 +32,29 @@ logger = logging.getLogger(__name__)
 
 
 class CameraConnectionTester:
-    """Probador de conexiones de cámaras."""
+    """Probador de conexiones de cámaras usando servicios del proyecto."""
     
     def __init__(self):
+        self.protocol_service = ProtocolService()
+        self.scan_service = ScanService()
+        self.camera_manager = CameraManagerService()
+        self.data_service = DataService()
         self.config = None
-        self.streaming_config = StreamingConfig()
+        self.scan_results = []
+        
+        # Configurar callback para resultados de escaneo
+        self.scan_service.on_scan_completed = self._on_scan_completed
+        
+    def _on_scan_completed(self, scan_id: str, results: List[Dict[str, Any]]):
+        """Callback cuando se completa un escaneo."""
+        self.scan_results = results
+        logger.info(f"Escaneo completado: {len(results)} resultados")
         
     def print_header(self, text: str):
         """Imprime un encabezado formateado."""
-        print("\n" + "="*50)
+        print("\n" + "="*60)
         print(f" {text}")
-        print("="*50)
+        print("="*60)
         
     def print_success(self, text: str):
         """Imprime mensaje de éxito."""
@@ -54,18 +68,6 @@ class CameraConnectionTester:
         """Imprime información."""
         print(f"ℹ {text}")
     
-    def _sanitize_url(self, url: str) -> str:
-        """Oculta credenciales en la URL para mostrar."""
-        if '@' in url:
-            # Extraer partes de la URL
-            parts = url.split('@')
-            if len(parts) == 2:
-                # Ocultar credenciales
-                protocol_part = parts[0].split('://')
-                if len(protocol_part) == 2:
-                    return f"{protocol_part[0]}://****:****@{parts[1]}"
-        return url
-        
     def get_input(self, prompt: str, default: Optional[str] = None) -> str:
         """Obtiene entrada del usuario con valor por defecto opcional."""
         if default:
@@ -85,189 +87,217 @@ class CameraConnectionTester:
         username = self.get_input("Usuario", "admin")
         password = self.get_input("Contraseña")
         
-        # Protocolo
-        print("\nProtocolos disponibles:")
-        print("1. ONVIF")
-        print("2. RTSP")
-        protocol_choice = self.get_input("Seleccione protocolo (1-2)", "1")
-        protocol = "ONVIF" if protocol_choice == "1" else "RTSP"
-        
-        # Puertos según protocolo
-        if protocol == "ONVIF":
-            onvif_port = int(self.get_input("Puerto ONVIF", "80"))
-            rtsp_port = int(self.get_input("Puerto RTSP", "554"))
-            http_port = int(self.get_input("Puerto HTTP", "80"))
-        else:
-            rtsp_port = int(self.get_input("Puerto RTSP", "554"))
-            onvif_port = 80
-            http_port = 80
-            
-        # Crear configuración
+        # Crear configuración básica
         config = ConnectionConfig(
             ip=ip,
             username=username,
             password=password,
-            onvif_port=onvif_port,
-            rtsp_port=rtsp_port,
-            http_port=http_port
+            onvif_port=80,  # Se ajustará durante detección
+            rtsp_port=554,  # Se ajustará durante detección
+            http_port=80    # Se ajustará durante detección
         )
         
-        return config, protocol
+        return config
         
-    async def test_onvif_connection(self) -> Optional[Dict[str, Any]]:
-        """Prueba conexión ONVIF y obtiene perfiles."""
-        self.print_header("PRUEBA DE CONEXIÓN ONVIF")
+    async def scan_camera_ports(self, ip: str) -> Dict[str, Any]:
+        """Escanea puertos comunes de cámaras IP."""
+        self.print_header("ESCANEANDO PUERTOS")
+        self.print_info(f"Escaneando puertos comunes en {ip}...")
         
-        try:
-            # Crear handler ONVIF
-            handler = ONVIFHandler(self.config, self.streaming_config)
+        # Crear rango de escaneo para una sola IP
+        scan_range = ScanRange(
+            start_ip=ip,
+            end_ip=ip,
+            ports=[80, 443, 554, 2020, 8000, 8080, 8554, 5543]  # Puertos comunes
+        )
+        
+        # Reiniciar resultados
+        self.scan_results = []
+        
+        # Ejecutar escaneo
+        scan_id = await self.scan_service.start_scan_async(
+            scan_range=scan_range,
+            methods=[ScanMethod.PORT_SCAN],
+            priority=3,
+            use_cache=False
+        )
+        
+        # Esperar a que complete el escaneo
+        max_wait = 10  # segundos
+        waited = 0
+        all_results = None
+        
+        while waited < max_wait:
+            status = self.scan_service.get_scan_status(scan_id)
             
-            # Conectar
-            self.print_info(f"Conectando a {self.config.ip}:{self.config.onvif_port}...")
-            self.print_info(f"Usuario: {self.config.username}")
-            self.print_info(f"Password: {'*' * len(self.config.password) if self.config.password else 'Sin password'}")
-            
-            success = await handler.connect()
-            
-            if not success:
-                self.print_error("No se pudo conectar via ONVIF")
-                self.print_info("Tip: Para cámaras Dahua, verifica:")
-                self.print_info("  - Puerto ONVIF: usualmente 80, 8000 o 8080")
-                self.print_info("  - Credenciales correctas")
-                self.print_info("  - ONVIF habilitado en la cámara")
-                return None
-                
-            self.print_success("Conexión ONVIF establecida")
-            
-            # Obtener información del dispositivo
-            try:
-                device_info = await handler.get_device_info()
-                if isinstance(device_info, dict):
-                    if 'success' in device_info and device_info['success']:
-                        self.print_info("Información del dispositivo:")
-                        for key, value in device_info['data'].items():
-                            print(f"  - {key}: {value}")
-                    elif 'manufacturer' in device_info:
-                        # Formato directo
-                        self.print_info("Información del dispositivo:")
-                        for key, value in device_info.items():
-                            print(f"  - {key}: {value}")
-            except Exception as e:
-                self.print_error(f"No se pudo obtener información del dispositivo: {e}")
+            # Intentar capturar resultados en cada iteración
+            if scan_id in self.scan_service.active_scans:
+                scan_model = self.scan_service.active_scans[scan_id]
+                # Capturar resultados cuando el escaneo esté cerca de completarse
+                if status and status.value in ['completed', 'processing']:
+                    try:
+                        all_results = scan_model.get_all_results()
+                    except:
+                        pass  # El modelo puede haberse eliminado
                     
-            # Obtener perfiles
-            try:
-                # get_profiles no es asíncrono
-                profiles = handler.get_profiles()
-                profiles_data = []
+            if status and status.value in ['completed', 'error', 'cancelled']:
+                # Dar una última oportunidad de capturar resultados
+                if not all_results and scan_id in self.scan_service.active_scans:
+                    try:
+                        all_results = self.scan_service.active_scans[scan_id].get_all_results()
+                    except:
+                        pass
+                await asyncio.sleep(0.1)  # Pequeña pausa antes de salir
+                break
                 
-                if isinstance(profiles, dict) and 'success' in profiles:
-                    if profiles['success']:
-                        profiles_data = profiles['data']
+            await asyncio.sleep(0.5)
+            waited += 0.5
+            
+        # Debug: mostrar qué capturamos
+        self.logger.info(f"Escaneo completado: {len(all_results) if all_results else 0} resultados")
+        
+        # Obtener información de la cámara
+        camera_info = {}
+        
+        if all_results and len(all_results) > 0:
+            # El primer resultado debería ser nuestra IP
+            result = all_results[0]
+            open_ports = result.get('open_ports', [])
+            
+            self.print_success(f"Puertos abiertos encontrados: {open_ports}")
+            
+            # Ajustar configuración basada en puertos encontrados
+            if 2020 in open_ports:
+                self.print_info("Puerto 2020 detectado - Posible cámara TP-Link")
+                self.config.onvif_port = 2020
+            elif 8000 in open_ports:
+                self.print_info("Puerto 8000 detectado - Posible cámara Hikvision/Steren")
+                self.config.onvif_port = 8000
+                
+            if 443 in open_ports:
+                self.print_info("Puerto HTTPS 443 detectado")
+                self.config.http_port = 443
+                
+            if 5543 in open_ports:
+                self.print_info("Puerto 5543 detectado - RTSP alternativo")
+                self.config.rtsp_port = 5543
+                
+            camera_info = result
+        else:
+            self.print_error("No se detectaron puertos abiertos")
+            self.print_info("Esto puede deberse a:")
+            self.print_info("  - Firewall bloqueando los puertos")
+            self.print_info("  - La cámara no responde a escaneos de puertos")
+            self.print_info("  - Los puertos están en rangos no estándar")
+            
+        return camera_info
+            
+    async def auto_detect_protocols(self) -> List[ProtocolType]:
+        """Auto-detecta protocolos soportados por la cámara."""
+        self.print_header("DETECCIÓN AUTOMÁTICA DE PROTOCOLOS")
+        self.print_info("Probando protocolos disponibles...")
+        
+        # Detectar protocolos soportados
+        supported_protocols = await self.protocol_service.detect_protocols(self.config)
+        
+        if supported_protocols:
+            self.print_success(f"Protocolos detectados: {[p.value for p in supported_protocols]}")
+        else:
+            self.print_error("No se detectaron protocolos compatibles")
+            self.print_info("Esto puede deberse a:")
+            self.print_info("  - Credenciales incorrectas")
+            self.print_info("  - Firewall bloqueando conexiones")
+            self.print_info("  - Protocolos deshabilitados en la cámara")
+            
+        return supported_protocols
+        
+    async def discover_rtsp_urls(self, protocol: ProtocolType) -> List[Dict[str, str]]:
+        """Descubre URLs RTSP disponibles."""
+        self.print_header("DESCUBRIMIENTO DE URLs RTSP")
+        
+        urls = []
+        
+        # Crear conexión temporal para descubrimiento
+        camera_id = f"test_{self.config.ip}"
+        handler = await self.protocol_service.create_connection(
+            camera_id=camera_id,
+            protocol=protocol,
+            config=self.config
+        )
+        
+        if not handler:
+            self.print_error("No se pudo crear conexión para descubrimiento")
+            return urls
+            
+        try:
+            if protocol == ProtocolType.ONVIF:
+                # Para ONVIF, obtener perfiles y sus URLs
+                profiles = handler.get_profiles()
+                
+                if isinstance(profiles, dict) and profiles.get('success'):
+                    profiles_data = profiles.get('data', [])
                 elif isinstance(profiles, list):
                     profiles_data = profiles
-                elif isinstance(profiles, dict) and 'data' in profiles:
-                    profiles_data = profiles['data']
                 else:
-                    # Si get_profiles devuelve directamente una lista
-                    profiles_data = profiles if profiles else []
+                    profiles_data = []
+                    
+                self.print_info(f"Perfiles ONVIF encontrados: {len(profiles_data)}")
                 
-                self.print_info(f"Perfiles obtenidos: {len(profiles_data)}")
-                    
-                if profiles_data:
-                    self.print_info(f"Se encontraron {len(profiles_data)} perfiles:")
-                    
-                    profile_urls = []
-                    for i, profile in enumerate(profiles_data):
-                        print(f"\n  Perfil {i+1}:")
-                        
-                        # Manejar diferentes formatos de perfil
+                for i, profile in enumerate(profiles_data):
+                    try:
+                        # Obtener URL del stream para este perfil
                         if hasattr(profile, '_token'):
-                            # Objeto ONVIF
-                            print(f"    - Token: {profile._token}")
-                            print(f"    - Nombre: {getattr(profile, 'Name', 'Sin nombre')}")
-                            
-                            # Obtener URL del stream
-                            try:
-                                # get_stream_uri retorna diccionario {'success': bool, 'data': str}
-                                stream_result = await handler._get_best_stream_url()
-                                if stream_result:
-                                    profile_urls.append({
-                                        'name': getattr(profile, 'Name', f'Perfil {i+1}'),
-                                        'url': stream_result,
-                                        'token': profile._token
-                                    })
-                                    print(f"    - URL: {self._sanitize_url(stream_result)}")
-                                else:
-                                    self.print_error(f"    - No se pudo obtener URL del stream")
-                            except Exception as e:
-                                self.print_error(f"    - Error obteniendo URL: {e}")
-                        elif hasattr(profile, 'Name'):
-                            # Objeto ONVIF con atributos en mayúsculas
-                            print(f"    - Token: {getattr(profile, '_token', 'N/A')}")
-                            print(f"    - Nombre: {getattr(profile, 'Name', 'Sin nombre')}")
-                            
-                            # Intentar obtener URL directamente
-                            if hasattr(handler, '_stream_uri') and handler._stream_uri:
-                                url = handler._stream_uri
-                                profile_urls.append({
+                            stream_uri = await handler.get_stream_uri(profile._token)
+                            if stream_uri:
+                                url_info = {
                                     'name': getattr(profile, 'Name', f'Perfil {i+1}'),
-                                    'url': url,
-                                    'token': getattr(profile, '_token', 'unknown')
-                                })
-                                print(f"    - URL: {url}")
-                        else:
-                            # Diccionario
-                            print(f"    - Nombre: {profile.get('name', 'Sin nombre')}")
-                            print(f"    - Token: {profile.get('token', 'N/A')}")
-                            
-                            if 'video_encoder' in profile:
-                                encoder = profile['video_encoder']
-                                resolution = encoder.get('resolution', {})
-                                print(f"    - Resolución: {resolution.get('width', 'N/A')}x{resolution.get('height', 'N/A')}")
-                                print(f"    - Encoding: {encoder.get('encoding', 'N/A')}")
-                                print(f"    - FPS: {encoder.get('framerate', 'N/A')}")
-                else:
-                    self.print_error("No se encontraron perfiles")
-                    
-            except Exception as e:
-                self.print_error(f"Error obteniendo perfiles: {e}")
-                profile_urls = []
-            
-            # Desconectar
-            await handler.disconnect()
-            
-            # Retornar lo que se pudo obtener
-            if 'profile_urls' in locals() and profile_urls:
-                return {
-                    'profiles': profiles_data if 'profiles_data' in locals() else [],
-                    'urls': profile_urls
-                }
-            else:
-                return None
+                                    'url': stream_uri,
+                                    'token': profile._token
+                                }
+                                urls.append(url_info)
+                                self.print_success(f"URL encontrada: {url_info['name']}")
+                    except Exception as e:
+                        self.print_error(f"Error obteniendo URL del perfil {i+1}: {e}")
+                        
+            elif protocol == ProtocolType.RTSP:
+                # Para RTSP directo, usar patrones comunes
+                rtsp_patterns = handler._get_stream_urls()
                 
+                for name, url in rtsp_patterns.items():
+                    # Probar si la URL funciona
+                    cap = cv2.VideoCapture(url)
+                    if cap.isOpened():
+                        ret, _ = cap.read()
+                        if ret:
+                            url_info = {
+                                'name': name.replace('_', ' ').title(),
+                                'url': url,
+                                'token': name
+                            }
+                            urls.append(url_info)
+                            self.print_success(f"URL RTSP válida: {name}")
+                    cap.release()
+                    
         except Exception as e:
-            self.print_error(f"Error en prueba ONVIF: {e}")
+            self.print_error(f"Error durante descubrimiento: {e}")
             logger.exception("Error detallado:")
-            return None
+        finally:
+            # Desconectar
+            await self.protocol_service.disconnect_camera(camera_id)
             
-    async def test_rtsp_stream(self, rtsp_url: Optional[str] = None) -> bool:
-        """Prueba streaming RTSP."""
-        self.print_header("PRUEBA DE STREAMING RTSP")
+        return urls
         
-        # Si no se proporciona URL, pedirla
-        if not rtsp_url:
-            rtsp_url = self.get_input("URL RTSP completa")
-            
+    async def test_rtsp_stream(self, rtsp_url: str, name: str = "Stream") -> bool:
+        """Prueba streaming RTSP con visualización."""
+        self.print_header(f"PRUEBA DE STREAMING: {name}")
+        
         try:
-            self.print_info(f"Probando URL: {self._sanitize_url(rtsp_url)}")
+            self.print_info(f"Conectando a stream...")
             
-            # Conectar directamente con OpenCV para prueba rápida
-            self.print_info("Intentando conexión directa con OpenCV...")
             cap = cv2.VideoCapture(rtsp_url)
             
             if not cap.isOpened():
-                self.print_error("No se pudo abrir el stream con OpenCV")
+                self.print_error("No se pudo abrir el stream")
                 return False
                 
             # Verificar que podemos leer frames
@@ -277,7 +307,7 @@ class CameraConnectionTester:
                 cap.release()
                 return False
                 
-            self.print_success("Conexión RTSP establecida con OpenCV")
+            self.print_success("Conexión RTSP establecida")
             
             # Obtener propiedades del stream
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -298,25 +328,24 @@ class CameraConnectionTester:
                     frame_count += 1
                     
                     # Redimensionar para visualización
-                    height, width = frame.shape[:2]
                     if width > 800:
                         scale = 800 / width
                         new_width = int(width * scale)
                         new_height = int(height * scale)
-                        frame = cv2.resize(frame, (new_width, new_height))
+                        display_frame = cv2.resize(frame, (new_width, new_height))
                     else:
-                        new_width, new_height = width, height
+                        display_frame = frame
                     
                     # Agregar información al frame
-                    cv2.putText(frame, f"Frame: {frame_count}", (10, 30),
+                    cv2.putText(display_frame, f"{name} - Frame: {frame_count}", (10, 30),
                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                    cv2.putText(frame, f"Res: {width}x{height}", (10, 60),
+                    cv2.putText(display_frame, f"Res: {width}x{height} @ {fps}fps", (10, 60),
                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                    cv2.putText(frame, "Presione 'q' para salir", (10, 90),
+                    cv2.putText(display_frame, "Presione 'q' para salir", (10, 90),
                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
                     
                     # Mostrar frame
-                    cv2.imshow("Stream de Camara", frame)
+                    cv2.imshow(f"Camera Test - {self.config.ip}", display_frame)
                     
                     # Verificar si se presiona 'q'
                     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -337,92 +366,152 @@ class CameraConnectionTester:
             logger.exception("Error detallado:")
             return False
             
+    async def save_camera_if_desired(self, rtsp_url: str) -> bool:
+        """Pregunta si desea guardar la cámara en la base de datos."""
+        print("\n¿Desea guardar esta cámara en la base de datos?")
+        save = self.get_input("Guardar (s/n)", "n")
+        
+        if save.lower() != 's':
+            return False
+            
+        # Recolectar información adicional
+        display_name = self.get_input("Nombre para mostrar", f"Cámara {self.config.ip}")
+        brand = self.get_input("Marca de la cámara", "generic")
+        model = self.get_input("Modelo", "Unknown")
+        location = self.get_input("Ubicación", "Sin especificar")
+        
+        try:
+            # Crear datos de la cámara
+            camera_data = {
+                "display_name": display_name,
+                "ip_address": self.config.ip,
+                "brand": brand.lower(),
+                "model": model,
+                "location": location,
+                "username": self.config.username,
+                "password": self.config.password,
+                "rtsp_port": self.config.rtsp_port,
+                "onvif_port": self.config.onvif_port,
+                "http_port": self.config.http_port
+            }
+            
+            # Guardar usando el servicio
+            result = await self.camera_manager.create_camera(camera_data)
+            
+            if result and result.get('success'):
+                self.print_success(f"Cámara guardada con ID: {result.get('camera_id')}")
+                
+                # Guardar el endpoint RTSP descubierto
+                await self.camera_manager.save_discovered_endpoint(
+                    camera_id=result.get('camera_id'),
+                    endpoint_type='rtsp_main',
+                    url=rtsp_url,
+                    name='Stream Principal'
+                )
+                
+                return True
+            else:
+                self.print_error("No se pudo guardar la cámara")
+                return False
+                
+        except Exception as e:
+            self.print_error(f"Error guardando cámara: {e}")
+            return False
+            
     async def run(self):
         """Ejecuta el probador de conexiones."""
-        self.print_header("PROBADOR DE CONEXIONES DE CÁMARAS")
-        print("Universal Camera Viewer - Test de Conexión")
+        self.print_header("PROBADOR UNIVERSAL DE CÁMARAS IP")
+        print("Sistema de detección automática y prueba de streaming")
         
-        # Recolectar información
-        self.config, protocol = self.collect_connection_info()
+        # Recolectar información básica
+        self.config = self.collect_connection_info()
         
-        # Modo de prueba
-        if protocol == "ONVIF":
-            # Primero probar ONVIF para obtener perfiles
-            onvif_result = await self.test_onvif_connection()
+        # Escanear puertos para ajustar configuración
+        camera_info = await self.scan_camera_ports(self.config.ip)
+        
+        if not camera_info:
+            print("\n¿Desea continuar sin escaneo de puertos?")
+            cont = self.get_input("Continuar (s/n)", "s")
+            if cont.lower() != 's':
+                return
+        
+        # Auto-detectar protocolos
+        supported_protocols = await self.auto_detect_protocols()
+        
+        if not supported_protocols:
+            # Ofrecer prueba manual
+            print("\n¿Desea intentar conexión RTSP manual?")
+            manual = self.get_input("Continuar (s/n)", "s")
             
-            if onvif_result and onvif_result.get('urls'):
-                # Preguntar si quiere probar algún stream
-                print("\n¿Desea probar alguno de los streams encontrados?")
-                for i, url_info in enumerate(onvif_result['urls']):
-                    print(f"{i+1}. {url_info['name']}")
-                print("0. No probar ninguno")
+            if manual.lower() == 's':
+                # Construir URLs RTSP comunes
+                urls = [
+                    {
+                        'name': 'RTSP Genérico Stream 1',
+                        'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/stream1"
+                    },
+                    {
+                        'name': 'RTSP Genérico Stream 2', 
+                        'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/stream2"
+                    },
+                    {
+                        'name': 'Dahua Principal',
+                        'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/cam/realmonitor?channel=1&subtype=0"
+                    },
+                    {
+                        'name': 'Hikvision Principal',
+                        'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/Streaming/Channels/101"
+                    },
+                    {
+                        'name': 'TP-Link H264 HD',
+                        'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/h264_hd.sdp"
+                    },
+                    {
+                        'name': 'TP-Link H264 VGA',
+                        'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/h264_vga.sdp"
+                    }
+                ]
                 
-                choice = self.get_input("Seleccione opción (0-" + str(len(onvif_result['urls'])) + ")", "1")
-                
-                if choice != "0" and choice.isdigit():
-                    idx = int(choice) - 1
-                    if 0 <= idx < len(onvif_result['urls']):
-                        rtsp_url = onvif_result['urls'][idx]['url']
-                        await self.test_rtsp_stream(rtsp_url)
-            else:
-                # Si ONVIF falla, ofrecer probar RTSP directo
-                print("\n¿Desea probar conexión RTSP directa?")
-                print("1. Sí, con URL manual")
-                print("2. Sí, con URL estándar de Dahua")
-                print("0. No")
-                
-                choice = self.get_input("Seleccione opción (0-2)", "2")
-                
-                if choice == "1":
-                    await self.test_rtsp_stream()
-                elif choice == "2":
-                    # URLs estándar de Dahua
-                    print("\nSeleccione calidad del stream:")
-                    print("1. Stream principal (HD)")
-                    print("2. Stream secundario (SD)")
-                    
-                    quality_choice = self.get_input("Seleccione calidad (1-2)", "1")
-                    
-                    if quality_choice == "1":
-                        rtsp_url = f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/cam/realmonitor?channel=1&subtype=0"
-                    else:
-                        rtsp_url = f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/cam/realmonitor?channel=1&subtype=1"
-                    
-                    self.print_info(f"Probando con URL Dahua estándar...")
-                    await self.test_rtsp_stream(rtsp_url)
+                # Probar cada URL
+                for url_info in urls:
+                    print(f"\nProbando: {url_info['name']}...")
+                    if await self.test_rtsp_stream(url_info['url'], url_info['name']):
+                        await self.save_camera_if_desired(url_info['url'])
+                        break
         else:
-            # Modo RTSP directo
-            print("\n¿Cómo desea especificar la URL RTSP?")
-            print("1. Ingresar URL completa manualmente")
-            print("2. Usar plantilla por marca")
+            # Usar el primer protocolo detectado
+            protocol = supported_protocols[0]
+            self.print_info(f"Usando protocolo: {protocol.value}")
             
-            choice = self.get_input("Seleccione opción (1-2)", "1")
+            # Descubrir URLs RTSP
+            rtsp_urls = await self.discover_rtsp_urls(protocol)
             
-            if choice == "1":
-                await self.test_rtsp_stream()
+            if rtsp_urls:
+                print(f"\nSe encontraron {len(rtsp_urls)} streams disponibles:")
+                for i, url_info in enumerate(rtsp_urls):
+                    print(f"{i+1}. {url_info['name']}")
+                    
+                print("0. Probar todos")
+                choice = self.get_input("Seleccione stream para probar", "1")
+                
+                if choice == "0":
+                    # Probar todos
+                    for url_info in rtsp_urls:
+                        if await self.test_rtsp_stream(url_info['url'], url_info['name']):
+                            await self.save_camera_if_desired(url_info['url'])
+                            break
+                elif choice.isdigit():
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(rtsp_urls):
+                        url_info = rtsp_urls[idx]
+                        if await self.test_rtsp_stream(url_info['url'], url_info['name']):
+                            await self.save_camera_if_desired(url_info['url'])
             else:
-                # Plantillas por marca
-                print("\nMarcas disponibles:")
-                print("1. Dahua")
-                print("2. TP-Link")
-                print("3. Hikvision")
-                print("4. Genérico")
+                self.print_error("No se encontraron URLs RTSP")
                 
-                brand_choice = self.get_input("Seleccione marca (1-4)", "1")
-                
-                rtsp_templates = {
-                    "1": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/cam/realmonitor?channel=1&subtype=0",
-                    "2": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/stream1",
-                    "3": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/Streaming/Channels/101",
-                    "4": f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:{self.config.rtsp_port}/live"
-                }
-                
-                rtsp_url = rtsp_templates.get(brand_choice, rtsp_templates["1"])
-                await self.test_rtsp_stream(rtsp_url)
-            
-        print("\n" + "="*50)
+        print("\n" + "="*60)
         print(" Prueba finalizada")
-        print("="*50)
+        print("="*60)
 
 
 async def main():
@@ -435,6 +524,9 @@ async def main():
     except Exception as e:
         print(f"\nError inesperado: {e}")
         logger.exception("Error completo:")
+    finally:
+        # Limpiar servicios
+        await tester.protocol_service.cleanup()
 
 
 if __name__ == "__main__":

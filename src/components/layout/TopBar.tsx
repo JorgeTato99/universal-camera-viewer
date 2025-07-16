@@ -3,7 +3,7 @@
  * Barra superior fija similar a VS Code
  */
 
-import React from "react";
+import React, { useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -25,6 +25,7 @@ import {
 import { useTheme } from "../../hooks/useTheme";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { colorTokens } from "../../design-system/tokens";
+import { AboutDialog } from "../dialogs";
 
 interface TopBarProps {
   onMenuToggle?: () => void;
@@ -37,6 +38,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 }) => {
   const muiTheme = useMuiTheme();
   const { effectiveTheme } = useTheme();
+  const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
 
   const handleMinimize = () => {
     // Implementar minimizar ventana (Tauri)
@@ -54,29 +56,30 @@ export const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <AppBar
-      position="fixed"
-      elevation={0}
-      sx={{
-        backgroundColor:
-          effectiveTheme === "dark"
-            ? colorTokens.background.darkSurface // Nivel 1: Más oscuro
-            : colorTokens.background.surface, // Nivel 1: Más claro
-        borderBottom: `1px solid ${
-          effectiveTheme === "dark"
-            ? colorTokens.background.darkPaper // Separador con nivel 2
-            : colorTokens.background.lightSidebar // Separador con nivel 2
-        }`,
-        zIndex: muiTheme.zIndex.drawer + 1,
-        height: "32px",
-        minHeight: "32px",
-        "& .MuiToolbar-root": {
-          minHeight: "32px",
+    <>
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          backgroundColor:
+            effectiveTheme === "dark"
+              ? colorTokens.background.darkSurface // Nivel 1: Más oscuro
+              : colorTokens.background.surface, // Nivel 1: Más claro
+          borderBottom: `1px solid ${
+            effectiveTheme === "dark"
+              ? colorTokens.background.darkPaper // Separador con nivel 2
+              : colorTokens.background.lightSidebar // Separador con nivel 2
+          }`,
+          zIndex: muiTheme.zIndex.drawer + 1,
           height: "32px",
-          padding: "0 8px",
-        },
-      }}
-    >
+          minHeight: "32px",
+          "& .MuiToolbar-root": {
+            minHeight: "32px",
+            height: "32px",
+            padding: "0 8px",
+          },
+        }}
+      >
       <Toolbar variant="dense">
         {/* Sección izquierda - Logo y menú */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -167,6 +170,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           <IconButton
             size="small"
+            onClick={() => setAboutDialogOpen(true)}
             sx={{
               p: 0.5,
               color: (theme) => theme.palette.text.secondary,
@@ -175,6 +179,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 color: (theme) => theme.palette.text.primary,
               },
             }}
+            aria-label="Acerca de"
           >
             <HelpIcon fontSize="small" />
           </IconButton>
@@ -236,6 +241,13 @@ export const TopBar: React.FC<TopBarProps> = ({
           </IconButton>
         </Box>
       </Toolbar>
-    </AppBar>
+      </AppBar>
+      
+      {/* About Dialog */}
+      <AboutDialog 
+        open={aboutDialogOpen} 
+        onClose={() => setAboutDialogOpen(false)} 
+      />
+    </>
   );
 };

@@ -18,6 +18,7 @@ Responsabilidades:
 import asyncio
 import ipaddress
 import logging
+import socket
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -492,8 +493,12 @@ class ScanModel:
     
     async def _port_scan(self, ip_list: List[str]) -> bool:
         """Ejecuta port scan en hosts activos."""
-        active_ips = [ip for ip, result in self.results.items() 
-                     if result.is_alive or self.include_offline]
+        # Si no hay resultados previos o include_offline está activo, escanear todas las IPs
+        if not self.results or self.include_offline:
+            active_ips = ip_list
+        else:
+            active_ips = [ip for ip, result in self.results.items() 
+                         if result.is_alive or self.include_offline]
         
         self.logger.debug(f"Starting port scan for {len(active_ips)} IPs on {len(self.scan_range.ports)} ports")
         
@@ -515,23 +520,41 @@ class ScanModel:
         return True
     
     async def _scan_port(self, semaphore: asyncio.Semaphore, ip: str, port: int):
-        """Escanea un puerto específico."""
+        """Escanea un puerto específico usando conexión TCP real."""
         async with semaphore:
             if self._cancel_event.is_set():
                 return
             
             try:
-                # Simular port scan (en implementación real usaría socket connection)
-                await asyncio.sleep(0.05)  # Simular delay de conexión
-                import random
-                is_open = random.random() > 0.8  # 20% puertos abiertos para demo
+                # Crear socket TCP
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setblocking(False)  # Non-blocking para usar con asyncio
                 
-                if is_open:
+                # Configurar timeout
+                sock.settimeout(self.timeout)
+                
+                # Intentar conectar de forma asíncrona
+                loop = asyncio.get_event_loop()
+                try:
+                    # Usar el loop de asyncio para la conexión no bloqueante
+                    await asyncio.wait_for(
+                        loop.sock_connect(sock, (ip, port)),
+                        timeout=self.timeout
+                    )
+                    
+                    # Si llegamos aquí, el puerto está abierto
                     if ip not in self.results:
                         self.results[ip] = ScanResult(ip=ip)
                     
                     if port not in self.results[ip].open_ports:
                         self.results[ip].open_ports.append(port)
+                        self.logger.debug(f"Puerto {port} abierto en {ip}")
+                    
+                except (asyncio.TimeoutError, ConnectionRefusedError, OSError):
+                    # Puerto cerrado o timeout - esto es normal, no es un error
+                    pass
+                finally:
+                    sock.close()
                 
                 # Actualizar progreso
                 self.progress.scanned_ports += 1

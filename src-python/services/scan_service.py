@@ -207,6 +207,10 @@ class ScanService:
         self.scan_queue: List[ScanJob] = []
         self.scan_history: List[Dict[str, Any]] = []
         
+        # Resultados completados recientes (para evitar race conditions)
+        self.completed_scans: Dict[str, Dict[str, Any]] = {}
+        self.max_completed_scans = 20
+        
         # Cache de resultados
         self.result_cache: Dict[str, CachedScanResult] = {}  # cache_key -> result
         self.cache_lock = threading.Lock()
@@ -498,8 +502,27 @@ class ScanService:
         except Exception as e:
             self.logger.error(f"Error executing scan {scan_id}: {e}")
         finally:
-            # Limpiar escaneo activo
+            # Guardar resultados antes de eliminar el modelo
             if scan_id in self.active_scans:
+                scan_model = self.active_scans[scan_id]
+                
+                # Guardar resultados completos
+                self.completed_scans[scan_id] = {
+                    'scan_id': scan_id,
+                    'status': scan_model.status.value,
+                    'results': scan_model.get_all_results(),
+                    'camera_results': scan_model.get_camera_results(),
+                    'stats': scan_model.get_scan_stats(),
+                    'completed_at': datetime.now()
+                }
+                
+                # Limpiar escaneos antiguos si excede el límite
+                if len(self.completed_scans) > self.max_completed_scans:
+                    oldest_id = min(self.completed_scans.keys(), 
+                                  key=lambda k: self.completed_scans[k]['completed_at'])
+                    del self.completed_scans[oldest_id]
+                
+                # Ahora sí eliminar el modelo activo
                 del self.active_scans[scan_id]
             
             # Actualizar estado
@@ -897,10 +920,33 @@ class ScanService:
     
     # === API Pública ===
     
-    def get_scan_status(self, scan_id: str) -> Optional[ScanStatus]:
-        """Obtiene estado de un escaneo."""
+    def get_scan_status(self, scan_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene estado de un escaneo.
+        
+        Returns:
+            Diccionario con información del estado o None
+        """
+        # Buscar en activos
         if scan_id in self.active_scans:
-            return self.active_scans[scan_id].status
+            scan_model = self.active_scans[scan_id]
+            return {
+                'status': scan_model.status.value,
+                'progress': scan_model.progress.overall_progress_percentage,
+                'cameras_found': scan_model.progress.cameras_found,
+                'elapsed_time': scan_model.duration_seconds
+            }
+            
+        # Buscar en completados
+        if scan_id in self.completed_scans:
+            completed = self.completed_scans[scan_id]
+            return {
+                'status': completed['status'],
+                'progress': 100.0,
+                'cameras_found': len(completed.get('camera_results', [])),
+                'elapsed_time': completed['stats'].get('duration_seconds', 0)
+            }
+            
         return None
     
     def get_scan_progress(self, scan_id: str) -> Optional[float]:
@@ -929,6 +975,28 @@ class ScanService:
     def get_scan_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Obtiene historial de escaneos."""
         return self.scan_history[-limit:] if self.scan_history else []
+    
+    async def get_scan_results(self, scan_id: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Obtiene los resultados de un escaneo.
+        
+        Args:
+            scan_id: ID del escaneo
+            
+        Returns:
+            Lista de resultados del escaneo o None si no existe
+        """
+        # Primero buscar en escaneos completados
+        if scan_id in self.completed_scans:
+            return self.completed_scans[scan_id]['results']
+            
+        # Si está activo, obtener del modelo
+        if scan_id in self.active_scans:
+            scan_model = self.active_scans[scan_id]
+            return scan_model.get_all_results()
+            
+        # No encontrado
+        return None
     
     def get_network_analysis(self) -> Dict[str, Any]:
         """Obtiene análisis de red."""
@@ -1018,4 +1086,8 @@ def get_scan_service(config: Optional[ScanServiceConfig] = None) -> ScanService:
     if _scan_service_instance is None:
         _scan_service_instance = ScanService(config)
     
-    return _scan_service_instance 
+    return _scan_service_instance
+
+
+# Crear instancia singleton
+scan_service = get_scan_service() 
