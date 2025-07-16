@@ -7,6 +7,44 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.6] - 2025-07-16 - 📚 REORGANIZACIÓN DE DOCUMENTACIÓN
+
+### 📝 Documentation - Reestructuración Completa
+
+- **Documentación reorganizada** en carpeta `docs/`:
+  - Todos los archivos renombrados a minúsculas (excepto README.md)
+  - Estructura lógica con secciones agrupadas
+  - Índice principal actualizado con navegación clara
+  - Eliminación de contenido duplicado
+
+- **Archivos renombrados**:
+  - `ARCHITECTURE.md` → `architecture.md`
+  - `DATABASE_SCHEMA_3FN.md` → `database-schema.md`
+  - `FEATURES.md` → `features.md`
+  - `WINDOWS_SETUP.md` → `windows-setup.md`
+
+- **Documentación actualizada**:
+  - `api-services.md` - Reescrito completamente para API v2 y WebSocket
+  - `deployment.md` - Migrado de Tauri a FastAPI/Docker
+  - `camera-compatibility.md` - Creado con guía completa de cámaras
+
+### 🧹 Code Cleanup - Limpieza de Proyecto
+
+- **Análisis de carpeta `config/`**:
+  - Identificada como obsoleta (legacy de versiones con Flet)
+  - ConfigService comentado en dependencies.py
+  - Puede ser eliminada de forma segura
+
+### 📊 Organization - Mejoras de Estructura
+
+- **README.md principal** en docs/:
+  - Reorganizado con secciones temáticas
+  - Estado actualizado a v0.9.5
+  - Enlaces de navegación corregidos
+  - Tabla de estado de documentación actualizada
+
+---
+
 ## [0.9.5] - 2025-07-16 - 🔐 CONSOLIDACIÓN DE SEGURIDAD Y PATHS
 
 ### 🛡️ Security - Rutas Absolutas y Encriptación

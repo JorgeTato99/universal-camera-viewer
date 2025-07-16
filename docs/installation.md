@@ -46,6 +46,7 @@ yarn tauri-dev     # Aplicación completa
 ### 1. **Preparar Herramientas Base**
 
 #### Windows
+
 ```bash
 # 1. Instalar Rust (IMPORTANTE: Seleccionar MSVC)
 # Descargar desde: https://www.rust-lang.org/tools/install
@@ -65,6 +66,7 @@ python --version
 ```
 
 #### Linux/macOS
+
 ```bash
 # Node.js con nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
@@ -169,6 +171,7 @@ xcode-select --install
 ### Error: `Cannot find module '@tauri-apps/cli-win32-x64-msvc'`
 
 **Causa:** Usaste npm install en lugar de yarn
+
 ```bash
 # Solución
 rm -rf node_modules
@@ -178,6 +181,7 @@ yarn install       # Usar Yarn, no npm
 ### Error: `Microsoft Visual C++ 14.0 or greater is required`
 
 **Causa:** Falta MSVC toolchain
+
 ```bash
 # Instalar Visual Studio Build Tools
 # Descargar desde: https://visualstudio.microsoft.com/visual-cpp-build-tools/

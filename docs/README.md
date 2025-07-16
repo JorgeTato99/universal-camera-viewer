@@ -1,80 +1,92 @@
 # 📚 Documentación - Universal Camera Viewer
 
-> **Visor Universal de Cámaras Multi-Marca v0.8.0**  
-> Stack: Tauri + React + Python | Arquitectura: MVP Pattern
+> **Sistema Profesional de Videovigilancia IP v0.9.5**  
+> Stack: FastAPI + React + WebSocket | Base de Datos: SQLite 3FN
 
 ## 🗂️ Índice de Documentación
 
-### Orden de Lectura Recomendado
+### 📋 Guías de Inicio Rápido
 
 1. **[🚀 Instalación y Setup](installation.md)**  
-   *Configuración inicial, dependencias y primer arranque*
+   *Requisitos, dependencias y configuración inicial*
 
-2. **[🪟 Configuración Windows](WINDOWS_SETUP.md)**  
-   *Guía específica para Windows, Rust MSVC y solución bug NPM*
+2. **[🪟 Configuración Windows](windows-setup.md)**  
+   *Guía específica para desarrollo en Windows*
 
 3. **[💻 Guía de Desarrollo](development.md)**  
-   *Workflow de desarrollo, comandos y mejores prácticas*
+   *Comandos, workflow y mejores prácticas*
 
-4. **[🏛️ Arquitectura Técnica](ARCHITECTURE.md)**  
-   *Arquitectura MVP, patrones de diseño y comunicación Tauri*
+### 🏗️ Arquitectura y Diseño
 
-5. **[✨ Características Detalladas](FEATURES.md)**  
-   *Funcionalidades completas, UI/UX y herramientas*
+4. **[🏛️ Arquitectura del Sistema](architecture.md)**  
+   *FastAPI + React, WebSocket streaming, patrón MVP*
+
+5. **[🗄️ Esquema de Base de Datos](database-schema.md)**  
+   *Diseño 3FN, 16 tablas normalizadas, encriptación*
 
 6. **[🎨 Diseño de Interfaz](ui-design.md)**  
-   *Material Design 3, componentes y sistema de diseño*
+   *Material-UI, componentes React, sistema de diseño*
 
-7. **[📷 Compatibilidad de Cámaras](CAMERA_COMPATIBILITY.md)**  
-   *Marcas soportadas, configuración y troubleshooting*
+### 📷 Cámaras y Protocolos
 
-8. **[🔌 Protocolos de Cámara](camera-protocols.md)**  
-   *ONVIF, RTSP, HTTP/CGI - Implementación técnica*
+7. **[📷 Compatibilidad de Cámaras](camera-compatibility.md)**  
+   *Marcas soportadas, configuración específica*
 
-9. **[📡 API y Servicios](api-services.md)**  
-   *Documentación de servicios internos y APIs*
+8. **[🔌 Protocolos de Comunicación](camera-protocols.md)**  
+   *ONVIF, RTSP, HTTP/CGI - Detalles técnicos*
 
-10. **[📦 Deployment y Distribución](deployment.md)**  
-    *Build, empaquetado y distribución multiplataforma*
+### 🚀 API y Deployment
+
+9. **[📡 API REST y WebSocket](api-services.md)**  
+   *Endpoints, autenticación, streaming*
+
+10. **[✨ Características del Sistema](features.md)**  
+    *Funcionalidades completas y roadmap*
+
+11. **[📦 Deployment y Distribución](deployment.md)**  
+    *Docker, instaladores, configuración producción*
 
 ---
 
 ## 📊 Estado de la Documentación
 
-| Documento | Actualizado | Versión | Estado |
-|-----------|-------------|---------|--------|
-| installation.md | ⚠️ | 0.7.0 | Necesita actualización Tauri |
-| WINDOWS_SETUP.md | ✅ | 0.8.0 | Actualizado |
-| development.md | ⚠️ | 0.7.0 | Necesita comandos Yarn |
-| ARCHITECTURE.md | ✅ | 0.8.0 | Actualizado |
-| FEATURES.md | ✅ | 0.8.0 | Actualizado |
-| ui-design.md | ⚠️ | 0.7.0 | Referencias Flet, migrar React |
-| CAMERA_COMPATIBILITY.md | ✅ | 0.8.0 | Actualizado |
-| camera-protocols.md | ✅ | 0.7.0 | Válido, sin cambios |
-| api-services.md | ✅ | 0.7.0 | Válido, sin cambios |
-| deployment.md | ❌ | 0.7.0 | Necesita reescribir para Tauri |
+| Documento | Estado | Última Actualización | Descripción |
+|-----------|--------|---------------------|-------------|
+| installation.md | ✅ | v0.9.5 | Instalación con Yarn y FastAPI |
+| windows-setup.md | ✅ | v0.9.5 | Desarrollo en Windows |
+| development.md | ✅ | v0.9.5 | Comandos y workflow actual |
+| architecture.md | ✅ | v0.9.5 | Arquitectura FastAPI + WebSocket |
+| database-schema.md | ✅ | v0.9.5 | Esquema 3FN completo |
+| ui-design.md | ✅ | v0.9.0 | React + Material-UI |
+| camera-compatibility.md | ✅ | v0.9.0 | Cámaras testeadas |
+| camera-protocols.md | ✅ | v0.9.0 | Protocolos implementados |
+| api-services.md | ✅ | v0.9.3 | API v2 documentada |
+| features.md | ✅ | v0.9.3 | Características actuales |
+| deployment.md | ✅ | v0.9.5 | Deploy con Docker |
 
 ---
 
 ## 🎯 Quick Links
 
-### Para Empezar
+### 🚀 Inicio Rápido
 
-- **[⚡ Inicio Rápido](installation.md#quick-start)** - Ejecutar en 5 minutos
-- **[🐛 Solución Bug NPM](WINDOWS_SETUP.md#bug-crítico-de-npm-en-windows)** - Usar Yarn obligatorio
-- **[🔧 Comandos Básicos](development.md#comandos-principales)** - yarn tauri-dev
+```bash
+# Backend
+python run_api.py
 
-### Arquitectura
+# Frontend (nueva terminal)
+yarn dev
+```
 
-- **[🏗️ Patrón MVP](ARCHITECTURE.md#arquitectura-mvp-model-view-presenter)** - Entender la estructura
-- **[🔄 Comunicación IPC](ARCHITECTURE.md#comunicación-frontend-backend-tauri)** - React ↔ Python
-- **[📐 Patrones de Diseño](ARCHITECTURE.md#patrones-de-diseño-implementados)** - Singleton, Factory, etc.
+- **[📋 Guía Completa](installation.md)** - Instalación paso a paso
+- **[🐛 Problemas Windows](windows-setup.md#problemas-comunes)** - Yarn vs NPM
+- **[🔧 Base de Datos](database-schema.md#gestión-de-base-de-datos)** - Comandos de BD
 
-### Cámaras
+### 📚 Documentación Clave
 
-- **[📷 Marcas Soportadas](CAMERA_COMPATIBILITY.md#marcas-soportadas-y-testadas)** - Dahua, TP-Link, Steren
-- **[🔧 Configuración Rápida](CAMERA_COMPATIBILITY.md#configuración-por-marca)** - Por marca
-- **[🚨 Troubleshooting](CAMERA_COMPATIBILITY.md#solución-de-problemas)** - Problemas comunes
+- **[🏗️ Arquitectura WebSocket](architecture.md#websocket-streaming)** - Streaming en tiempo real
+- **[🗄️ Estructura 3FN](database-schema.md#tablas-principales)** - 16 tablas normalizadas
+- **[📷 Configurar Cámaras](camera-compatibility.md#configuración-por-marca)** - Dahua, TP-Link, etc.
 
 ---
 
@@ -82,41 +94,54 @@
 
 ### Errores Comunes
 
-#### **Error: Cannot find module '@tauri-apps/cli-win32-x64-msvc'**
+#### **Error: Cannot find module (Windows)**
 
-- Ver: [Bug NPM Windows](WINDOWS_SETUP.md#el-problema)
-- Solución: Usar `yarn install` en lugar de `npm install`
+```bash
+# Solución: Usar Yarn en lugar de NPM
+yarn install
+```
 
-#### **Error: Microsoft Visual C++ 14.0 or greater is required**
+[Más detalles →](windows-setup.md#problemas-comunes)
 
-- Ver: [Requisitos Rust](WINDOWS_SETUP.md#1-rust--msvc-toolchain)
-- Solución: Instalar Visual Studio Build Tools
+#### **Error: ONVIF Authentication Failed**
 
-#### **Cámara no conecta**
+```bash
+# Recrear BD con credenciales correctas
+python src-python/seed_database.py --clear
+```
 
-- Ver: [Troubleshooting Cámaras](CAMERA_COMPATIBILITY.md#solución-de-problemas)
-- Verificar: Puerto correcto según marca
+[Configuración de cámaras →](camera-compatibility.md#credenciales)
 
----
+#### **Error: Multiple encryption keys**
 
-## 📝 Notas de Migración v0.8.0
+```bash
+# La clave debe estar en:
+data/.encryption_key
+```
 
-### Cambios Principales
-
-- 🔄 **Frontend**: Flet → React + TypeScript
-- 📁 **Estructura**: Python movido a `src-python/`
-- 🚀 **Framework**: Tauri para aplicación nativa
-- 📦 **Dependencias**: Yarn obligatorio (bug npm)
-
-### Documentos por Actualizar
-
-1. `installation.md` - Agregar pasos Tauri/Yarn
-2. `development.md` - Cambiar npm → yarn
-3. `ui-design.md` - Migrar ejemplos a React
-4. `deployment.md` - Reescribir para Tauri
+[Seguridad →](database-schema.md#ubicación-y-seguridad)
 
 ---
 
-**📅 Última actualización:** Enero 2025  
-**🏷️ Versión documentada:** 0.8.0  
-**📍 Estado**: Migración a Tauri en progreso
+## 🎯 Estado del Proyecto
+
+### ✅ Funcional en v0.9.5
+
+- **Streaming WebSocket** en tiempo real con cámaras Dahua
+- **Base de datos 3FN** con encriptación AES-256
+- **Frontend React** con Material-UI
+- **API REST + WebSocket** con FastAPI
+- **Métricas en vivo**: FPS, latencia, uptime
+
+### 🔄 En Desarrollo
+
+- Soporte multi-cámara simultáneo
+- Grabación local de video
+- Detección de movimiento
+- Control PTZ
+
+---
+
+**📅 Última actualización:** 16 Julio 2025  
+**🏷️ Versión actual:** 0.9.5  
+**📍 Estado**: Sistema en producción con streaming funcional

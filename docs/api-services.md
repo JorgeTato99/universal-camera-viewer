@@ -1,477 +1,448 @@
-# 📡 API y Servicios
+# 📡 API REST y WebSocket
 
-## 📋 Servicios Internos
+> Documentación de la API v2 con FastAPI y streaming WebSocket
 
-El sistema implementa **5 servicios principales** que forman la capa de negocio:
+## 🎯 Arquitectura API
 
-| Servicio | Responsabilidad | Estado | Archivos |
-|----------|-----------------|--------|----------|
-| **ProtocolService** | Gestión de protocolos de cámara | ✅ 100% | `protocol_service.py` |
-| **ScanService** | Escaneo de red y descubrimiento | ✅ 100% | `scan_service.py` |
-| **ConnectionService** | Gestión de conexiones activas | ✅ 100% | `connection_service.py` |
-| **ConfigService** | Configuración y settings | ✅ 100% | `config_service.py` |
-| **DataService** | Persistencia y base de datos | ✅ 100% | `data_service.py` |
+### Stack Tecnológico
 
-## 🔧 Protocol Service
+- **FastAPI** - Framework web moderno con async/await
+- **WebSocket** - Streaming de video en tiempo real
+- **Pydantic** - Validación y serialización de datos
+- **SQLite + SQLAlchemy** - Base de datos con ORM
+- **OpenCV** - Procesamiento de video
 
-### **Clase Principal**
+### Base URLs
 
-```python
-# src/services/protocol_service.py
-class ProtocolService:
-    """Gestión unificada de protocolos de cámara"""
-    
-    def __init__(self):
-        self.onvif_handler = ONVIFHandler()
-        self.rtsp_handler = RTSPHandler() 
-        self.http_cgi_handler = HTTPCGIHandler()
-        
-    async def detect_camera_protocol(self, ip: str, brand: str) -> dict:
-        """Auto-detecta el mejor protocolo para una cámara"""
-        
-    async def connect_camera(self, ip: str, protocol: str, credentials: dict) -> bool:
-        """Establece conexión usando el protocolo especificado"""
-        
-    async def get_stream_url(self, ip: str, protocol: str) -> str:
-        """Obtiene URL del stream de video"""
-        
-    async def capture_snapshot(self, ip: str, protocol: str) -> bytes:
-        """Captura imagen estática"""
+```bash
+API REST: http://localhost:8000/api/v2
+WebSocket: ws://localhost:8000/ws
+Docs: http://localhost:8000/docs
 ```
 
-### **Métodos de API**
+## 📷 REST API v2
 
-#### **detect_camera_protocol(ip, brand)**
+### Endpoints de Cámaras
 
-```python
-# Entrada
-{
-    "ip": "192.168.1.100",
-    "brand": "dahua"
-}
+#### GET /api/v2/cameras
 
-# Salida
-{
-    "primary_protocol": "onvif",
-    "secondary_protocol": "http_cgi",
-    "available_ports": [80, 554, 8080],
-    "supported_formats": ["h264", "mjpeg"],
-    "confidence_score": 0.95
-}
-```
+Listar todas las cámaras con filtros opcionales
 
-#### **connect_camera(ip, protocol, credentials)**
+**Query Parameters:**
 
-```python
-# Entrada
-{
-    "ip": "192.168.1.100",
-    "protocol": "onvif",
-    "credentials": {
-        "username": "admin",
-        "password": "password123"
-    }
-}
+- `brand` (string): Filtrar por marca
+- `is_active` (boolean): Solo cámaras activas
+- `protocol` (string): Filtrar por protocolo
 
-# Salida
-{
-    "success": true,
-    "stream_url": "rtsp://192.168.1.100:554/stream1",
-    "device_info": {
-        "model": "IPC-HFW2831S-S-S2",
-        "firmware": "V2.800.0000000.0.R",
-        "resolution": "1920x1080"
-    }
-}
-```
-
-## 🌐 Scan Service
-
-### **Clase Principal**
-
-```python
-# src/services/scan_service.py
-class ScanService:
-    """Escaneo de red y descubrimiento de cámaras"""
-    
-    def __init__(self):
-        self.scan_results = []
-        self.active_scans = {}
-        
-    async def scan_network_range(self, network: str, scan_type: str = "fast") -> list:
-        """Escanea un rango de red buscando cámaras"""
-        
-    async def scan_single_ip(self, ip: str) -> dict:
-        """Escanea una IP específica"""
-        
-    async def get_scan_progress(self, scan_id: str) -> dict:
-        """Obtiene progreso de escaneo activo"""
-        
-    def get_discovered_cameras(self) -> list:
-        """Retorna lista de cámaras descubiertas"""
-```
-
-### **Métodos de API**
-
-#### **scan_network_range(network, scan_type)**
-
-```python
-# Entrada
-{
-    "network": "192.168.1.0/24",
-    "scan_type": "comprehensive"  # fast, normal, comprehensive
-}
-
-# Salida
-{
-    "scan_id": "scan_20241210_143022",
-    "total_ips": 254,
-    "estimated_time": "120s",
-    "scan_status": "in_progress"
-}
-```
-
-#### **get_discovered_cameras()**
-
-```python
-# Salida
-[
-    {
-        "ip": "192.168.1.100",
-        "brand": "dahua",
-        "model": "IPC-HFW2831S",
-        "protocols": ["onvif", "http_cgi"],
-        "ports_open": [80, 554],
-        "response_time": 45,
-        "confidence": 0.92
-    },
-    {
-        "ip": "192.168.1.101", 
-        "brand": "tplink",
-        "model": "VIGI C300",
-        "protocols": ["onvif", "rtsp"],
-        "ports_open": [554, 8080],
-        "response_time": 67,
-        "confidence": 0.88
-    }
-]
-```
-
-## 🔗 Connection Service
-
-### **Clase Principal**
-
-```python
-# src/services/connection_service.py
-class ConnectionService:
-    """Gestión de conexiones activas a cámaras"""
-    
-    def __init__(self):
-        self.active_connections = {}
-        self.connection_pool = {}
-        self.max_connections = 10
-        
-    async def establish_connection(self, camera_config: dict) -> str:
-        """Establece nueva conexión a cámara"""
-        
-    async def close_connection(self, connection_id: str) -> bool:
-        """Cierra conexión específica"""
-        
-    async def get_stream_frame(self, connection_id: str) -> bytes:
-        """Obtiene frame actual del stream"""
-        
-    def get_connection_status(self, connection_id: str) -> dict:
-        """Estado de conexión específica"""
-        
-    def get_all_connections(self) -> list:
-        """Lista todas las conexiones activas"""
-```
-
-### **Métodos de API**
-
-#### **establish_connection(camera_config)**
-
-```python
-# Entrada
-{
-    "ip": "192.168.1.100",
-    "brand": "dahua",
-    "protocol": "onvif",
-    "credentials": {
-        "username": "admin",
-        "password": "password123"
-    },
-    "stream_quality": "high"  # low, medium, high
-}
-
-# Salida
-{
-    "connection_id": "conn_dahua_192_168_1_100",
-    "status": "connected",
-    "stream_url": "rtsp://192.168.1.100:554/stream1",
-    "fps": 25,
-    "resolution": "1920x1080",
-    "bandwidth_kbps": 2048
-}
-```
-
-#### **get_all_connections()**
-
-```python
-# Salida
-[
-    {
-        "connection_id": "conn_dahua_192_168_1_100",
-        "ip": "192.168.1.100", 
-        "brand": "dahua",
-        "status": "connected",
-        "uptime_seconds": 3600,
-        "frames_received": 90000,
-        "last_frame_time": "2024-12-10T14:30:22Z"
-    },
-    {
-        "connection_id": "conn_tplink_192_168_1_101",
-        "ip": "192.168.1.101",
-        "brand": "tplink", 
-        "status": "reconnecting",
-        "uptime_seconds": 1800,
-        "frames_received": 45000,
-        "last_frame_time": "2024-12-10T14:29:58Z"
-    }
-]
-```
-
-## ⚙️ Config Service
-
-### **Clase Principal**
-
-```python
-# src/services/config_service.py
-class ConfigService:
-    """Gestión de configuración y settings"""
-    
-    def __init__(self):
-        self.config_file = "config/app_config.json"
-        self.profiles_file = "config/profiles.json"
-        self.current_config = {}
-        
-    def load_config(self) -> dict:
-        """Carga configuración desde archivo"""
-        
-    def save_config(self, config: dict) -> bool:
-        """Guarda configuración a archivo"""
-        
-    def get_camera_profile(self, brand: str) -> dict:
-        """Obtiene perfil de configuración por marca"""
-        
-    def create_backup(self) -> str:
-        """Crea backup de configuración actual"""
-        
-    def restore_backup(self, backup_id: str) -> bool:
-        """Restaura configuración desde backup"""
-```
-
-### **Configuración por Defecto**
+**Response:**
 
 ```json
-// config/app_config.json
 {
-    "app": {
-        "version": "0.7.0",
-        "debug_mode": false,
-        "auto_scan_on_start": true,
-        "max_concurrent_cameras": 8,
-        "default_scan_range": "192.168.1.0/24"
-    },
-    "ui": {
-        "theme": "auto",
-        "language": "es",
-        "window_size": [1200, 800],
-        "enable_animations": true,
-        "show_performance_stats": false
-    },
-    "camera": {
-        "connection_timeout": 10,
-        "retry_attempts": 3,
-        "default_stream_quality": "medium",
-        "enable_motion_detection": false,
-        "snapshot_format": "jpg"
-    },
-    "network": {
-        "scan_timeout": 5,
-        "ping_timeout": 2,
-        "max_scan_threads": 50,
-        "discovery_protocols": ["onvif", "rtsp", "http_cgi"]
+  "status": "success",
+  "data": [
+    {
+      "camera_id": "550e8400-e29b-41d4-a716-446655440000",
+      "code": "CAM-DAHUA-REAL-172",
+      "display_name": "Cámara Principal",
+      "ip_address": "192.168.1.172",
+      "brand": "Dahua",
+      "model": "Hero-K51H",
+      "is_active": true,
+      "created_at": "2025-07-16T10:00:00Z"
     }
+  ],
+  "count": 1
 }
 ```
 
-## 💾 Data Service
+#### GET /api/v2/cameras/{camera_id}
 
-### **Clase Principal**
+Obtener detalle de una cámara específica
 
-```python
-# src/services/data_service.py
-class DataService:
-    """Persistencia y gestión de datos"""
-    
-    def __init__(self):
-        self.db_path = "data/camera_data.db"
-        self.analytics_db = "data/analytics.db"
-        
-    async def save_discovered_camera(self, camera_data: dict) -> bool:
-        """Guarda cámara descubierta en BD"""
-        
-    async def get_saved_cameras(self) -> list:
-        """Obtiene cámaras guardadas"""
-        
-    async def log_connection_attempt(self, ip: str, success: bool, protocol: str) -> bool:
-        """Log de intento de conexión para analytics"""
-        
-    async def get_connection_history(self, ip: str) -> list:
-        """Historial de conexiones de una cámara"""
-        
-    async def export_data(self, format: str = "json") -> str:
-        """Exporta datos a archivo"""
-```
+**Response:**
 
-### **Schema de Base de Datos**
-
-```sql
--- data/camera_data.db
-CREATE TABLE cameras (
-    id INTEGER PRIMARY KEY,
-    ip TEXT UNIQUE NOT NULL,
-    brand TEXT NOT NULL,
-    model TEXT,
-    protocols TEXT,  -- JSON array
-    last_seen TIMESTAMP,
-    connection_quality REAL,
-    notes TEXT
-);
-
-CREATE TABLE connections (
-    id INTEGER PRIMARY KEY,
-    camera_ip TEXT,
-    protocol TEXT,
-    success BOOLEAN,
-    timestamp TIMESTAMP,
-    error_message TEXT,
-    response_time_ms INTEGER
-);
-
-CREATE TABLE scan_results (
-    id INTEGER PRIMARY KEY,
-    scan_id TEXT,
-    network_range TEXT,
-    total_found INTEGER,
-    scan_duration_seconds INTEGER,
-    timestamp TIMESTAMP
-);
-```
-
-## 📊 Analytics y Métricas
-
-### **Sistema de Métricas**
-
-```python
-# src/utils/analytics.py
-class AnalyticsService:
-    """Análisis y métricas del sistema"""
-    
-    def __init__(self):
-        self.duckdb_conn = duckdb.connect('data/analytics.db')
-        
-    def log_camera_discovery(self, ip: str, brand: str, protocols: list):
-        """Log de descubrimiento de cámara"""
-        
-    def generate_usage_report(self, days: int = 30) -> dict:
-        """Genera reporte de uso"""
-        
-    def get_protocol_success_rates(self) -> dict:
-        """Tasa de éxito por protocolo"""
-        
-    def get_brand_statistics(self) -> dict:
-        """Estadísticas por marca de cámara"""
-```
-
-### **Métricas Disponibles**
-
-```python
-# Ejemplo de métricas
+```json
 {
-    "discovery_stats": {
-        "total_cameras_found": 156,
-        "unique_brands": 4,
-        "avg_discovery_time": 8.5,
-        "success_rate": 0.94
+  "status": "success",
+  "data": {
+    "camera_id": "550e8400-e29b-41d4-a716-446655440000",
+    "code": "CAM-DAHUA-REAL-172",
+    "display_name": "Cámara Principal",
+    "ip_address": "192.168.1.172",
+    "brand": "Dahua",
+    "model": "Hero-K51H",
+    "protocols": [
+      {
+        "protocol_name": "RTSP",
+        "port": 554,
+        "is_primary": true
+      },
+      {
+        "protocol_name": "ONVIF",
+        "port": 80,
+        "is_primary": false
+      }
+    ],
+    "credentials": {
+      "username": "admin",
+      "has_password": true
     },
-    "protocol_stats": {
-        "onvif": {"attempts": 120, "success": 115, "rate": 0.96},
-        "rtsp": {"attempts": 89, "success": 82, "rate": 0.92},
-        "http_cgi": {"attempts": 45, "success": 41, "rate": 0.91}
-    },
-    "brand_stats": {
-        "dahua": {"count": 45, "avg_response": 67},
-        "tplink": {"count": 38, "avg_response": 89},
-        "steren": {"count": 32, "avg_response": 112},
-        "generic": {"count": 41, "avg_response": 95}
+    "endpoints": [
+      {
+        "endpoint_type": "rtsp_main",
+        "url": "rtsp://192.168.1.172:554/cam/realmonitor?channel=1&subtype=0",
+        "is_verified": true
+      }
+    ],
+    "statistics": {
+      "total_connections": 1523,
+      "successful_connections": 1498,
+      "average_fps": 14.8,
+      "last_connection_at": "2025-07-16T09:45:00Z"
     }
+  }
 }
 ```
 
-## 🔌 Eventos y Callbacks
+#### POST /api/v2/cameras
 
-### **Sistema de Eventos**
+Crear nueva cámara
+
+**Request Body:**
+
+```json
+{
+  "display_name": "Cámara Entrada",
+  "ip_address": "192.168.1.100",
+  "brand": "Dahua",
+  "model": "IPC-HDW1200SP",
+  "username": "admin",
+  "password": "secure_password",
+  "rtsp_port": 554,
+  "onvif_port": 80
+}
+```
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "camera_id": "new-uuid-here",
+    "code": "CAM-DAHUA-HDW1200SP-100",
+    "message": "Cámara creada exitosamente"
+  }
+}
+```
+
+#### PUT /api/v2/cameras/{camera_id}
+
+Actualizar cámara existente
+
+#### DELETE /api/v2/cameras/{camera_id}
+
+Eliminar cámara
+
+### Endpoints de Scanner
+
+#### POST /api/v2/scanner/scan
+
+Iniciar escaneo de red
+
+**Request Body:**
+
+```json
+{
+  "network_range": "192.168.1.0/24",
+  "scan_type": "fast",
+  "protocols": ["onvif", "rtsp"]
+}
+```
+
+#### GET /api/v2/scanner/results/{scan_id}
+
+Obtener resultados de escaneo
+
+## 🌐 WebSocket API
+
+### Protocolo de Streaming
+
+#### Conexión
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/stream/camera_192.168.1.172');
+```
+
+#### Mensajes Cliente → Servidor
+
+**Iniciar Stream:**
+
+```json
+{
+  "action": "start_stream",
+  "params": {
+    "quality": "medium",
+    "fps": 30,
+    "format": "jpeg"
+  }
+}
+```
+
+**Detener Stream:**
+
+```json
+{
+  "action": "stop_stream"
+}
+```
+
+**Heartbeat:**
+
+```json
+{
+  "type": "ping"
+}
+```
+
+#### Mensajes Servidor → Cliente
+
+**Frame de Video:**
+
+```json
+{
+  "type": "frame",
+  "camera_id": "cam_192.168.1.172",
+  "data": "base64_encoded_jpeg_string",
+  "timestamp": "2025-07-16T10:00:00.123Z",
+  "frame_number": 1234,
+  "metrics": {
+    "fps": 15,
+    "frameCount": 1234
+  }
+}
+```
+
+**Estado de Conexión:**
+
+```json
+{
+  "type": "status",
+  "camera_id": "cam_192.168.1.172",
+  "status": "connected",
+  "data": {
+    "message": "Streaming activo",
+    "protocol": "RTSP"
+  }
+}
+```
+
+**Error:**
+
+```json
+{
+  "type": "error",
+  "camera_id": "cam_192.168.1.172",
+  "error": {
+    "code": "CONNECTION_FAILED",
+    "message": "No se pudo conectar a la cámara"
+  }
+}
+```
+
+### Flujo de Conexión
+
+```mermaid
+sequenceDiagram
+    Client->>WS: Connect to /ws/stream/{camera_id}
+    WS->>Client: status: "initializing"
+    Client->>WS: action: "start_stream"
+    WS->>Camera: RTSP Connection
+    Camera->>WS: Video Stream
+    loop Every Frame
+        WS->>Client: type: "frame", data: base64
+    end
+    loop Every 30s
+        Client->>WS: type: "ping"
+        WS->>Client: type: "pong"
+    end
+```
+
+## 🔧 Servicios Backend
+
+### Arquitectura de Servicios
+
+```bash
+┌─────────────────────────────────┐
+│        API Router Layer         │
+├─────────────────────────────────┤
+│     CameraManagerService        │ ← Orquestador principal
+├─────────────────────────────────┤
+│  VideoStreamService (Singleton) │ ← Gestión de streaming
+├─────────────────────────────────┤
+│ DataService │ EncryptionService │ ← Servicios de soporte
+├─────────────────────────────────┤
+│      ProtocolService            │ ← ONVIF/RTSP/HTTP
+└─────────────────────────────────┘
+```
+
+### Servicios Principales
+
+| Servicio | Responsabilidad | Patrón |
+|----------|-----------------|---------|
+| **CameraManagerService** | Orquestación de operaciones de cámara | Facade |
+| **VideoStreamService** | Gestión centralizada de streaming | Singleton |
+| **EncryptionService** | Encriptación AES-256 de credenciales | Singleton |
+| **DataService** | Acceso a base de datos SQLite | Repository |
+| **ProtocolService** | Implementación de protocolos | Strategy |
+| **WebSocketStreamService** | Gestión de conexiones WebSocket | Observer |
+
+### Ejemplo: VideoStreamService
 
 ```python
-# src/utils/events.py
-class EventManager:
-    """Gestión de eventos del sistema"""
+from services.video_stream_service import video_stream_service
+
+# Iniciar streaming
+await video_stream_service.start_stream(
+    camera_id="cam_192.168.1.172",
+    config=StreamConfig(
+        quality="medium",
+        fps=30,
+        format="jpeg"
+    )
+)
+
+# Obtener frame
+frame = await video_stream_service.get_frame("cam_192.168.1.172")
+if frame:
+    base64_data = frame.to_base64()
     
-    def __init__(self):
-        self.listeners = {}
-        
-    def subscribe(self, event_type: str, callback: callable):
-        """Suscribirse a evento"""
-        
-    def emit(self, event_type: str, data: dict):
-        """Emitir evento"""
-        
-    def unsubscribe(self, event_type: str, callback: callable):
-        """Desuscribirse de evento"""
+# Obtener métricas
+metrics = video_stream_service.get_stream_metrics("cam_192.168.1.172")
+print(f"FPS: {metrics.current_fps}")
 ```
 
-### **Eventos Disponibles**
+## 🔒 Seguridad
+
+### Encriptación de Credenciales
+
+- **Algoritmo**: AES-256 con Fernet
+- **Ubicación clave**: `data/.encryption_key`
+- **Rotación**: Manual (pendiente automatizar)
 
 ```python
-# Eventos del sistema
-EVENTS = {
-    'camera_discovered': 'Nueva cámara encontrada',
-    'camera_connected': 'Cámara conectada exitosamente', 
-    'camera_disconnected': 'Cámara desconectada',
-    'scan_started': 'Escaneo de red iniciado',
-    'scan_completed': 'Escaneo de red completado',
-    'connection_failed': 'Falló conexión a cámara',
-    'stream_started': 'Stream de video iniciado',
-    'stream_stopped': 'Stream de video detenido'
+from services.encryption_service import encryption_service
+
+# Encriptar password
+encrypted = encryption_service.encrypt("mi_password_seguro")
+
+# Desencriptar
+plaintext = encryption_service.decrypt(encrypted)
+```
+
+### Headers de Seguridad
+
+```python
+# CORS configurado en main.py
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+```
+
+## 📊 Monitoreo y Métricas
+
+### Métricas Disponibles
+
+- **Conexiones activas**: Total y por cámara
+- **FPS en tiempo real**: Por stream activo
+- **Uso de memoria**: Por proceso de streaming
+- **Latencia**: RTT del WebSocket
+- **Errores**: Por tipo y frecuencia
+
+### Endpoint de Health Check
+
+```bash
+GET /health
+
+Response:
+{
+  "status": "healthy",
+  "version": "0.9.5",
+  "uptime_seconds": 3600,
+  "active_streams": 2,
+  "database": "connected"
 }
 ```
 
-## 🎯 Próximos Pasos
+## 🚀 Ejemplos de Uso
 
-1. **[📦 Instalación](installation.md)** - Setup inicial del proyecto
-2. **[💻 Desarrollo](development.md)** - Configurar entorno de desarrollo
-3. **[🌐 Protocolos](camera-protocols.md)** - Entender protocolos de cámara
+### Cliente JavaScript/React
+
+```javascript
+// Servicio WebSocket
+class CameraStreamService {
+  constructor(cameraId) {
+    this.ws = new WebSocket(`ws://localhost:8000/ws/stream/${cameraId}`);
+    this.setupHandlers();
+  }
+  
+  setupHandlers() {
+    this.ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      
+      switch(message.type) {
+        case 'frame':
+          this.handleFrame(message.data);
+          break;
+        case 'status':
+          this.handleStatus(message.status);
+          break;
+      }
+    };
+  }
+  
+  startStream() {
+    this.ws.send(JSON.stringify({
+      action: 'start_stream',
+      params: { quality: 'medium', fps: 30 }
+    }));
+  }
+}
+```
+
+### Cliente Python
+
+```python
+import asyncio
+import websockets
+import json
+
+async def stream_camera():
+    uri = "ws://localhost:8000/ws/stream/camera_192.168.1.172"
+    
+    async with websockets.connect(uri) as websocket:
+        # Iniciar stream
+        await websocket.send(json.dumps({
+            "action": "start_stream",
+            "params": {"quality": "high"}
+        }))
+        
+        # Recibir frames
+        async for message in websocket:
+            data = json.loads(message)
+            if data["type"] == "frame":
+                print(f"Frame {data['frame_number']}")
+```
+
+## 📚 Referencias
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [WebSocket Protocol RFC 6455](https://tools.ietf.org/html/rfc6455)
+- [Pydantic V2 Docs](https://docs.pydantic.dev/)
 
 ---
 
-**📡 Servicios:** 5 servicios principales con APIs bien definidas  
-**💾 Persistencia:** SQLite + DuckDB para datos y analytics  
-**📊 Métricas:** Sistema completo de analytics y reporting
-
----
-
-### 📚 Navegación
-
-[← Anterior: Protocolos de Cámara](camera-protocols.md) | [📑 Índice](README.md) | [Siguiente: Deployment y Distribución →](deployment.md)
+**Última actualización**: v0.9.5 - Julio 2025

@@ -5,7 +5,8 @@
 El proyecto implementa una arquitectura MVP estricta con las siguientes capas:
 
 ### Model Layer (100% Completo)
-```
+
+```bash
 src-python/models/
 ├── camera_model.py      # Entidad de cámara
 ├── connection_model.py  # Estado de conexión
@@ -16,6 +17,7 @@ src-python/models/
 ```
 
 ### View Layer (✅ React Funcional)
+
 - **Legacy**: `src-python/views/` - Flet UI (referencia)
 - **Actual**: `src/` - React + TypeScript + Material-UI
   - VideoPlayer con streaming WebSocket funcional
@@ -23,7 +25,8 @@ src-python/models/
   - Grid responsivo de cámaras
 
 ### Presenter Layer (✅ Streaming Funcional)
-```
+
+```bash
 src-python/presenters/
 ├── camera_presenter.py     # Gestión de cámaras
 ├── streaming/
@@ -32,13 +35,15 @@ src-python/presenters/
 ```
 
 **WebSocket Streaming Implementado**:
+
 - StreamHandler para conexiones WebSocket
 - Integración con VideoStreamPresenter
 - Transmisión de frames base64 JPEG
 - Heartbeat y reconexiones automáticas
 
 ### Service Layer (✅ 100% Completo)
-```
+
+```bash
 src-python/services/
 ├── connection_service.py   # Gestión de conexiones
 ├── protocol_service.py     # Protocolos ONVIF/RTSP
@@ -53,6 +58,7 @@ src-python/services/
 ## Patrones de Diseño Implementados
 
 ### Singleton Pattern
+
 ```python
 class VideoStreamService:
     _instance = None
@@ -64,6 +70,7 @@ class VideoStreamService:
 ```
 
 ### Factory Pattern
+
 ```python
 class StreamManagerFactory:
     @staticmethod
@@ -75,6 +82,7 @@ class StreamManagerFactory:
 ```
 
 ### Strategy Pattern
+
 ```python
 class FrameConverter:
     def __init__(self, strategy: ConversionStrategy):
@@ -85,6 +93,7 @@ class FrameConverter:
 ```
 
 ### Template Method Pattern
+
 ```python
 class StreamManager(ABC):
     def start_stream(self):
@@ -97,7 +106,8 @@ class StreamManager(ABC):
 ## Comunicación Frontend-Backend
 
 ### Arquitectura WebSocket (FastAPI) ✅ FUNCIONAL
-```
+
+```bash
 ┌─────────────────┐     WebSocket      ┌────────────────┐
 │  React Frontend │ ←───────────────→  │ FastAPI Backend │
 │   VideoPlayer   │     ws://8000      │  StreamHandler  │
@@ -108,6 +118,7 @@ class StreamManager(ABC):
 ```
 
 ### Flujo de Streaming en Tiempo Real
+
 1. **Conexión**: React establece WebSocket con `/ws/stream/{camera_id}`
 2. **Autenticación**: Backend valida cámara y credenciales
 3. **RTSP Stream**: OpenCV captura frames de la cámara
@@ -116,6 +127,7 @@ class StreamManager(ABC):
 6. **Renderizado**: React muestra frames en `<img>` tag
 
 ### Protocolo WebSocket Implementado
+
 ```typescript
 // Frontend → Backend
 {
@@ -146,7 +158,8 @@ Backend: { "type": "pong" }
 ```
 
 ### Arquitectura Tauri (Opcional)
-```
+
+```bash
 React Frontend <-> Tauri Core <-> Python Sidecar
      JSON            IPC           stdin/stdout
 ```
@@ -154,6 +167,7 @@ React Frontend <-> Tauri Core <-> Python Sidecar
 ## Protocolos de Cámara
 
 ### ONVIF Implementation
+
 ```python
 # Descubrimiento WS-Discovery
 # Autenticación WS-UsernameToken
@@ -162,6 +176,7 @@ React Frontend <-> Tauri Core <-> Python Sidecar
 ```
 
 ### RTSP Implementation
+
 ```python
 # URLs patterns (16+ soportados)
 # Autenticación Basic/Digest
@@ -170,6 +185,7 @@ React Frontend <-> Tauri Core <-> Python Sidecar
 ```
 
 ### Configuración por Marca
+
 ```python
 BRAND_CONFIGS = {
     'dahua': {
@@ -193,18 +209,21 @@ BRAND_CONFIGS = {
 ## Performance y Optimización
 
 ### Gestión de Memoria
+
 - Pool de conexiones reutilizables
 - Liberación automática de recursos OpenCV
 - Garbage collection optimizado
 - Límites de buffer configurables
 
 ### Threading y Async
+
 - AsyncIO para todas las operaciones I/O
 - ThreadPoolExecutor para decodificación
 - Queues para comunicación inter-thread
 - Backpressure handling
 
 ### Métricas de Performance
+
 ```python
 # Target metrics
 FPS: 15-30 (configurable)
@@ -216,12 +235,14 @@ RAM: < 50MB por stream
 ## Seguridad
 
 ### Gestión de Credenciales
+
 - No hardcoded credentials
 - Encriptación en .env (planeado)
 - Sesiones con timeout
 - Rate limiting en APIs
 
 ### Validación de Entrada
+
 - IP address validation
 - Port range checking
 - Command injection prevention
@@ -230,18 +251,21 @@ RAM: < 50MB por stream
 ## Testing Strategy
 
 ### Unit Tests
+
 - Models: 100% coverage target
 - Services: 90% coverage target
 - Presenters: 85% coverage target
 - Utils: 95% coverage target
 
 ### Integration Tests
+
 - Protocol handlers
 - Database operations
 - IPC communication
 - End-to-end flows
 
 ### Performance Tests
+
 - Load testing (4+ cámaras)
 - Memory leak detection
 - Network stress testing

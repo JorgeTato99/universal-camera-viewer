@@ -19,7 +19,11 @@
       "Bash(del src-pythonservicesdatabase_migration.py src-pythontest_migration.py)",
       "Bash(copy:*)",
       "Bash(cp:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(if [ -f CAMERA_COMPATIBILITY.md ])",
+      "Bash(then mv CAMERA_COMPATIBILITY.md camera-compatibility.md)",
+      "Bash(else echo \"File not found\")",
+      "Bash(fi)"
     ],
     "deny": []
   }

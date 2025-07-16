@@ -120,7 +120,7 @@ export const darkTheme = createTheme({
 
 ### **Estructura de Carpetas**
 
-```
+```bash
 src/
 ├── app/
 │   ├── providers/
@@ -158,6 +158,7 @@ src/
 ### **Componentes Principales**
 
 #### NavigationBar
+
 ```tsx
 <AppBar position="static" elevation={2}>
   <Toolbar>
@@ -183,6 +184,7 @@ src/
 ```
 
 #### CameraCard
+
 ```tsx
 <Paper 
   elevation={2}
