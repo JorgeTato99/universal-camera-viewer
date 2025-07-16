@@ -319,7 +319,6 @@ yarn tauri-build    # Generar instalador .exe/.msi
 
 ---
 
-> **¡FELICITACIONES! 🎉**  
 > **El Universal Camera Viewer tiene ahora un ciclo completo funcional de streaming en tiempo real.**  
-> **Versión: 0.9.3 - Con base de datos normalizada y encriptación segura**  
+> **Versión: 0.9.6 - Con base de datos normalizada y encriptación segura**  
 > **Última actualización: 16 de Julio 2025**

@@ -9,22 +9,6 @@
 
 Sistema profesional de videovigilancia IP con streaming en tiempo real. ¡Ciclo completo funcional implementado!
 
-## 🎉 Nuevo en v0.9.3: Base de Datos Profesional
-
-- ✅ **Estructura 3FN completa**: 16 tablas normalizadas siguiendo mejores prácticas
-- ✅ **IDs con UUID v4**: Únicos globalmente + campo `code` para referencia legible
-- ✅ **Credenciales encriptadas**: Seguridad con AES-256 Fernet
-- ✅ **Script de creación**: `create_database.py` para setup limpio
-- ✅ **Datos SEED incluidos**: 6 cámaras de prueba listas para usar
-
-### En v0.9.0-0.9.2: Streaming en Tiempo Real
-
-- ✅ **Streaming RTSP funcional** con cámaras Dahua
-- ✅ **WebSocket estable** con heartbeat automático
-- ✅ **Métricas en vivo**: FPS, latencia y tiempo de conexión
-- ✅ **Interfaz pulida** con área de video limpia
-- ✅ **Manejo robusto de errores** con reintentos automáticos
-
 ## ✨ Características Principales
 
 ### 🎥 Streaming de Video

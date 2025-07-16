@@ -143,5 +143,5 @@ data/.encryption_key
 ---
 
 **📅 Última actualización:** 16 Julio 2025  
-**🏷️ Versión actual:** 0.9.5  
+**🏷️ Versión actual:** 0.9.6  
 **📍 Estado**: Sistema en producción con streaming funcional
