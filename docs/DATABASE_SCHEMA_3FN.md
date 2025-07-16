@@ -331,3 +331,34 @@ Para migrar desde la estructura anterior, se necesitará:
 4. **Generar estadísticas iniciales**: Desde contadores existentes
 
 La migración se puede hacer gradualmente manteniendo compatibilidad hacia atrás.
+
+## Gestión de Base de Datos
+
+### Comandos de Setup
+
+```bash
+# Crear/recrear base de datos limpia
+python src-python/services/create_database.py
+
+# Poblar con 6 cámaras de prueba
+python src-python/seed_database.py
+
+# Limpiar y recrear con datos de prueba
+python src-python/seed_database.py --clear
+
+# Forzar recreación completa (backup + nueva BD)
+python src-python/seed_database.py --force
+```
+
+### Ubicación y Seguridad
+
+- **Archivo de BD**: `data/camera_data.db`
+- **Clave de encriptación**: `data/.encryption_key` (archivo oculto)
+- **Encriptación**: AES-256 mediante Fernet para credenciales
+- **Rutas absolutas**: Se usan para evitar problemas con cambios de directorio
+
+### Notas Importantes
+
+- Las credenciales se almacenan encriptadas en `camera_credentials.password_encrypted`
+- La clave de encriptación se genera automáticamente la primera vez
+- Usar siempre rutas absolutas al trabajar con la BD desde diferentes directorios

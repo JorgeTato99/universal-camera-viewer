@@ -7,6 +7,68 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.5] - 2025-07-16 - 🔐 CONSOLIDACIÓN DE SEGURIDAD Y PATHS
+
+### 🛡️ Security - Rutas Absolutas y Encriptación
+
+- **EncryptionService mejorado** con rutas absolutas:
+  - Eliminación de problemas con `os.chdir()` en run_api.py
+  - Clave de encriptación única en `data/.encryption_key`
+  - Prevención de múltiples claves en diferentes ubicaciones
+  - Consolidación de todas las operaciones a ruta del proyecto
+
+- **DataService actualizado** con paths absolutos:
+  - Base de datos siempre en `data/camera_data.db`
+  - Eliminación de bases de datos duplicadas
+  - Consistencia en todas las operaciones de archivo
+
+### 🐛 Fixed - Problemas de Autenticación
+
+- **Credenciales Dahua corregidas**:
+  - Password actualizado en seed_database.py
+  - Encriptación correcta de credenciales
+  - Autenticación ONVIF funcionando
+  - Conexión RTSP estable con cámara real
+
+### 📚 Documentation - Actualización Completa
+
+- **README.md** actualizado con comandos de base de datos
+- **CURRENT_STATUS.md** actualizado con problemas resueltos
+- **DATABASE_SCHEMA_3FN.md** con sección de gestión de BD
+
+---
+
+## [0.9.4] - 2025-07-16 - 🗄️ MEJORAS DE BASE DE DATOS
+
+### ✨ Added - Opciones de Gestión de BD
+
+- **Opciones en seed_database.py**:
+  - `--clear` para limpiar y recrear con datos de prueba
+  - `--force` para recreación completa con backup
+  - Manejo de errores de constraint UNIQUE
+  - Eliminación de caracteres Unicode problemáticos
+
+- **migrate_database.py reescrito**:
+  - Eliminación de imports no existentes
+  - Creación de backup antes de migración
+  - Recreación limpia de estructura 3FN
+
+### 🛠️ Fixed - Problemas de Encoding
+
+- **UnicodeEncodeError resuelto**:
+  - Eliminación de emojis en seed_database.py
+  - Compatibilidad con terminal Windows
+  - Encoding UTF-8 explícito en archivos
+
+### 🔧 Changed - Estructura de Proyecto
+
+- **Consolidación de archivos**:
+  - Una sola base de datos en `data/`
+  - Eliminación de `src-python/data/`
+  - Limpieza de archivos temporales
+
+---
+
 ## [0.9.3] - 2025-07-14 - 🗄️ BASE DE DATOS PROFESIONAL 3FN
 
 ### ✨ Added - Nueva Estructura de Base de Datos

@@ -1,4 +1,4 @@
-# 📊 Estado Actual del Proyecto - v0.9.3 (14 Julio 2025)
+# 📊 Estado Actual del Proyecto - v0.9.3 (16 Julio 2025)
 
 > **Documento técnico consolidado** - Sistema con streaming funcional y base de datos profesional 3FN.
 
@@ -163,6 +163,14 @@ FPS nativos: 15
    - Causa: Valor mock no actualizado
    - Solución: Contador real con setInterval
 
+6. **Múltiples claves de encriptación**
+   - Causa: `os.chdir()` en run_api.py causaba rutas relativas inconsistentes
+   - Solución: Usar rutas absolutas en EncryptionService
+
+7. **Autenticación ONVIF fallando**
+   - Causa: Password incorrecto en base de datos
+   - Solución: Actualizar seed_database.py con credenciales correctas
+
 ---
 
 ## 🚀 **Comandos de Desarrollo**
@@ -175,6 +183,22 @@ yarn install         # NO usar npm (bug en Windows)
 
 # Backend
 pip install -r requirements.txt
+```
+
+### **Base de Datos**
+
+```bash
+# Crear/recrear base de datos limpia
+python src-python/services/create_database.py
+
+# Poblar con 6 cámaras de prueba
+python src-python/seed_database.py
+
+# Limpiar y recrear con datos de prueba
+python src-python/seed_database.py --clear
+
+# Forzar recreación completa (backup + nueva BD)
+python src-python/seed_database.py --force
 ```
 
 ### **Ejecución**
@@ -297,5 +321,5 @@ yarn tauri-build    # Generar instalador .exe/.msi
 
 > **¡FELICITACIONES! 🎉**  
 > **El Universal Camera Viewer tiene ahora un ciclo completo funcional de streaming en tiempo real.**  
-> **Versión: 0.9.0 - Primera versión con streaming completo**  
-> **Última actualización: 14 de Julio 2025**
+> **Versión: 0.9.3 - Con base de datos normalizada y encriptación segura**  
+> **Última actualización: 16 de Julio 2025**

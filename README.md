@@ -106,9 +106,16 @@ python src-python/services/create_database.py
 
 # Poblar con 6 cámaras de prueba
 python src-python/seed_database.py
+
+# Limpiar y recrear base de datos con datos de prueba
+python src-python/seed_database.py --clear
+
+# Forzar recreación completa (backup + nueva BD)
+python src-python/seed_database.py --force
 ```
 
 **Estructura principal**:
+
 - `cameras` - Información principal con UUID y código único
 - `camera_credentials` - Credenciales encriptadas (múltiples por cámara)
 - `camera_protocols` - Configuración de protocolos
