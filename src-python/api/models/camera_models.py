@@ -3,14 +3,17 @@ Modelos Pydantic para la API de cámaras.
 
 Define los esquemas de request/response para la nueva estructura 3FN.
 """
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, validator
 
 
 class ConnectionStatus(str, Enum):
     """Estados de conexión de una cámara."""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -21,15 +24,19 @@ class ConnectionStatus(str, Enum):
 
 class ProtocolType(str, Enum):
     """Tipos de protocolo soportados."""
+
     RTSP = "rtsp"
     ONVIF = "onvif"
     HTTP = "http"
+    HTTPS = "https"
+    CGI = "cgi"
     AMCREST = "amcrest"
     GENERIC = "generic"
 
 
 class AuthType(str, Enum):
     """Tipos de autenticación."""
+
     BASIC = "basic"
     DIGEST = "digest"
     BEARER = "bearer"
@@ -38,30 +45,35 @@ class AuthType(str, Enum):
 
 # === Modelos de Request ===
 
+
 class CredentialsRequest(BaseModel):
     """Credenciales para autenticación."""
+
     username: str = Field(..., min_length=1, description="Nombre de usuario")
     password: str = Field(..., min_length=1, description="Contraseña")
-    auth_type: AuthType = Field(default=AuthType.BASIC, description="Tipo de autenticación")
-    
+    auth_type: AuthType = Field(
+        default=AuthType.BASIC, description="Tipo de autenticación"
+    )
+
     class Config:
         json_schema_extra = {
             "example": {
                 "username": "admin",
                 "password": "password123",
-                "auth_type": "basic"
+                "auth_type": "basic",
             }
         }
 
 
 class ProtocolConfigRequest(BaseModel):
     """Configuración de protocolo."""
+
     protocol_type: ProtocolType = Field(..., description="Tipo de protocolo")
     port: int = Field(..., ge=1, le=65535, description="Puerto del protocolo")
     is_enabled: bool = Field(default=True, description="Si está habilitado")
     is_primary: bool = Field(default=False, description="Si es el protocolo principal")
     version: Optional[str] = Field(None, description="Versión del protocolo")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -69,19 +81,20 @@ class ProtocolConfigRequest(BaseModel):
                 "port": 80,
                 "is_enabled": True,
                 "is_primary": True,
-                "version": "2.0"
+                "version": "2.0",
             }
         }
 
 
 class EndpointRequest(BaseModel):
     """Endpoint/URL descubierto o configurado."""
+
     type: str = Field(..., description="Tipo de endpoint (rtsp_main, snapshot, etc)")
     url: str = Field(..., description="URL completa")
     protocol: Optional[ProtocolType] = Field(None, description="Protocolo usado")
     verified: bool = Field(default=False, description="Si fue verificada exitosamente")
     priority: int = Field(default=0, ge=0, description="Prioridad (0=mayor)")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -89,13 +102,14 @@ class EndpointRequest(BaseModel):
                 "url": "rtsp://192.168.1.50:554/cam/realmonitor?channel=1&subtype=0",
                 "protocol": "rtsp",
                 "verified": True,
-                "priority": 0
+                "priority": 0,
             }
         }
 
 
 class StreamProfileRequest(BaseModel):
     """Perfil de streaming."""
+
     profile_name: str = Field(..., description="Nombre del perfil")
     stream_type: str = Field(default="main", description="Tipo de stream (main/sub)")
     resolution: Optional[str] = Field(None, description="Resolución (1920x1080)")
@@ -110,44 +124,43 @@ class StreamProfileRequest(BaseModel):
 
 class CreateCameraRequest(BaseModel):
     """Request para crear una nueva cámara."""
+
     brand: str = Field(..., min_length=1, description="Marca de la cámara")
     model: str = Field(default="Unknown", description="Modelo de la cámara")
     display_name: str = Field(..., min_length=1, description="Nombre para mostrar")
     ip: str = Field(..., description="Dirección IP")
     location: Optional[str] = Field(None, description="Ubicación física")
     description: Optional[str] = Field(None, description="Descripción")
-    
+
     # Credenciales
     credentials: CredentialsRequest
-    
+
     # Protocolos opcionales
     protocols: Optional[List[ProtocolConfigRequest]] = Field(
-        default=None, 
-        description="Configuración de protocolos"
+        default=None, description="Configuración de protocolos"
     )
-    
+
     # Endpoints opcionales
     endpoints: Optional[List[EndpointRequest]] = Field(
-        default=None,
-        description="URLs conocidas"
+        default=None, description="URLs conocidas"
     )
-    
+
     # Perfiles de streaming opcionales
     stream_profiles: Optional[List[StreamProfileRequest]] = Field(
-        default=None,
-        description="Perfiles de streaming"
+        default=None, description="Perfiles de streaming"
     )
-    
-    @validator('ip')
+
+    @validator("ip")
     def validate_ip(cls, v):
         """Valida formato de IP."""
         import ipaddress
+
         try:
             ipaddress.ip_address(v)
         except ValueError:
-            raise ValueError('Dirección IP inválida')
+            raise ValueError("Dirección IP inválida")
         return v
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -157,44 +170,36 @@ class CreateCameraRequest(BaseModel):
                 "ip": "192.168.1.50",
                 "location": "Entrada principal",
                 "description": "Cámara de seguridad entrada",
-                "credentials": {
-                    "username": "admin",
-                    "password": "password123"
-                },
+                "credentials": {"username": "admin", "password": "password123"},
                 "protocols": [
-                    {
-                        "protocol_type": "onvif",
-                        "port": 80,
-                        "is_primary": True
-                    },
-                    {
-                        "protocol_type": "rtsp",
-                        "port": 554
-                    }
-                ]
+                    {"protocol_type": "onvif", "port": 80, "is_primary": True},
+                    {"protocol_type": "rtsp", "port": 554},
+                ],
             }
         }
 
 
 class UpdateCameraRequest(BaseModel):
     """Request para actualizar una cámara."""
+
     display_name: Optional[str] = Field(None, min_length=1)
     location: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
-    
+
     # Credenciales opcionales
     credentials: Optional[CredentialsRequest] = None
-    
+
     # Endpoints para agregar/actualizar
     endpoints: Optional[List[EndpointRequest]] = None
-    
+
     # Perfiles de streaming
     stream_profiles: Optional[List[StreamProfileRequest]] = None
 
 
 class TestConnectionRequest(BaseModel):
     """Request para probar conexión sin guardar."""
+
     ip: str = Field(..., description="Dirección IP")
     username: str = Field(..., description="Usuario")
     password: str = Field(..., description="Contraseña")
@@ -205,8 +210,10 @@ class TestConnectionRequest(BaseModel):
 
 # === Modelos de Response ===
 
+
 class CredentialsResponse(BaseModel):
     """Respuesta de credenciales (sin contraseña)."""
+
     username: str
     auth_type: AuthType
     is_configured: bool = Field(..., description="Si tiene contraseña configurada")
@@ -214,6 +221,7 @@ class CredentialsResponse(BaseModel):
 
 class ProtocolResponse(BaseModel):
     """Respuesta de configuración de protocolo."""
+
     protocol_id: Optional[int] = None
     protocol_type: ProtocolType
     port: int
@@ -224,6 +232,7 @@ class ProtocolResponse(BaseModel):
 
 class EndpointResponse(BaseModel):
     """Respuesta de endpoint."""
+
     endpoint_id: Optional[int] = None
     type: str
     url: str
@@ -236,6 +245,7 @@ class EndpointResponse(BaseModel):
 
 class StreamProfileResponse(BaseModel):
     """Respuesta de perfil de streaming."""
+
     profile_id: Optional[int] = None
     profile_name: str
     stream_type: str
@@ -251,6 +261,7 @@ class StreamProfileResponse(BaseModel):
 
 class CameraStatisticsResponse(BaseModel):
     """Estadísticas de una cámara."""
+
     total_connections: int = 0
     successful_connections: int = 0
     failed_connections: int = 0
@@ -265,6 +276,7 @@ class CameraStatisticsResponse(BaseModel):
 
 class CameraCapabilitiesResponse(BaseModel):
     """Capacidades de la cámara."""
+
     supported_protocols: List[ProtocolType] = []
     has_ptz: bool = False
     has_audio: bool = False
@@ -276,47 +288,48 @@ class CameraCapabilitiesResponse(BaseModel):
 
 class CameraResponse(BaseModel):
     """Respuesta completa de una cámara."""
+
     # Identificación
     camera_id: str
     brand: str
     model: str
     display_name: str
-    
+
     # Conexión
     ip_address: str
     mac_address: Optional[str] = None
-    
+
     # Estado
     status: ConnectionStatus
     is_active: bool
     is_connected: bool
     is_streaming: bool
-    
+
     # Hardware info
     firmware_version: Optional[str] = None
     hardware_version: Optional[str] = None
     serial_number: Optional[str] = None
-    
+
     # Ubicación
     location: Optional[str] = None
     description: Optional[str] = None
-    
+
     # Configuración
     credentials: Optional[CredentialsResponse] = None
     protocols: List[ProtocolResponse] = []
     endpoints: List[EndpointResponse] = []
     stream_profiles: List[StreamProfileResponse] = []
-    
+
     # Capacidades
     capabilities: CameraCapabilitiesResponse
-    
+
     # Estadísticas
     statistics: Optional[CameraStatisticsResponse] = None
-    
+
     # Timestamps
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -333,14 +346,14 @@ class CameraResponse(BaseModel):
                 "credentials": {
                     "username": "admin",
                     "auth_type": "basic",
-                    "is_configured": True
+                    "is_configured": True,
                 },
                 "protocols": [
                     {
                         "protocol_type": "onvif",
                         "port": 80,
                         "is_enabled": True,
-                        "is_primary": True
+                        "is_primary": True,
                     }
                 ],
                 "endpoints": [
@@ -348,28 +361,30 @@ class CameraResponse(BaseModel):
                         "type": "rtsp_main",
                         "url": "rtsp://192.168.1.50:554/cam/realmonitor?channel=1&subtype=0",
                         "is_verified": True,
-                        "priority": 0
+                        "priority": 0,
                     }
                 ],
                 "capabilities": {
                     "supported_protocols": ["onvif", "rtsp"],
                     "has_ptz": False,
-                    "has_audio": True
+                    "has_audio": True,
                 },
                 "created_at": "2025-07-15T10:00:00Z",
-                "updated_at": "2025-07-15T10:00:00Z"
+                "updated_at": "2025-07-15T10:00:00Z",
             }
         }
 
 
 class CameraListResponse(BaseModel):
     """Respuesta para listado de cámaras."""
+
     total: int = Field(..., description="Total de cámaras")
     cameras: List[CameraResponse] = Field(..., description="Lista de cámaras")
 
 
 class TestConnectionResponse(BaseModel):
     """Respuesta de prueba de conexión."""
+
     success: bool
     message: str
     discovered_endpoints: Optional[List[EndpointResponse]] = None

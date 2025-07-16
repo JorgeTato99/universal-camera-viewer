@@ -193,11 +193,17 @@ class CameraManagerService(BaseService):
             stream_config = StreamConfig()
         
         # Capacidades
-        supported_protocols = [
-            ProtocolType(p['type'].lower()) 
-            for p in protocols 
-            if p.get('is_enabled', True)
-        ]
+        supported_protocols = []
+        for p in protocols:
+            if p.get('is_enabled', True):
+                protocol_type = p['type'].lower()
+                # Convertir HTTPS a HTTP para compatibilidad
+                if protocol_type == 'https':
+                    protocol_type = 'http'
+                try:
+                    supported_protocols.append(ProtocolType(protocol_type))
+                except ValueError:
+                    self.logger.warning(f"Protocolo no soportado: {p['type']}")
         
         capabilities = CameraCapabilities(
             supported_protocols=supported_protocols
@@ -220,7 +226,16 @@ class CameraManagerService(BaseService):
         # Establecer el protocolo principal o el primero disponible
         primary_protocol = next((p for p in protocols if p.get('is_primary')), None)
         if primary_protocol:
-            camera.protocol = ProtocolType(primary_protocol['type'].lower())
+            protocol_type = primary_protocol['type'].lower()
+            # Convertir HTTPS a HTTP para compatibilidad
+            if protocol_type == 'https':
+                protocol_type = 'http'
+            try:
+                camera.protocol = ProtocolType(protocol_type)
+            except ValueError:
+                self.logger.warning(f"Protocolo principal no válido: {primary_protocol['type']}")
+                if supported_protocols:
+                    camera.protocol = supported_protocols[0]
         elif supported_protocols:
             camera.protocol = supported_protocols[0]
         

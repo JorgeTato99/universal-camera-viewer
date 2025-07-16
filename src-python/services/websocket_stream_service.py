@@ -347,13 +347,18 @@ class WebSocketStreamService(BaseService):
                 # Extraer el path de la URL completa
                 import urllib.parse
                 parsed = urllib.parse.urlparse(rtsp_endpoint)
+                # Incluir tanto el path como los query parameters
                 config['rtsp_path'] = parsed.path
+                if parsed.query:
+                    config['rtsp_path'] += f"?{parsed.query}"
+                self.logger.info(f"Usando path RTSP desde endpoint descubierto: {config['rtsp_path']}")
             else:
                 # Path por defecto según la marca
                 if camera.brand.lower() == 'dahua':
                     config['rtsp_path'] = '/cam/realmonitor?channel=1&subtype=0'
                 else:
                     config['rtsp_path'] = '/stream1'
+                self.logger.info(f"Usando path RTSP por defecto para {camera.brand}: {config['rtsp_path']}")
             
             self.logger.info(f"Configuración obtenida para cámara {camera_id}: IP={config['ip']}, Protocol={config['protocol']}")
             return config

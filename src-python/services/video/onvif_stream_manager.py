@@ -122,7 +122,7 @@ class ONVIFStreamManager(RTSPStreamManager):
             
             # Para otras marcas, intentar obtener perfiles ONVIF
             try:
-                profiles_result = await self._onvif_handler.get_profiles()
+                profiles_result = self._onvif_handler.get_profiles()
                 if profiles_result['success'] and profiles_result['data']:
                     profiles = profiles_result['data']
                     
@@ -158,6 +158,18 @@ class ONVIFStreamManager(RTSPStreamManager):
                                     rtsp_url = self._build_fallback_rtsp_url()
                                     if rtsp_url:
                                         return rtsp_url
+                                
+                                # Agregar credenciales a la URL si no las tiene
+                                if '@' not in stream_url and self.connection_config.username and self.connection_config.password:
+                                    # Parsear la URL para insertar credenciales
+                                    import urllib.parse
+                                    parsed = urllib.parse.urlparse(stream_url)
+                                    # Reconstruir con credenciales
+                                    auth = f"{self.connection_config.username}:{self.connection_config.password}@"
+                                    stream_url = f"{parsed.scheme}://{auth}{parsed.netloc}{parsed.path}"
+                                    if parsed.query:
+                                        stream_url += f"?{parsed.query}"
+                                    self.logger.info(f"Credenciales agregadas a URL RTSP")
                                 
                                 # Actualizar metadata con información del perfil
                                 self.stream_model.metadata.update({
@@ -203,6 +215,17 @@ class ONVIFStreamManager(RTSPStreamManager):
             if hasattr(config, 'rtsp_main') and config.rtsp_main:
                 return config.rtsp_main
             
+            # Si hay un rtsp_path configurado, usarlo
+            if hasattr(config, 'rtsp_path') and config.rtsp_path:
+                if config.username and config.password:
+                    auth = f"{config.username}:{config.password}@"
+                else:
+                    auth = ""
+                rtsp_port = getattr(config, 'rtsp_port', 554)
+                rtsp_url = f"rtsp://{auth}{config.ip}:{rtsp_port}{config.rtsp_path}"
+                self.logger.info(f"Usando rtsp_path configurado: {config.rtsp_path}")
+                return rtsp_url
+            
             # Construir URL basada en credenciales y puerto
             if config.username and config.password:
                 auth = f"{config.username}:{config.password}@"
@@ -214,14 +237,21 @@ class ONVIFStreamManager(RTSPStreamManager):
             
             # Path según la marca detectada
             brand = getattr(config, 'brand', 'dahua').lower()
+            self.logger.info(f"Marca detectada para fallback: {brand}")
             
             # Paths conocidos por marca
             brand_paths = {
                 'dahua': '/cam/realmonitor?channel=1&subtype=0',
                 'hikvision': '/Streaming/Channels/101',
+                'tplink': '/stream1',  # TP-Link usa stream1/stream2
+                'tp-link': '/stream1',  # Variante con guión
+                'tapo': '/stream1',     # Cámaras Tapo de TP-Link
                 'axis': '/axis-media/media.amp',
                 'bosch': '/rtsp_tunnel',
                 'panasonic': '/MediaInput/h264/stream_1',
+                'steren': '/live/ch00_0',  # Steren CCTV
+                'reolink': '/h264Preview_01_main',
+                'xiaomi': '/live/ch0',
                 'default': '/cam/realmonitor?channel=1&subtype=0'  # Dahua por defecto
             }
             
