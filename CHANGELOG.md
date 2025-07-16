@@ -7,6 +7,116 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.7] - 2025-01-16 - 🎨 INTERFAZ DE USUARIO MEJORADA
+
+### ✨ Added - Nuevas Funcionalidades
+
+#### 🔍 Sistema de Escaneo de Red (Scanner)
+
+- **Vista completa de Scanner** con flujo de 3 pasos:
+  1. Escaneo de red para detectar dispositivos
+  2. Escaneo de puertos para identificar servicios
+  3. Prueba de acceso con credenciales
+- **Componentes especializados**:
+  - `NetworkScanPanel` - Configuración de escaneo con modos auto/manual
+  - `PortScanPanel` - Análisis de puertos por velocidad
+  - `AccessTestPanel` - Validación de credenciales
+  - `ScanResults` - Visualización en tiempo real de dispositivos encontrados
+  - `ScanSummary` - Resumen del progreso del escaneo
+- **Servicio Scanner** (`scannerService.ts`) con arquitectura preparada para WebSocket
+- **Animaciones fluidas** con keyframes personalizados y transiciones suaves
+
+#### 💬 Diálogo "Acerca de" Mejorado
+
+- **Rediseño completo con tabs**:
+  - Tab Información: Stack tecnológico y características principales
+  - Tab Actualizaciones: Sistema de verificación y descarga
+  - Tab Licencia: Vista previa y acceso a licencia completa
+- **Indicador de actualizaciones** en TopBar con badge animado
+- **LicenseDialog** separado con funciones de impresión y descarga
+
+#### ⚙️ Menú de Configuración Rápida
+
+- **QuickSettingsMenu** accesible desde TopBar
+- **Controles rápidos**:
+  - Volumen de alertas con slider
+  - Calidad de streaming (auto/HD/SD)
+  - Toggle de notificaciones
+  - Selector de idioma (ES/EN)
+  - Acceso directo a carpeta de grabaciones
+- **Diferenciación clara** entre configuración rápida y completa
+
+### 🎨 Enhanced - Mejoras de Interfaz
+
+#### 🎯 TopBar Mejorada
+
+- **Animaciones en todos los íconos**:
+  - Rotación en configuración
+  - Pulso en ayuda
+  - Transformaciones suaves en controles de ventana
+- **Tooltips informativos** en todos los botones
+- **Badge de notificación** cuando hay actualizaciones disponibles
+- **Eliminación del ícono de notificaciones** (redundante con QuickSettings)
+
+#### 🌊 Animaciones y Transiciones
+
+- **Keyframes personalizados**: `slideInLeft`, `fadeInUp`, `pulseAnimation`, `shimmer`, `rippleEffect`
+- **Transiciones con cubic-bezier** para movimientos naturales
+- **Efectos de hover mejorados** en todos los componentes interactivos
+- **Skeleton loaders** para estados de carga
+
+### 📝 Changed - Cambios Importantes
+
+#### 🏗️ Arquitectura Frontend
+
+- **Documentación inline detallada** de integraciones pendientes:
+  - Todos los TODOs incluyen endpoints esperados
+  - Estructuras de datos request/response documentadas
+  - Ejemplos de implementación con código funcional
+- **Emojis identificadores**: 🚀 para integraciones, 🔧 para mocks
+- **Referencias cruzadas** entre componentes relacionados
+
+#### 📄 Documentación de Integración
+
+- **Creación de `PENDING_INTEGRATIONS.md`** con resumen de todas las funcionalidades pendientes
+- **TODOs mejorados** en el código con:
+  - Contexto completo de la funcionalidad
+  - Endpoints del backend esperados
+  - Código de ejemplo para implementación
+  - Notas sobre dependencias y configuración
+
+### 🐛 Fixed - Correcciones
+
+- **Import duplicado de React** en TopBar.tsx
+- **Etiquetas JSX no cerradas** en NetworkScanPanel.tsx
+- **Imports faltantes** de `keyframes`, `alpha`, `borderTokens`
+- **Badge import** consolidado en Material-UI imports
+
+### 🔧 Technical - Detalles Técnicos
+
+#### Componentes Creados
+
+- `/src/features/scanner/` - Módulo completo de escaneo
+- `/src/components/dialogs/LicenseDialog.tsx` - Diálogo de licencia
+- `/src/components/menus/QuickSettingsMenu.tsx` - Menú de configuración rápida
+
+#### Integraciones Documentadas
+
+- Sistema de actualizaciones con GitHub Releases API
+- WebSocket para eventos de escaneo en tiempo real
+- Tauri API para controles de ventana
+- Sistema i18n para internacionalización
+- Persistencia de configuración con Zustand
+
+### 📌 Notes - Notas para Desarrolladores
+
+- **Mock data funcional** mientras se implementa el backend
+- **Todos los componentes** siguen el design system establecido
+- **Animaciones optimizadas** para rendimiento
+- **Código preparado** para integración inmediata con backend
+
+---
+
 ## [0.9.6] - 2025-07-16 - 📚 REORGANIZACIÓN DE DOCUMENTACIÓN
 
 ### 📝 Documentation - Reestructuración Completa

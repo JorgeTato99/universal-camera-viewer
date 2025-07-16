@@ -4,3 +4,4 @@
  */
 
 export { AboutDialog } from "./AboutDialog";
+export { LicenseDialog } from "./LicenseDialog";

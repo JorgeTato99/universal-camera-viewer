@@ -197,5 +197,180 @@
     "cameras_found": 0,
     "total_ips_scanned": 0,
     "camera_results": []
+  },
+  {
+    "scan_id": "scan_1752642227_0",
+    "timestamp": "2025-07-15T23:03:49.977384",
+    "scan_range": {
+      "start_ip": "192.168.1.77",
+      "end_ip": "192.168.1.77",
+      "ports": [
+        80,
+        443,
+        554,
+        2020,
+        8000,
+        8080,
+        8554,
+        5543
+      ]
+    },
+    "methods": [
+      "port_scan"
+    ],
+    "duration_seconds": 2.053856,
+    "cameras_found": 0,
+    "total_ips_scanned": 0,
+    "camera_results": []
+  },
+  {
+    "scan_id": "scan_1752642422_0",
+    "timestamp": "2025-07-15T23:07:04.924570",
+    "scan_range": {
+      "start_ip": "192.168.1.77",
+      "end_ip": "192.168.1.77",
+      "ports": [
+        80,
+        443,
+        554,
+        2020,
+        8000,
+        8080,
+        8554,
+        5543
+      ]
+    },
+    "methods": [
+      "port_scan"
+    ],
+    "duration_seconds": 2.051914,
+    "cameras_found": 0,
+    "total_ips_scanned": 0,
+    "camera_results": []
+  },
+  {
+    "scan_id": "scan_1752642572_0",
+    "timestamp": "2025-07-15T23:09:34.079484",
+    "scan_range": {
+      "start_ip": "192.168.1.77",
+      "end_ip": "192.168.1.77",
+      "ports": [
+        80,
+        443,
+        554,
+        2020,
+        8000,
+        8080,
+        8554,
+        5543
+      ]
+    },
+    "methods": [
+      "port_scan"
+    ],
+    "duration_seconds": 2.040956,
+    "cameras_found": 0,
+    "total_ips_scanned": 0,
+    "camera_results": []
+  },
+  {
+    "scan_id": "scan_1752642670_0",
+    "timestamp": "2025-07-15T23:11:12.278794",
+    "scan_range": {
+      "start_ip": "192.168.1.77",
+      "end_ip": "192.168.1.77",
+      "ports": [
+        80,
+        443,
+        554,
+        2020,
+        8000,
+        8080,
+        8554,
+        5543
+      ]
+    },
+    "methods": [
+      "port_scan"
+    ],
+    "duration_seconds": 2.044251,
+    "cameras_found": 0,
+    "total_ips_scanned": 0,
+    "camera_results": []
+  },
+  {
+    "scan_id": "scan_1752642966_0",
+    "timestamp": "2025-07-15T23:16:08.622195",
+    "scan_range": {
+      "start_ip": "192.168.1.77",
+      "end_ip": "192.168.1.77",
+      "ports": [
+        80,
+        443,
+        554,
+        2020,
+        8000,
+        8080,
+        8554,
+        5543
+      ]
+    },
+    "methods": [
+      "port_scan"
+    ],
+    "duration_seconds": 2.048472,
+    "cameras_found": 0,
+    "total_ips_scanned": 1,
+    "camera_results": []
+  },
+  {
+    "scan_id": "scan_1752643333_0",
+    "timestamp": "2025-07-15T23:22:15.874884",
+    "scan_range": {
+      "start_ip": "192.168.1.77",
+      "end_ip": "192.168.1.77",
+      "ports": [
+        80,
+        443,
+        554,
+        2020,
+        8000,
+        8080,
+        8554,
+        5543
+      ]
+    },
+    "methods": [
+      "port_scan"
+    ],
+    "duration_seconds": 2.041706,
+    "cameras_found": 0,
+    "total_ips_scanned": 1,
+    "camera_results": []
+  },
+  {
+    "scan_id": "scan_1752643491_0",
+    "timestamp": "2025-07-15T23:24:53.779423",
+    "scan_range": {
+      "start_ip": "192.168.1.77",
+      "end_ip": "192.168.1.77",
+      "ports": [
+        80,
+        443,
+        554,
+        2020,
+        8000,
+        8080,
+        8554,
+        5543
+      ]
+    },
+    "methods": [
+      "port_scan"
+    ],
+    "duration_seconds": 2.044678,
+    "cameras_found": 0,
+    "total_ips_scanned": 1,
+    "camera_results": []
   }
 ]

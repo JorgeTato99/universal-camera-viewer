@@ -159,13 +159,18 @@ class ONVIFHandler(BaseHandler):
             return True
             
         except ONVIFError as e:
-            self.logger.error(f"Error ONVIF específico: {type(e).__name__}: {str(e)}")
+            # Ya se manejó en _create_onvif_camera
+            self._set_state(ConnectionState.ERROR)
+            return False
+        except ConnectionError as e:
+            # Error ya formateado desde _create_onvif_camera
             self._set_state(ConnectionState.ERROR)
             return False
         except Exception as e:
-            self.logger.error(f"Error de conexión ONVIF: {type(e).__name__}: {str(e)}")
-            import traceback
-            self.logger.error(f"Traceback:\n{traceback.format_exc()}")
+            self.logger.error(f"Error inesperado: {type(e).__name__}: {str(e)}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                import traceback
+                self.logger.debug(f"Traceback completo:\n{traceback.format_exc()}")
             self._set_state(ConnectionState.ERROR)
             return False
     
@@ -193,9 +198,21 @@ class ONVIFHandler(BaseHandler):
             return camera
             
         except Exception as e:
-            self.logger.error(f"Error creando cámara ONVIF: {type(e).__name__}: {str(e)}")
-            import traceback
-            self.logger.error(f"Traceback:\n{traceback.format_exc()}")
+            error_msg = str(e)
+            # Mensajes más amigables para errores comunes
+            if "Remote end closed connection" in error_msg:
+                self.logger.error(f"Puerto {self.onvif_port} no responde a ONVIF. ¿Es el puerto correcto?")
+            elif "401" in error_msg or "Unauthorized" in error_msg:
+                self.logger.error("Credenciales incorrectas para ONVIF")
+            elif "timeout" in error_msg.lower():
+                self.logger.error(f"Timeout conectando a {self.ip}:{self.onvif_port}")
+            else:
+                self.logger.error(f"Error ONVIF: {type(e).__name__}: {error_msg}")
+            
+            # Solo mostrar traceback en modo debug
+            if self.logger.isEnabledFor(logging.DEBUG):
+                import traceback
+                self.logger.debug(f"Traceback completo:\n{traceback.format_exc()}")
             return None
     
     async def _setup_media_uris(self):
@@ -596,12 +613,23 @@ class ONVIFHandler(BaseHandler):
         """
         try:
             if self._profiles:
+                self.logger.info(f"Obteniendo información de {len(self._profiles)} perfiles")
+                
                 # Convertir perfiles ONVIF a formato estándar
                 profiles_data = []
-                for profile in self._profiles:
+                for i, profile in enumerate(self._profiles):
+                    # Debug del perfil
+                    self.logger.debug(f"Perfil {i}: tipo={type(profile)}")
+                    self.logger.debug(f"Perfil {i} atributos: {[attr for attr in dir(profile) if not attr.startswith('_')][:10]}")
+                    
+                    token = self._get_profile_token(profile)
+                    name = getattr(profile, 'Name', 'Unknown')
+                    
+                    self.logger.info(f"Perfil {i}: name={name}, token={token}")
+                    
                     profile_data = {
-                        'token': self._get_profile_token(profile),
-                        'name': getattr(profile, 'Name', 'Unknown')
+                        'token': token,
+                        'name': name
                     }
                     
                     # Agregar información de codificación si está disponible

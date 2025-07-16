@@ -95,18 +95,49 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
 
   return (
     <>
-      <Tooltip title="Cambiar tema" arrow>
+      <Tooltip title="Cambiar tema" arrow placement="bottom">
         <IconButton
           onClick={handleClick}
           size={size}
           sx={{
             color: (theme) => theme.palette.text.secondary,
+            transition: "all 0.3s ease",
             "&:hover": {
-              backgroundColor: (theme) => theme.palette.action.hover,
-              color: (theme) => theme.palette.text.primary,
+              backgroundColor: alpha(colorTokens.primary[500], 0.1),
+              color: colorTokens.primary[500],
+              "& svg": {
+                animation: effectiveTheme === "dark" 
+                  ? `moonAnimation 1s ease-in-out`
+                  : `sunAnimation 1s ease-in-out`,
+              },
             },
-            transition: "all 0.2s ease",
+            "& svg": {
+              transition: "transform 0.3s ease",
+            },
+            "@keyframes sunAnimation": {
+              "0%": {
+                transform: "scale(1) rotate(0deg)",
+              },
+              "50%": {
+                transform: "scale(1.1) rotate(180deg)",
+              },
+              "100%": {
+                transform: "scale(1) rotate(360deg)",
+              },
+            },
+            "@keyframes moonAnimation": {
+              "0%": {
+                transform: "scale(1) rotate(0deg)",
+              },
+              "50%": {
+                transform: "scale(0.9) rotate(-15deg)",
+              },
+              "100%": {
+                transform: "scale(1) rotate(0deg)",
+              },
+            },
           }}
+          aria-label="Cambiar tema"
         >
           {getCurrentIcon()}
         </IconButton>

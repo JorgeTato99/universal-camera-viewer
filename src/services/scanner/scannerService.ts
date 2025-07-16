@@ -68,29 +68,63 @@ export class ScannerService {
   // ============================================
 
   /**
-   * Inicia un escaneo de red
+   * 🚀 INTEGRACIÓN PENDIENTE - Iniciar Escaneo de Red
    * 
-   * @integration
-   * Endpoint: POST /api/v2/scanner/start
-   * Body: ScanConfig
-   * Response: { scan_id: string, status: string }
+   * TODO: Conectar con endpoint real del backend
+   * 
+   * ENDPOINT ESPERADO:
+   * POST /api/v2/scanner/network/start
+   * 
+   * REQUEST BODY:
+   * {
+   *   "mode": "auto" | "manual",
+   *   "network_ranges": ["192.168.1.0/24"],
+   *   "scan_speed": "fast" | "normal" | "thorough",
+   *   "port_list": [80, 554, 8080, 2020, 8000],
+   *   "timeout_seconds": 5,
+   *   "parallel_scans": 50
+   * }
+   * 
+   * RESPONSE:
+   * {
+   *   "scan_id": "uuid-v4",
+   *   "status": "started",
+   *   "estimated_time": 120,
+   *   "websocket_channel": "scanner:network:uuid-v4"
+   * }
+   * 
+   * IMPLEMENTACIÓN REAL:
+   * ```typescript
+   * const response = await apiClient.post(`${SCANNER_API_BASE}/network/start`, {
+   *   mode: config.mode || 'auto',
+   *   network_ranges: config.network_ranges || ['192.168.1.0/24'],
+   *   scan_speed: config.scan_speed || 'normal',
+   *   port_list: this.getPortsForSpeed(config.scan_speed),
+   *   timeout_seconds: this.getTimeoutForSpeed(config.scan_speed),
+   *   parallel_scans: this.getParallelScansForSpeed(config.scan_speed)
+   * });
+   * 
+   * // Suscribirse a eventos WebSocket
+   * this.subscribeToScanEvents(response.data.scan_id);
+   * 
+   * return response.data.scan_id;
+   * ```
    * 
    * @param config Configuración del escaneo
    * @returns ID del escaneo iniciado
    */
   async startNetworkScan(config: Partial<ScanConfig>): Promise<string> {
     try {
-      // Configuración por defecto basada en la velocidad
-      const defaultConfig = this.getDefaultScanConfig(config.network_ranges?.[0] || "192.168.1.0/24");
-      const finalConfig = { ...defaultConfig, ...config };
-
-      const response = await apiClient.post(`${SCANNER_API_BASE}/start`, finalConfig);
+      // 🔧 MOCK: Simulación de inicio de escaneo
+      console.log("🔧 MOCK: Iniciando escaneo de red con config:", config);
       
-      // Conectar WebSocket para recibir actualizaciones
-      const scanId = response.data.scan_id;
-      this.connectWebSocket(scanId);
+      // TODO: Reemplazar con llamada real al API
+      const mockScanId = `scan_${Date.now()}`;
       
-      return scanId;
+      // Simular conexión WebSocket
+      console.log(`🔧 MOCK: Conectando WebSocket para scan ${mockScanId}`);
+      
+      return mockScanId;
     } catch (error) {
       console.error("Error starting network scan:", error);
       throw new Error("Failed to start network scan");
@@ -98,16 +132,27 @@ export class ScannerService {
   }
 
   /**
-   * Detiene el escaneo actual
+   * 🚀 INTEGRACIÓN PENDIENTE - Detener Escaneo
    * 
-   * @integration
-   * Endpoint: POST /api/v2/scanner/stop/{scan_id}
-   * Response: { status: "cancelled" }
+   * TODO: Conectar con endpoint real
+   * 
+   * ENDPOINT: POST /api/v2/scanner/network/stop
+   * BODY: { "scan_id": "uuid-v4" }
+   * RESPONSE: { "status": "stopped", "devices_found": 12 }
+   * 
+   * IMPLEMENTACIÓN:
+   * ```typescript
+   * await apiClient.post(`${SCANNER_API_BASE}/network/stop`, { scan_id: scanId });
+   * this.unsubscribeFromScanEvents(scanId);
+   * ```
    */
   async stopScan(scanId: string): Promise<void> {
     try {
-      await apiClient.post(`${SCANNER_API_BASE}/stop/${scanId}`);
-      this.disconnectWebSocket();
+      // 🔧 MOCK: Simular detención de escaneo
+      console.log(`🔧 MOCK: Deteniendo escaneo ${scanId}`);
+      
+      // TODO: Reemplazar con llamada real
+      // await apiClient.post(`${SCANNER_API_BASE}/network/stop`, { scan_id: scanId });
     } catch (error) {
       console.error("Error stopping scan:", error);
       throw new Error("Failed to stop scan");
@@ -115,16 +160,35 @@ export class ScannerService {
   }
 
   /**
-   * Obtiene el estado actual del escaneo
+   * 🚀 INTEGRACIÓN PENDIENTE - Estado del Escaneo
    * 
-   * @integration
-   * Endpoint: GET /api/v2/scanner/status/{scan_id}
-   * Response: NetworkDiscovery
+   * TODO: Endpoint para obtener estado actual
+   * 
+   * ENDPOINT: GET /api/v2/scanner/network/status/{scan_id}
+   * RESPONSE: NetworkDiscovery object con campos actualizados
    */
   async getScanStatus(scanId: string): Promise<NetworkDiscovery> {
     try {
-      const response = await apiClient.get(`${SCANNER_API_BASE}/status/${scanId}`);
-      return response.data;
+      // 🔧 MOCK: Retornar estado simulado
+      console.log(`🔧 MOCK: Obteniendo estado del escaneo ${scanId}`);
+      
+      return {
+        network_info: {
+          local_ip: "192.168.1.100",
+          network_cidr: "192.168.1.0/24",
+          gateway: "192.168.1.1",
+          interface_name: "eth0"
+        },
+        scan_results: [],
+        scan_stats: {
+          total_scanned: 100,
+          devices_found: 5,
+          scan_duration: 45.2,
+          start_time: new Date().toISOString(),
+          end_time: null
+        },
+        status: "scanning" as ScanStatus
+      };
     } catch (error) {
       console.error("Error getting scan status:", error);
       throw new Error("Failed to get scan status");
@@ -132,14 +196,17 @@ export class ScannerService {
   }
 
   /**
-   * Obtiene los resultados del escaneo
+   * 🚀 INTEGRACIÓN PENDIENTE - Resultados del Escaneo
    * 
-   * @integration
-   * Endpoint: GET /api/v2/scanner/results/{scan_id}
-   * Response: DeviceScanResult[]
+   * TODO: Obtener dispositivos encontrados
    * 
-   * NOTA: El backend debe transformar ScanResult a DeviceScanResult
-   * agregando los campos probability, deviceType, etc.
+   * ENDPOINT: GET /api/v2/scanner/network/results/{scan_id}
+   * 
+   * TRANSFORMACIÓN NECESARIA:
+   * Backend debe agregar campos UI:
+   * - probability: Calcular basado en puertos abiertos
+   * - deviceType: Inferir tipo (camera, router, computer, etc)
+   * - cameraLikelihood: Porcentaje de probabilidad de ser cámara
    */
   async getScanResults(scanId: string): Promise<DeviceScanResult[]> {
     try {
@@ -156,24 +223,34 @@ export class ScannerService {
   // ============================================
 
   /**
-   * Inicia escaneo de puertos para una IP específica
+   * 🚀 INTEGRACIÓN PENDIENTE - Escaneo de Puertos
    * 
-   * @integration
-   * Endpoint: POST /api/v2/scanner/ports/{ip}
-   * Body: PortScanConfig
-   * Response: { scan_id: string }
+   * TODO: Escanear puertos de dispositivos específicos
+   * 
+   * ENDPOINT: POST /api/v2/scanner/ports/start
+   * BODY:
+   * {
+   *   "devices": [{ "ip": "192.168.1.10", "mac": "XX:XX:XX" }],
+   *   "port_range": "1-65535" | "common" | "camera",
+   *   "scan_speed": "fast" | "normal" | "thorough",
+   *   "timeout_per_port": 2
+   * }
+   * 
+   * RESPONSE:
+   * {
+   *   "scan_id": "uuid-v4",
+   *   "total_operations": 120,
+   *   "websocket_channel": "scanner:ports:uuid-v4"
+   * }
    */
   async startPortScan(config: PortScanConfig): Promise<string> {
     try {
-      const ports = this.getPortsFromConfig(config);
-      const response = await apiClient.post(
-        `${SCANNER_API_BASE}/ports/${config.ip}`,
-        {
-          ports,
-          timeout: config.timeout || 5,
-        }
-      );
-      return response.data.scan_id;
+      // 🔧 MOCK: Simular inicio de escaneo de puertos
+      console.log("🔧 MOCK: Iniciando escaneo de puertos:", config);
+      
+      // TODO: Implementar llamada real
+      const mockScanId = `port_scan_${Date.now()}`;
+      return mockScanId;
     } catch (error) {
       console.error("Error starting port scan:", error);
       throw new Error("Failed to start port scan");
@@ -181,16 +258,47 @@ export class ScannerService {
   }
 
   /**
-   * Obtiene resultados del escaneo de puertos
+   * 🚀 INTEGRACIÓN PENDIENTE - Resultados de Puertos
    * 
-   * @integration
-   * Endpoint: GET /api/v2/scanner/ports/{ip}/results
-   * Response: PortScanResult[]
+   * TODO: Obtener puertos abiertos por dispositivo
+   * 
+   * ENDPOINT: GET /api/v2/scanner/ports/results/{scan_id}
+   * 
+   * RESPONSE:
+   * [
+   *   {
+   *     "ip": "192.168.1.10",
+   *     "ports": [
+   *       { "port": 80, "service": "http", "state": "open" },
+   *       { "port": 554, "service": "rtsp", "state": "open" }
+   *     ],
+   *     "scan_time": 2.5
+   *   }
+   * ]
    */
   async getPortScanResults(ip: string): Promise<PortScanResult[]> {
     try {
-      const response = await apiClient.get(`${SCANNER_API_BASE}/ports/${ip}/results`);
-      return response.data;
+      // 🔧 MOCK: Retornar puertos simulados
+      console.log(`🔧 MOCK: Obteniendo resultados de puertos para ${ip}`);
+      
+      return [
+        {
+          ip,
+          port: 80,
+          protocol: "tcp",
+          service: "http",
+          state: "open",
+          banner: "Server: Mini Web Server"
+        },
+        {
+          ip,
+          port: 554,
+          protocol: "tcp",
+          service: "rtsp",
+          state: "open",
+          banner: "RTSP/1.0 200 OK"
+        }
+      ];
     } catch (error) {
       console.error("Error getting port scan results:", error);
       throw new Error("Failed to get port scan results");
@@ -202,20 +310,52 @@ export class ScannerService {
   // ============================================
 
   /**
-   * Prueba acceso a una cámara con credenciales
+   * 🚀 INTEGRACIÓN PENDIENTE - Prueba de Acceso
    * 
-   * @integration
-   * Endpoint: POST /api/v2/scanner/test-access
-   * Body: AccessTestConfig
-   * Response: AccessTestResult[]
+   * TODO: Validar credenciales en dispositivos
    * 
-   * NOTA: Si tryAllProtocols es true, el backend debe probar
-   * ONVIF, RTSP y HTTP en paralelo y retornar todos los resultados
+   * ENDPOINT: POST /api/v2/scanner/access/test
+   * BODY:
+   * {
+   *   "devices": [{ "ip": "192.168.1.10", "ports": [80, 554] }],
+   *   "credentials": { "username": "admin", "password": "admin123" },
+   *   "protocols": ["onvif", "rtsp", "http"],
+   *   "timeout": 10
+   * }
+   * 
+   * RESPONSE:
+   * [
+   *   {
+   *     "ip": "192.168.1.10",
+   *     "protocol": "onvif",
+   *     "success": true,
+   *     "message": "Acceso exitoso",
+   *     "device_info": {
+   *       "manufacturer": "Dahua",
+   *       "model": "IPC-HFW1230S",
+   *       "firmware": "2.800.0000000.20.R"
+   *     }
+   *   }
+   * ]
+   * 
+   * NOTA: El backend debe probar todos los protocolos solicitados
+   * y retornar resultados para cada uno
    */
   async testCameraAccess(config: AccessTestConfig): Promise<AccessTestResult[]> {
     try {
-      const response = await apiClient.post(`${SCANNER_API_BASE}/test-access`, config);
-      return Array.isArray(response.data) ? response.data : [response.data];
+      // 🔧 MOCK: Simular prueba de acceso
+      console.log("🔧 MOCK: Probando acceso con:", config);
+      
+      // TODO: Implementar llamada real
+      return [
+        {
+          ip: config.ip,
+          protocol: "onvif" as any,
+          success: true,
+          message: "Acceso exitoso (MOCK)",
+          responseTime: 1.2
+        }
+      ];
     } catch (error) {
       console.error("Error testing camera access:", error);
       throw new Error("Failed to test camera access");
@@ -223,25 +363,41 @@ export class ScannerService {
   }
 
   /**
-   * Obtiene credenciales comunes para pruebas
+   * 🚀 INTEGRACIÓN PENDIENTE - Credenciales Por Defecto
    * 
-   * @integration
-   * Endpoint: GET /api/v2/scanner/default-credentials
-   * Response: Array<{ username: string, password: string, brand: string }>
+   * TODO: Obtener lista de credenciales comunes
+   * 
+   * ENDPOINT: GET /api/v2/scanner/credentials/defaults
+   * 
+   * RESPONSE:
+   * [
+   *   { "username": "admin", "password": "admin", "brand": "generic" },
+   *   { "username": "admin", "password": "admin123", "brand": "dahua" },
+   *   { "username": "admin", "password": "12345", "brand": "hikvision" }
+   * ]
+   * 
+   * NOTA: Lista debe estar ordenada por frecuencia de uso
    */
   async getDefaultCredentials(): Promise<Array<{ username: string; password: string; brand: string }>> {
     try {
-      const response = await apiClient.get(`${SCANNER_API_BASE}/default-credentials`);
-      return response.data;
-    } catch (error) {
-      console.error("Error getting default credentials:", error);
-      // Retornar credenciales por defecto si falla
+      // 🔧 MOCK: Retornar credenciales comunes
+      console.log("🔧 MOCK: Obteniendo credenciales por defecto");
+      
+      // TODO: Reemplazar con llamada real
+      // const response = await apiClient.get(`${SCANNER_API_BASE}/credentials/defaults`);
+      // return response.data;
+      
       return [
         { username: "admin", password: "admin", brand: "Genérico" },
         { username: "admin", password: "12345", brand: "Genérico" },
         { username: "admin", password: "123456", brand: "Genérico" },
         { username: "admin", password: "", brand: "Dahua/Hikvision" },
+        { username: "admin", password: "admin123", brand: "Dahua" },
+        { username: "888888", password: "888888", brand: "XMEye" },
       ];
+    } catch (error) {
+      console.error("Error getting default credentials:", error);
+      throw new Error("Failed to get default credentials");
     }
   }
 
@@ -250,16 +406,24 @@ export class ScannerService {
   // ============================================
 
   /**
-   * Conecta WebSocket para recibir actualizaciones en tiempo real
+   * 🚀 INTEGRACIÓN PENDIENTE - WebSocket para Eventos en Tiempo Real
    * 
-   * @integration
-   * WebSocket: ws://localhost:8000/ws/scanner/{scan_id}
+   * TODO: Conectar con WebSocket del backend
    * 
-   * Mensajes esperados:
-   * - { type: "progress", data: ScanProgress }
-   * - { type: "device_found", data: DeviceScanResult }
-   * - { type: "scan_complete", data: NetworkDiscovery }
-   * - { type: "error", data: { message: string } }
+   * ENDPOINT: ws://localhost:8000/ws/scanner/{scan_id}
+   * 
+   * EVENTOS ESPERADOS:
+   * ```json
+   * { "type": "scan:progress", "data": { "percentage": 45, "current_ip": "192.168.1.45" } }
+   * { "type": "device:found", "data": { "ip": "192.168.1.10", "mac": "XX:XX", "open_ports": [80, 554] } }
+   * { "type": "scan:complete", "data": { "total_devices": 12, "duration": 120.5 } }
+   * { "type": "error", "data": { "code": "NETWORK_ERROR", "message": "Error de red" } }
+   * ```
+   * 
+   * IMPLEMENTACIÓN:
+   * - Usar reconexión automática con backoff exponencial
+   * - Emitir eventos a componentes suscritos
+   * - Manejar desconexiones gracefully
    */
   private connectWebSocket(scanId: string): void {
     if (this.websocket) {

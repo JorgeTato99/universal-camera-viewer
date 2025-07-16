@@ -550,6 +550,9 @@ class ScanModel:
                         self.results[ip].open_ports.append(port)
                         self.logger.debug(f"Puerto {port} abierto en {ip}")
                     
+                    # Marcar como vivo si tiene puertos abiertos
+                    self.results[ip].is_alive = True
+                    
                 except (asyncio.TimeoutError, ConnectionRefusedError, OSError):
                     # Puerto cerrado o timeout - esto es normal, no es un error
                     pass

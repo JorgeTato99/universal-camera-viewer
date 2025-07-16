@@ -78,11 +78,13 @@ async def test_real_scan():
         # Obtener resultados
         print("\nObteniendo resultados...")
         
-        # Usar los resultados capturados antes de que se eliminara el modelo
-        if final_results:
+        # Usar el nuevo método del servicio
+        results = await scan_service.get_scan_results(scan_id)
+        
+        if results:
             # Buscar resultados para nuestra IP
             scan_result = None
-            for result in final_results:
+            for result in results:
                 if result['ip'] == ip:
                     scan_result = result
                     break
@@ -109,7 +111,7 @@ async def test_real_scan():
             else:
                 print(f"\nX No se obtuvieron resultados para {ip}")
         else:
-            print(f"\nX No se pudieron capturar los resultados del escaneo")
+            print(f"\nX No se pudieron obtener los resultados del escaneo")
             
     except Exception as e:
         print(f"\nError durante el escaneo: {e}")

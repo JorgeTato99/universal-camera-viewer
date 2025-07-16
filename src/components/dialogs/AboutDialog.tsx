@@ -3,7 +3,7 @@
  * Dialog de información sobre la aplicación
  */
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,13 @@ import {
   keyframes,
   Skeleton,
   Grow,
+  Tabs,
+  Tab,
+  Button,
+  Alert,
+  CircularProgress,
+  Badge,
+  Paper,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -31,12 +38,19 @@ import {
   Speed as PerformanceIcon,
   Videocam as CameraIcon,
   AutoAwesome as SparkleIcon,
+  Info as InfoIcon,
+  Update as UpdateIcon,
+  Gavel as LicenseIcon,
+  CheckCircle as CheckIcon,
+  Download as DownloadIcon,
+  OpenInNew as OpenIcon,
 } from "@mui/icons-material";
 import {
   colorTokens,
   borderTokens,
   spacingTokens,
 } from "../../design-system/tokens";
+import { LicenseDialog } from "./LicenseDialog";
 
 interface AboutDialogProps {
   open: boolean;
@@ -110,10 +124,42 @@ const floatAnimation = keyframes`
   }
 `;
 
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`about-tabpanel-${index}`}
+      aria-labelledby={`about-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Fade in timeout={500}>
+          <Box>{children}</Box>
+        </Fade>
+      )}
+    </div>
+  );
+}
+
 export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
   const theme = useTheme();
   const [contentLoaded, setContentLoaded] = React.useState(false);
   const [rippleActive, setRippleActive] = React.useState(false);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [currentVersion] = useState("0.9.6");
+  const [latestVersion, setLatestVersion] = useState("0.9.6");
+  const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
 
   React.useEffect(() => {
     if (open) {
@@ -122,10 +168,79 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
       return () => clearTimeout(timer);
     } else {
       setContentLoaded(false);
+      setCurrentTab(0); // Reset al tab inicial
     }
   }, [open]);
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
+  };
+
+  /**
+   * 🚀 INTEGRACIÓN PENDIENTE - Sistema de Actualizaciones
+   * 
+   * TODO: Conectar con servicio real de actualizaciones
+   * 
+   * BACKEND REQUERIDO:
+   * - Endpoint: GET /api/v2/updates/check
+   * - Alternativa: GET https://api.github.com/repos/JorgeTato99/universal-camera-viewer/releases/latest
+   * 
+   * RESPUESTA ESPERADA:
+   * {
+   *   "version": "0.9.7",
+   *   "releaseDate": "2025-01-16T00:00:00Z",
+   *   "downloadUrl": "https://github.com/.../release.exe",
+   *   "fileSize": 45678901,
+   *   "changelog": [
+   *     "Mejoras en el rendimiento del streaming",
+   *     "Soporte para nuevos modelos de cámaras",
+   *     "Corrección de errores"
+   *   ],
+   *   "isPrerelease": false,
+   *   "isMandatory": false
+   * }
+   * 
+   * IMPLEMENTACIÓN SUGERIDA:
+   * ```typescript
+   * const checkForUpdates = async () => {
+   *   setCheckingUpdates(true);
+   *   try {
+   *     const response = await updateService.checkForUpdates();
+   *     setLatestVersion(response.version);
+   *     setUpdateAvailable(response.version !== currentVersion);
+   *     
+   *     // Guardar en store global para mostrar badge en TopBar
+   *     useAppStore.setState({ hasUpdate: response.version !== currentVersion });
+   *   } catch (error) {
+   *     console.error('Error checking updates:', error);
+   *     // Mostrar notificación de error al usuario
+   *     showNotification({
+   *       type: 'error',
+   *       message: 'No se pudo verificar actualizaciones'
+   *     });
+   *   } finally {
+   *     setCheckingUpdates(false);
+   *   }
+   * };
+   * ```
+   * 
+   * NOTA PARA DESARROLLADORES:
+   * - Implementar caché de 1 hora para no sobrecargar el servidor
+   * - Considerar usar WebSocket para notificaciones push de actualizaciones
+   * - El badge de actualización en TopBar debe sincronizarse con este estado
+   */
+  const checkForUpdates = () => {
+    setCheckingUpdates(true);
+    // 🔧 MOCK: Simular búsqueda de actualizaciones - REEMPLAZAR CON SERVICIO REAL
+    setTimeout(() => {
+      setLatestVersion("0.9.7");
+      setUpdateAvailable(true);
+      setCheckingUpdates(false);
+    }, 2000);
+  };
+
   return (
+    <>
     <Dialog
       open={open}
       onClose={onClose}
@@ -268,21 +383,69 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
         </Fade>
       </Box>
 
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs 
+          value={currentTab} 
+          onChange={handleTabChange}
+          variant="fullWidth"
+          sx={{
+            "& .MuiTab-root": {
+              textTransform: "none",
+              fontWeight: 500,
+              transition: "all 0.3s ease",
+              "&:hover": {
+                backgroundColor: alpha(colorTokens.primary[500], 0.05),
+              },
+            },
+          }}
+        >
+          <Tab 
+            label="Información" 
+            icon={<InfoIcon fontSize="small" />} 
+            iconPosition="start"
+            sx={{ gap: 1 }}
+          />
+          <Tab 
+            label="Actualizaciones" 
+            icon={
+              updateAvailable ? (
+                <Badge color="error" variant="dot">
+                  <UpdateIcon fontSize="small" />
+                </Badge>
+              ) : (
+                <UpdateIcon fontSize="small" />
+              )
+            } 
+            iconPosition="start"
+            sx={{ gap: 1 }}
+          />
+          <Tab 
+            label="Licencia" 
+            icon={<LicenseIcon fontSize="small" />} 
+            iconPosition="start"
+            sx={{ gap: 1 }}
+          />
+        </Tabs>
+      </Box>
+
       <DialogContent sx={{ p: 3 }}>
-        {/* Descripción con skeleton loader */}
-        {!contentLoaded ? (
-          <>
-            <Skeleton variant="text" sx={{ fontSize: "1rem", mb: 2 }} />
-            <Skeleton variant="text" sx={{ fontSize: "1rem", width: "80%" }} />
-          </>
-        ) : (
-          <Fade in={contentLoaded} timeout={500}>
-            <Typography variant="body1" paragraph>
-              Una solución completa para la gestión y monitoreo de cámaras IP
-              con soporte para múltiples protocolos y fabricantes.
-            </Typography>
-          </Fade>
-        )}
+        {/* Tab 1: Información */}
+        <TabPanel value={currentTab} index={0}>
+          {/* Descripción con skeleton loader */}
+          {!contentLoaded ? (
+            <>
+              <Skeleton variant="text" sx={{ fontSize: "1rem", mb: 2 }} />
+              <Skeleton variant="text" sx={{ fontSize: "1rem", width: "80%" }} />
+            </>
+          ) : (
+            <Fade in={contentLoaded} timeout={500}>
+              <Typography variant="body1" paragraph>
+                Una solución completa para la gestión y monitoreo de cámaras IP
+                con soporte para múltiples protocolos y fabricantes.
+              </Typography>
+            </Fade>
+          )}
 
         {/* Características principales */}
         <Box sx={{ mb: 3 }}>
@@ -551,7 +714,352 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
             </Typography>
           </Box>
         </Fade>
+        </TabPanel>
+
+        {/* Tab 2: Actualizaciones */}
+        <TabPanel value={currentTab} index={1}>
+          <Box>
+            {/* Estado actual */}
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 3,
+                mb: 3,
+                borderRadius: borderTokens.radius.md,
+                backgroundColor: updateAvailable
+                  ? alpha(colorTokens.status.connecting, 0.05)
+                  : alpha(colorTokens.status.connected, 0.05),
+                border: `1px solid ${
+                  updateAvailable
+                    ? alpha(colorTokens.status.connecting, 0.3)
+                    : alpha(colorTokens.status.connected, 0.3)
+                }`,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    backgroundColor: updateAvailable
+                      ? alpha(colorTokens.status.connecting, 0.1)
+                      : alpha(colorTokens.status.connected, 0.1),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: updateAvailable
+                      ? colorTokens.status.connecting
+                      : colorTokens.status.connected,
+                  }}
+                >
+                  {updateAvailable ? <UpdateIcon /> : <CheckIcon />}
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {updateAvailable
+                      ? `Nueva versión ${latestVersion} disponible`
+                      : "Sistema actualizado"}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Versión actual: {currentVersion}
+                  </Typography>
+                </Box>
+                {updateAvailable && (
+                  <Button
+                    variant="contained"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => {
+                      /**
+                       * 🚀 INTEGRACIÓN PENDIENTE - Descargar Actualización
+                       * 
+                       * TODO: Implementar descarga de actualización
+                       * 
+                       * OPCIÓN 1 - Abrir en navegador:
+                       * window.open(downloadUrl, '_blank');
+                       * 
+                       * OPCIÓN 2 - Descarga con progreso usando Tauri:
+                       * ```typescript
+                       * import { download } from '@tauri-apps/api/http';
+                       * import { save } from '@tauri-apps/api/dialog';
+                       * 
+                       * const filePath = await save({
+                       *   defaultPath: `UniversalCameraViewer_${latestVersion}.exe`
+                       * });
+                       * 
+                       * if (filePath) {
+                       *   await download(downloadUrl, filePath, {
+                       *     onDownloadProgress: (progress) => {
+                       *       setDownloadProgress(progress.percentage);
+                       *     }
+                       *   });
+                       * }
+                       * ```
+                       */
+                      console.log("🔧 MOCK: Descargar actualización - IMPLEMENTAR");
+                    }}
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: borderTokens.radius.md,
+                    }}
+                  >
+                    Descargar
+                  </Button>
+                )}
+              </Box>
+
+              {updateAvailable && (
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 600, mb: 1 }}
+                  >
+                    Novedades en la versión {latestVersion}:
+                  </Typography>
+                  <Box component="ul" sx={{ m: 0, pl: 3 }}>
+                    <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
+                      Mejoras en el rendimiento del streaming
+                    </Typography>
+                    <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
+                      Soporte para nuevos modelos de cámaras Hikvision
+                    </Typography>
+                    <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
+                      Corrección de errores en el escaneo de red
+                    </Typography>
+                    <Typography component="li" variant="body2">
+                      Actualización de dependencias de seguridad
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+
+            {/* Botón buscar actualizaciones */}
+            <Box sx={{ textAlign: "center" }}>
+              <Button
+                variant="outlined"
+                startIcon={
+                  checkingUpdates ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <UpdateIcon />
+                  )
+                }
+                onClick={checkForUpdates}
+                disabled={checkingUpdates}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: borderTokens.radius.md,
+                  minWidth: 200,
+                }}
+              >
+                {checkingUpdates
+                  ? "Buscando actualizaciones..."
+                  : "Buscar actualizaciones"}
+              </Button>
+            </Box>
+
+            {/* Configuración de actualizaciones */}
+            <Box sx={{ mt: 4 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 600, mb: 2 }}
+              >
+                Configuración de actualizaciones
+              </Typography>
+              <Alert severity="info" variant="outlined">
+                Las actualizaciones automáticas se pueden configurar en{" "}
+                <Link
+                  component="button"
+                  onClick={() => {
+                    onClose();
+                    /**
+                     * 🚀 INTEGRACIÓN PENDIENTE - Navegación a Configuración
+                     * 
+                     * TODO: Implementar navegación programática a settings
+                     * 
+                     * IMPLEMENTACIÓN:
+                     * ```typescript
+                     * import { useNavigate } from 'react-router-dom';
+                     * 
+                     * const navigate = useNavigate();
+                     * onClose();
+                     * navigate('/settings/general/updates');
+                     * ```
+                     * 
+                     * ALTERNATIVA con store global:
+                     * ```typescript
+                     * useAppStore.setState({ 
+                     *   activeSettingsTab: 'general',
+                     *   activeSettingsSection: 'updates'
+                     * });
+                     * navigate('/settings');
+                     * ```
+                     */
+                    console.log("🔧 MOCK: Navegar a configuración - IMPLEMENTAR");
+                  }}
+                  sx={{ fontWeight: 500 }}
+                >
+                  Configuración → General → Actualizaciones
+                </Link>
+              </Alert>
+            </Box>
+          </Box>
+        </TabPanel>
+
+        {/* Tab 3: Licencia */}
+        <TabPanel value={currentTab} index={2}>
+          <Box>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 3,
+                mb: 3,
+                borderRadius: borderTokens.radius.md,
+                backgroundColor: theme.palette.mode === "dark"
+                  ? "rgba(255, 255, 255, 0.02)"
+                  : "rgba(0, 0, 0, 0.01)",
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Licencia de Software
+              </Typography>
+              <Typography variant="body2" paragraph>
+                Universal Camera Viewer es un software propietario desarrollado
+                por Kipustec. Todos los derechos reservados.
+              </Typography>
+              <Typography variant="body2" paragraph>
+                Este software está protegido por las leyes de derechos de autor
+                y tratados internacionales. La reproducción o distribución no
+                autorizada de este programa, o cualquier parte del mismo, puede
+                resultar en severas sanciones civiles y penales.
+              </Typography>
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: 1,
+                  backgroundColor: theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.05)"
+                    : "rgba(0, 0, 0, 0.02)",
+                  fontFamily: "monospace",
+                  fontSize: "0.875rem",
+                  maxHeight: 200,
+                  overflow: "auto",
+                }}
+              >
+                <Typography variant="body2" component="pre" sx={{ m: 0 }}>
+{`LICENCIA DE SOFTWARE PROPIETARIO
+Version 1.0 - Enero 2025
+
+TÉRMINOS Y CONDICIONES
+
+1. CONCESIÓN DE LICENCIA
+Kipustec le otorga una licencia no exclusiva e 
+intransferible para usar el software Universal 
+Camera Viewer.
+
+2. RESTRICCIONES
+Usted NO puede:
+- Copiar o distribuir el software
+- Realizar ingeniería inversa
+- Modificar o crear trabajos derivados
+- Sublicenciar o transferir la licencia
+
+3. PROPIEDAD
+Este software es propiedad de Kipustec y está 
+protegido por leyes de propiedad intelectual.
+
+4. GARANTÍA LIMITADA
+El software se proporciona "tal cual" sin 
+garantías de ningún tipo.
+
+5. LIMITACIÓN DE RESPONSABILIDAD
+Kipustec no será responsable por daños 
+indirectos o consecuentes.`}
+                </Typography>
+              </Box>
+            </Paper>
+
+            {/* Botones de acción */}
+            <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
+              <Button
+                variant="outlined"
+                startIcon={<OpenIcon />}
+                onClick={() => {
+                  setLicenseDialogOpen(true);
+                }}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: borderTokens.radius.md,
+                }}
+              >
+                Ver licencia completa
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  /**
+                   * 🚀 INTEGRACIÓN PENDIENTE - Exportar Licencia a PDF
+                   * 
+                   * TODO: Implementar exportación de licencia
+                   * 
+                   * OPCIÓN 1 - Usando jsPDF (recomendado):
+                   * ```typescript
+                   * import { jsPDF } from 'jspdf';
+                   * 
+                   * const doc = new jsPDF();
+                   * doc.setFontSize(16);
+                   * doc.text('LICENCIA DE SOFTWARE', 20, 20);
+                   * doc.setFontSize(12);
+                   * doc.text(FULL_LICENSE_TEXT, 20, 40, { maxWidth: 170 });
+                   * doc.save('Universal_Camera_Viewer_Licencia.pdf');
+                   * ```
+                   * 
+                   * OPCIÓN 2 - Backend endpoint:
+                   * ```typescript
+                   * const response = await fetch('/api/v2/license/export/pdf');
+                   * const blob = await response.blob();
+                   * const url = URL.createObjectURL(blob);
+                   * const a = document.createElement('a');
+                   * a.href = url;
+                   * a.download = 'Universal_Camera_Viewer_Licencia.pdf';
+                   * a.click();
+                   * ```
+                   * 
+                   * NOTA: Si se usa jsPDF, instalar con:
+                   * yarn add jspdf @types/jspdf
+                   */
+                  console.log("🔧 MOCK: Exportar licencia PDF - IMPLEMENTAR");
+                }}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: borderTokens.radius.md,
+                }}
+              >
+                Exportar PDF
+              </Button>
+            </Box>
+
+            {/* Información adicional */}
+            <Box sx={{ mt: 4 }}>
+              <Alert severity="info" variant="outlined">
+                Para más información sobre licenciamiento, contacte a{" "}
+                <Link href="mailto:licencias@kipustec.com">
+                  licencias@kipustec.com
+                </Link>
+              </Alert>
+            </Box>
+          </Box>
+        </TabPanel>
       </DialogContent>
     </Dialog>
+    
+    {/* License Dialog */}
+    <LicenseDialog 
+      open={licenseDialogOpen} 
+      onClose={() => setLicenseDialogOpen(false)} 
+    />
+    </>
   );
 };

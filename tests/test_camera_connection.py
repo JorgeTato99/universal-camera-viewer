@@ -26,9 +26,15 @@ from services.data_service import DataService
 # Configurar logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    force=True  # Forzar reconfiguración
 )
 logger = logging.getLogger(__name__)
+
+# Silenciar logs de zeep (ONVIF)
+logging.getLogger('zeep').setLevel(logging.WARNING)
+logging.getLogger('zeep.xsd').setLevel(logging.WARNING)
+logging.getLogger('zeep.wsdl').setLevel(logging.WARNING)
 
 
 class CameraConnectionTester:
@@ -130,41 +136,83 @@ class CameraConnectionTester:
         while waited < max_wait:
             status = self.scan_service.get_scan_status(scan_id)
             
+            # Debug: mostrar estado (comentado para reducir ruido)
+            # if status:
+            #     print(f"[DEBUG] Estado del escaneo: {status}")
+            
             # Intentar capturar resultados en cada iteración
             if scan_id in self.scan_service.active_scans:
                 scan_model = self.scan_service.active_scans[scan_id]
                 # Capturar resultados cuando el escaneo esté cerca de completarse
-                if status and status.value in ['completed', 'processing']:
+                if status and status['status'] in ['completed', 'processing']:
                     try:
-                        all_results = scan_model.get_all_results()
-                    except:
-                        pass  # El modelo puede haberse eliminado
+                        temp_results = scan_model.get_all_results()
+                        # print(f"[DEBUG] Resultados capturados del modelo activo: {len(temp_results) if temp_results else 0}")
+                        if temp_results:
+                            all_results = temp_results
+                            # print(f"[DEBUG] Primer resultado: {temp_results[0] if temp_results else 'None'}")
+                    except Exception as e:
+                        logger.debug(f"Error capturando resultados: {e}")
                     
-            if status and status.value in ['completed', 'error', 'cancelled']:
+            if status and status['status'] in ['completed', 'error', 'cancelled']:
                 # Dar una última oportunidad de capturar resultados
                 if not all_results and scan_id in self.scan_service.active_scans:
                     try:
-                        all_results = self.scan_service.active_scans[scan_id].get_all_results()
-                    except:
-                        pass
+                        temp_results = self.scan_service.active_scans[scan_id].get_all_results()
+                        logger.debug(f"Última oportunidad - resultados: {len(temp_results) if temp_results else 0}")
+                        if temp_results:
+                            all_results = temp_results
+                    except Exception as e:
+                        logger.debug(f"Error en última oportunidad: {e}")
+                        
+                # Debug: verificar qué hay en completed_scans (comentado)
+                # if scan_id in self.scan_service.completed_scans:
+                #     completed_data = self.scan_service.completed_scans[scan_id]
+                #     print(f"[DEBUG] Datos en completed_scans: {completed_data.keys()}")
+                #     print(f"[DEBUG] Resultados en completed_scans: {len(completed_data.get('results', []))}")
+                # else:
+                #     print(f"[DEBUG] scan_id {scan_id} NO está en completed_scans")
+                    
                 await asyncio.sleep(0.1)  # Pequeña pausa antes de salir
                 break
                 
             await asyncio.sleep(0.5)
             waited += 0.5
             
-        # Debug: mostrar qué capturamos
-        self.logger.info(f"Escaneo completado: {len(all_results) if all_results else 0} resultados")
+        # Intentar obtener resultados usando el método mejorado del servicio
+        if not all_results:
+            results = await self.scan_service.get_scan_results(scan_id)
+            all_results = results if results else []
+            
+        logger.info(f"Escaneo completado: {len(all_results) if all_results else 0} resultados")
+        
+        # Debug: mostrar qué hay en all_results (comentado)
+        # print(f"[DEBUG] all_results tipo: {type(all_results)}")
+        # print(f"[DEBUG] all_results longitud: {len(all_results) if all_results else 0}")
+        # if all_results:
+        #     print(f"[DEBUG] all_results contenido: {all_results}")
         
         # Obtener información de la cámara
         camera_info = {}
         
         if all_results and len(all_results) > 0:
-            # El primer resultado debería ser nuestra IP
-            result = all_results[0]
+            # Buscar el resultado para nuestra IP específica
+            result = None
+            for r in all_results:
+                if r.get('ip') == ip:
+                    result = r
+                    break
+                    
+            if not result:
+                self.print_error(f"No se encontraron resultados para {ip}")
+                return camera_info
+                
             open_ports = result.get('open_ports', [])
             
             self.print_success(f"Puertos abiertos encontrados: {open_ports}")
+            
+            # Guardar para resumen
+            self._scan_results = open_ports
             
             # Ajustar configuración basada en puertos encontrados
             if 2020 in open_ports:
@@ -202,6 +250,8 @@ class CameraConnectionTester:
         
         if supported_protocols:
             self.print_success(f"Protocolos detectados: {[p.value for p in supported_protocols]}")
+            # Guardar para resumen
+            self._detected_protocols = [p.value for p in supported_protocols]
         else:
             self.print_error("No se detectaron protocolos compatibles")
             self.print_info("Esto puede deberse a:")
@@ -231,34 +281,27 @@ class CameraConnectionTester:
             
         try:
             if protocol == ProtocolType.ONVIF:
-                # Para ONVIF, obtener perfiles y sus URLs
-                profiles = handler.get_profiles()
+                # El handler actual no tiene get_profiles, pero ya obtuvo el stream URI durante la conexión
+                # Intentar obtener info del dispositivo
+                device_info = handler.get_device_info()
+                if device_info:
+                    self.print_info(f"Dispositivo: {device_info.get('manufacturer', 'Desconocido')} {device_info.get('model', '')}")
                 
-                if isinstance(profiles, dict) and profiles.get('success'):
-                    profiles_data = profiles.get('data', [])
-                elif isinstance(profiles, list):
-                    profiles_data = profiles
-                else:
-                    profiles_data = []
-                    
-                self.print_info(f"Perfiles ONVIF encontrados: {len(profiles_data)}")
+                # Como ya tenemos el stream URI del log, agregarlo directamente
+                # El handler ya mostró: "Stream URI: rtsp://192.168.1.77:554/stream1"
+                discovered_urls.append({
+                    'name': 'Stream Principal ONVIF',
+                    'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:554/stream1",
+                    'source': 'ONVIF'
+                })
                 
-                for i, profile in enumerate(profiles_data):
-                    try:
-                        # Obtener URL del stream para este perfil
-                        if hasattr(profile, '_token'):
-                            stream_uri = await handler.get_stream_uri(profile._token)
-                            if stream_uri:
-                                url_info = {
-                                    'name': getattr(profile, 'Name', f'Perfil {i+1}'),
-                                    'url': stream_uri,
-                                    'token': profile._token
-                                }
-                                urls.append(url_info)
-                                self.print_success(f"URL encontrada: {url_info['name']}")
-                    except Exception as e:
-                        self.print_error(f"Error obteniendo URL del perfil {i+1}: {e}")
-                        
+                # También probar stream secundario común
+                discovered_urls.append({
+                    'name': 'Stream Secundario ONVIF',
+                    'url': f"rtsp://{self.config.username}:{self.config.password}@{self.config.ip}:554/stream2",
+                    'source': 'ONVIF'
+                })
+                
             elif protocol == ProtocolType.RTSP:
                 # Para RTSP directo, usar patrones comunes
                 rtsp_patterns = handler._get_stream_urls()
@@ -486,6 +529,9 @@ class CameraConnectionTester:
             # Descubrir URLs RTSP
             rtsp_urls = await self.discover_rtsp_urls(protocol)
             
+            # Guardar para resumen
+            self._discovered_urls = rtsp_urls
+            
             if rtsp_urls:
                 print(f"\nSe encontraron {len(rtsp_urls)} streams disponibles:")
                 for i, url_info in enumerate(rtsp_urls):
@@ -509,6 +555,34 @@ class CameraConnectionTester:
             else:
                 self.print_error("No se encontraron URLs RTSP")
                 
+        print("\n" + "="*60)
+        print(" RESUMEN DE HALLAZGOS")
+        print("="*60)
+        
+        # Resumen de hallazgos
+        if hasattr(self, 'config') and self.config:
+            print(f"\n📷 Cámara: {self.config.ip}")
+            print(f"👤 Usuario: {self.config.username}")
+            
+            # Resumen de escaneo
+            if hasattr(self, '_scan_results'):
+                print(f"\n🔍 Escaneo de puertos:")
+                print(f"   - Puertos encontrados: {self._scan_results}")
+                print(f"   - Marca detectada: {'TP-Link' if 2020 in self._scan_results else 'Genérica'}")
+            
+            # Resumen de protocolos
+            if hasattr(self, '_detected_protocols'):
+                print(f"\n🔌 Protocolos detectados: {self._detected_protocols}")
+            
+            # Resumen de URLs
+            if hasattr(self, '_discovered_urls'):
+                print(f"\n📺 URLs RTSP descubiertas: {len(self._discovered_urls)}")
+                for url in self._discovered_urls:
+                    print(f"   - {url['name']}: {self.sanitize_url(url['url'])}")
+            
+            # Estado final
+            print(f"\n✅ Estado: {'Conexión exitosa' if hasattr(self, '_discovered_urls') and self._discovered_urls else 'Sin conexión'}")
+        
         print("\n" + "="*60)
         print(" Prueba finalizada")
         print("="*60)

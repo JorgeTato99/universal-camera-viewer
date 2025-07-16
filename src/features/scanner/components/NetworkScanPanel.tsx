@@ -21,6 +21,10 @@ import {
   IconButton,
   Tooltip,
   Paper,
+  keyframes,
+  Fade,
+  Grow,
+  alpha,
 } from "@mui/material";
 import {
   PlayArrow as StartIcon,
@@ -30,7 +34,7 @@ import {
   Speed as SpeedIcon,
   Timer as TimerIcon,
 } from "@mui/icons-material";
-import { colorTokens, spacingTokens } from "../../../design-system/tokens";
+import { colorTokens, spacingTokens, borderTokens } from "../../../design-system/tokens";
 
 // Animaciones
 const scanAnimation = keyframes`
@@ -72,28 +76,11 @@ export const NetworkScanPanel: React.FC<NetworkScanPanelProps> = ({
   const [elapsedTime, setElapsedTime] = useState(0);
 
   /**
-   * INTEGRACIÓN - Iniciar Escaneo
-   * 
-   * TODO: Conectar con el store/servicio
-   * 
-   * @example
-   * const handleStartScan = async () => {
-   *   const config = {
-   *     mode: scanMode,
-   *     ipRange: scanMode === 'manual' ? ipRange : undefined,
-   *     speed: scanSpeed,
-   *   };
-   *   
-   *   try {
-   *     await useScannerStore.getState().startNetworkScan(config);
-   *   } catch (error) {
-   *     // Mostrar error con toast/snackbar
-   *   }
-   * };
+   * Ver documentación completa de integración en líneas 107-149
    */
   const handleStartScan = () => {
-    // TODO: Implementar llamada al store
-    console.log("Iniciando escaneo de red...", {
+    // 🔧 MOCK: Iniciar escaneo - VER IMPLEMENTACIÓN COMPLETA EN LÍNEA 107
+    console.log("🔧 MOCK: Iniciando escaneo de red...", {
       mode: scanMode,
       ipRange,
       speed: scanSpeed,
@@ -101,22 +88,58 @@ export const NetworkScanPanel: React.FC<NetworkScanPanelProps> = ({
   };
 
   /**
-   * INTEGRACIÓN - Detener Escaneo
+   * 🚀 INTEGRACIÓN PENDIENTE - Sistema de Escaneo de Red
    * 
-   * TODO: Conectar con el store/servicio
+   * TODO: Conectar con backend de escaneo
    * 
-   * @example
-   * const handleStopScan = async () => {
+   * ENDPOINTS BACKEND:
+   * - POST /api/v2/scanner/network/start
+   *   Body: { mode: 'auto'|'manual', ipRange?: string, scanSpeed: string, ports: string[] }
+   * - POST /api/v2/scanner/network/stop
+   *   Body: { scanId: string }
+   * - WS eventos: 'scanner:progress', 'scanner:device_found'
+   * 
+   * IMPLEMENTACIÓN handleStartScan:
+   * ```typescript
+   * const handleStartScan = async () => {
+   *   setIsScanning(true);
    *   try {
-   *     await useScannerStore.getState().cancelCurrentScan();
+   *     const config = {
+   *       mode: scanMode,
+   *       ipRange: scanMode === 'manual' ? ipRange : undefined,
+   *       scanSpeed,
+   *       ports: getScanSpeedConfig().ports.split(', ')
+   *     };
+   *     
+   *     const { scanId } = await scannerService.startNetworkScan(config);
+   *     setScanId(scanId);
+   *     
+   *     // Escuchar eventos WebSocket
+   *     socket.on(`scanner:progress:${scanId}`, (progress) => {
+   *       setScanProgress(progress.percentage);
+   *     });
+   *     
+   *     socket.on(`scanner:device_found:${scanId}`, (device) => {
+   *       setDevicesFound(prev => prev + 1);
+   *       onDeviceFound?.(device);
+   *     });
    *   } catch (error) {
-   *     // Mostrar error
+   *     showNotification({ type: 'error', message: 'Error al iniciar escaneo' });
+   *     setIsScanning(false);
    *   }
    * };
+   * ```
    */
   const handleStopScan = () => {
-    // TODO: Implementar llamada al store
-    console.log("Deteniendo escaneo...");
+    /**
+     * TODO: Implementar cancelación de escaneo
+     * ```typescript
+     * await scannerService.stopNetworkScan(scanId);
+     * socket.off(`scanner:progress:${scanId}`);
+     * socket.off(`scanner:device_found:${scanId}`);
+     * ```
+     */
+    console.log("🔧 MOCK: Deteniendo escaneo - IMPLEMENTAR");
   };
 
   const getScanSpeedConfig = () => {
@@ -248,7 +271,7 @@ export const NetworkScanPanel: React.FC<NetworkScanPanelProps> = ({
               }}
             />
           </Box>
-        )}
+        </Fade>
         </Paper>
       </Grow>
 
@@ -356,6 +379,7 @@ export const NetworkScanPanel: React.FC<NetworkScanPanelProps> = ({
           </Typography>
         </Box>
       </Paper>
+      </Grow>
 
       {/* Estado del escaneo */}
       {isScanning && (

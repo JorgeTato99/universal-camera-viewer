@@ -1,7 +1,7 @@
 {
   "192.168.1.77_192.168.1.77_[80, 443, 554, 2020, 5543, 8000, 8080, 8554]": {
-    "scan_id": "scan_1752639514_0",
-    "timestamp": "2025-07-15T22:18:36.404290",
+    "scan_id": "scan_1752643491_0",
+    "timestamp": "2025-07-15T23:24:53.779408",
     "scan_range": {
       "start_ip": "192.168.1.77",
       "end_ip": "192.168.1.77",
@@ -18,9 +18,25 @@
       "protocols": [],
       "timeout": 5.0
     },
-    "results": [],
+    "results": [
+      {
+        "ip": "192.168.1.77",
+        "hostname": null,
+        "is_alive": true,
+        "open_ports": [
+          443,
+          554,
+          2020
+        ],
+        "has_camera_protocols": false,
+        "camera_protocols": [],
+        "scan_duration_ms": 0.0,
+        "scan_timestamp": "2025-07-15T23:24:51.735966",
+        "detection_results": []
+      }
+    ],
     "cameras_found": 0,
-    "scan_duration": 2.039418
+    "scan_duration": 2.044678
   },
   "127.0.0.1_127.0.0.1_[80, 443, 8080]": {
     "scan_id": "scan_1752640212_0",

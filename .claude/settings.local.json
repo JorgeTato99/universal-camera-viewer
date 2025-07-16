@@ -23,7 +23,8 @@
       "Bash(if [ -f CAMERA_COMPATIBILITY.md ])",
       "Bash(then mv CAMERA_COMPATIBILITY.md camera-compatibility.md)",
       "Bash(else echo \"File not found\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }
