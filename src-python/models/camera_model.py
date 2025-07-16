@@ -161,7 +161,8 @@ class CameraModel:
                  display_name: str,
                  connection_config: ConnectionConfig,
                  stream_config: Optional[StreamConfig] = None,
-                 capabilities: Optional[CameraCapabilities] = None):
+                 capabilities: Optional[CameraCapabilities] = None,
+                 camera_id: Optional[str] = None):
         """
         Inicializa el modelo de cámara.
         
@@ -179,7 +180,7 @@ class CameraModel:
         self.brand = brand
         self.model = model
         self.display_name = display_name
-        self.camera_id = generate_camera_id()  # UUID único e inmutable
+        self.camera_id = camera_id or generate_camera_id()  # UUID único e inmutable
         
         # Configuración
         self.connection_config = connection_config

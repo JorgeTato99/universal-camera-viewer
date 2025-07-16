@@ -20,6 +20,7 @@ from api.dependencies import cleanup_services, create_response
 # Importar routers
 from routers import cameras, scanner, config, streaming
 from routers.cameras_v2 import router as cameras_v2_router
+from services.camera_manager_service import camera_manager_service
 
 # Configurar logging
 logging.basicConfig(
@@ -41,6 +42,13 @@ async def lifespan(app: FastAPI):
     logger.info(f"Iniciando {settings.app_name} v{settings.app_version}")
     logger.info(f"Servidor en http://{settings.host}:{settings.port}")
     logger.info(f"Documentación en http://{settings.host}:{settings.port}/docs")
+    
+    # Inicializar servicios
+    try:
+        await camera_manager_service.initialize()
+        logger.info("CameraManagerService inicializado correctamente")
+    except Exception as e:
+        logger.error(f"Error inicializando CameraManagerService: {e}")
     
     yield
     

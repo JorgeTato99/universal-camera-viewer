@@ -286,25 +286,48 @@ class StreamManagerFactory:
         Raises:
             ValueError: Si el protocolo no está soportado
         """
-        if protocol == StreamProtocol.RTSP:
-            from .rtsp_stream_manager import RTSPStreamManager
-            return RTSPStreamManager(stream_model, connection_config, frame_converter)
+        self.logger.info(f"Creating stream manager for protocol: {protocol.value}")
+        
+        try:
+            if protocol == StreamProtocol.RTSP:
+                self.logger.debug("Importing RTSPStreamManager...")
+                from services.video.rtsp_stream_manager import RTSPStreamManager
+                self.logger.debug("RTSPStreamManager imported successfully")
+                return RTSPStreamManager(stream_model, connection_config, frame_converter)
             
-        elif protocol == StreamProtocol.ONVIF:
-            from .onvif_stream_manager import ONVIFStreamManager
-            return ONVIFStreamManager(stream_model, connection_config, frame_converter)
-            
-        elif protocol == StreamProtocol.HTTP:
-            from .http_stream_manager import HTTPStreamManager
-            return HTTPStreamManager(stream_model, connection_config, frame_converter)
-            
-        elif protocol == StreamProtocol.GENERIC:
-            # Generic usa RTSP por defecto
-            from .rtsp_stream_manager import RTSPStreamManager
-            return RTSPStreamManager(stream_model, connection_config, frame_converter)
-            
-        else:
-            raise ValueError(f"Protocolo no soportado: {protocol.value}")
+            elif protocol == StreamProtocol.ONVIF:
+                self.logger.debug("Importing ONVIFStreamManager...")
+                from services.video.onvif_stream_manager import ONVIFStreamManager
+                self.logger.debug("ONVIFStreamManager imported successfully")
+                return ONVIFStreamManager(stream_model, connection_config, frame_converter)
+                
+            elif protocol == StreamProtocol.HTTP:
+                self.logger.debug("Importing HTTPStreamManager...")
+                from services.video.http_stream_manager import HTTPStreamManager
+                self.logger.debug("HTTPStreamManager imported successfully")
+                return HTTPStreamManager(stream_model, connection_config, frame_converter)
+                
+            elif protocol == StreamProtocol.GENERIC:
+                # Generic usa RTSP por defecto
+                self.logger.debug("Importing RTSPStreamManager for GENERIC...")
+                from services.video.rtsp_stream_manager import RTSPStreamManager
+                self.logger.debug("RTSPStreamManager imported successfully for GENERIC")
+                return RTSPStreamManager(stream_model, connection_config, frame_converter)
+                
+            else:
+                raise ValueError(f"Protocolo no soportado: {protocol.value}")
+                
+        except ImportError as e:
+            self.logger.error(f"Error importing stream manager for {protocol.value}: {e}")
+            self.logger.error(f"Import error details: {e.__class__.__name__}: {str(e)}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Unexpected error creating stream manager: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
     
     @staticmethod
     def get_supported_protocols() -> list[StreamProtocol]:

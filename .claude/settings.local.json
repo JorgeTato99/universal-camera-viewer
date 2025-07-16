@@ -16,7 +16,10 @@
       "Bash(yarn type-check)",
       "Bash(yarn tsc:*)",
       "Bash(curl:*)",
-      "Bash(del src-pythonservicesdatabase_migration.py src-pythontest_migration.py)"
+      "Bash(del src-pythonservicesdatabase_migration.py src-pythontest_migration.py)",
+      "Bash(copy:*)",
+      "Bash(cp:*)",
+      "Bash(del:*)"
     ],
     "deny": []
   }

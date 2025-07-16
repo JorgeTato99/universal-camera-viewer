@@ -372,6 +372,14 @@ class ConnectionService:
         Returns:
             True si la conexión fue exitosa
         """
+        self.logger.info(f"[CONNECTION] Recibiendo solicitud de conexión para cámara {camera.camera_id}")
+        self.logger.info(f"[CONNECTION] Datos recibidos:")
+        self.logger.info(f"  - IP: {camera.connection_config.ip}")
+        self.logger.info(f"  - Protocolo: {camera.protocol}")
+        self.logger.info(f"  - Marca: {camera.brand}")
+        self.logger.info(f"  - Puerto ONVIF: {camera.connection_config.onvif_port}")
+        self.logger.info(f"  - Puerto RTSP: {camera.connection_config.rtsp_port}")
+        
         if not self.is_running:
             self.logger.error("Service is not running")
             return False

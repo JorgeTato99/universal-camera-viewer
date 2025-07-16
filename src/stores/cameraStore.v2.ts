@@ -317,11 +317,26 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
 
     // Connection management
     connectCamera: async (cameraId) => {
+      console.log('[STORE] Connecting camera:', cameraId);
+      
+      // Log camera details before connecting
+      const camera = get().cameras.get(cameraId);
+      if (camera) {
+        console.log('[STORE] Camera details:', {
+          id: camera.camera_id,
+          name: camera.display_name,
+          ip: camera.ip_address,
+          brand: camera.brand,
+          protocols: camera.protocols?.map(p => ({ type: p.type, port: p.port }))
+        });
+      }
+      
       const connectingMap = new Map(get().isConnecting);
       connectingMap.set(cameraId, true);
       set({ isConnecting: connectingMap });
 
       try {
+        console.log('[STORE] Calling API to connect camera:', cameraId);
         await cameraServiceV2.connectCamera(cameraId);
         
         // Update status

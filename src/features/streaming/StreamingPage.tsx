@@ -22,7 +22,7 @@ import {
 } from "@mui/icons-material";
 import { VideoPlayer } from "./components/VideoPlayer";
 import { useStreamingStore } from "../../stores/streamingStore";
-import { useCameraStore } from "../../stores/cameraStore";
+import { useCameraStoreV2 } from "../../stores/cameraStore.v2";
 import { colorTokens } from "../../design-system/tokens";
 
 const StreamingPage: React.FC = () => {
@@ -30,9 +30,8 @@ const StreamingPage: React.FC = () => {
   const navigate = useNavigate();
   const [showInfo, setShowInfo] = useState(true);
   
-  const camera = useCameraStore(state => 
-    state.cameras.find(cam => cam.camera_id === cameraId)
-  );
+  const { cameras } = useCameraStoreV2();
+  const camera = cameraId ? cameras.get(cameraId) : undefined;
   
   const session = useStreamingStore(state => 
     cameraId ? state.activeSessions.get(cameraId) : undefined
@@ -149,7 +148,7 @@ const StreamingPage: React.FC = () => {
                           IP:
                         </Typography>
                         <Typography variant="body2">
-                          {camera?.ip || 'N/A'}
+                          {camera?.ip_address || 'N/A'}
                         </Typography>
                       </Box>
                       <Box>
@@ -232,8 +231,8 @@ const StreamingPage: React.FC = () => {
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {camera?.capabilities?.map(cap => (
                         <Chip
-                          key={cap}
-                          label={cap}
+                          key={cap.capability_type}
+                          label={cap.capability_name}
                           size="small"
                           variant="outlined"
                         />

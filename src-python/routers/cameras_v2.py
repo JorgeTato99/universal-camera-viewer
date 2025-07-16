@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 # Crear router
 router = APIRouter(
-    prefix="/api/v2/cameras",
+    prefix="/cameras",
     tags=["cameras-v2"],
     responses={404: {"description": "Cámara no encontrada"}}
 )
@@ -158,7 +158,7 @@ def _build_camera_response(camera_model) -> CameraResponse:
 
 # === Endpoints ===
 
-@router.get("/", response_model=CameraListResponse)
+@router.get("/")
 async def list_cameras(
     active_only: bool = True,
     protocol: Optional[ProtocolType] = None
@@ -189,9 +189,14 @@ async def list_cameras(
         # Construir respuestas
         camera_responses = [_build_camera_response(camera) for camera in cameras]
         
-        return CameraListResponse(
+        response_data = CameraListResponse(
             total=len(camera_responses),
             cameras=camera_responses
+        )
+        
+        return create_response(
+            success=True,
+            data=response_data.dict()
         )
         
     except Exception as e:
@@ -202,7 +207,7 @@ async def list_cameras(
         )
 
 
-@router.get("/{camera_id}", response_model=CameraResponse)
+@router.get("/{camera_id}")
 async def get_camera(camera_id: str):
     """
     Obtener información detallada de una cámara específica.
@@ -220,7 +225,12 @@ async def get_camera(camera_id: str):
         logger.info(f"Obteniendo información de cámara: {camera_id}")
         
         camera = await camera_manager_service.get_camera(camera_id)
-        return _build_camera_response(camera)
+        camera_response = _build_camera_response(camera)
+        
+        return create_response(
+            success=True,
+            data=camera_response.dict()
+        )
         
     except CameraNotFoundError:
         raise HTTPException(
@@ -235,7 +245,7 @@ async def get_camera(camera_id: str):
         )
 
 
-@router.post("/", response_model=CameraResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_camera(request: CreateCameraRequest):
     """
     Crear una nueva cámara.
@@ -289,8 +299,12 @@ async def create_camera(request: CreateCameraRequest):
         
         # Crear cámara
         camera = await camera_manager_service.create_camera(camera_data)
+        camera_response = _build_camera_response(camera)
         
-        return _build_camera_response(camera)
+        return create_response(
+            success=True,
+            data=camera_response.dict()
+        )
         
     except CameraAlreadyExistsError as e:
         raise HTTPException(
@@ -305,7 +319,7 @@ async def create_camera(request: CreateCameraRequest):
         )
 
 
-@router.put("/{camera_id}", response_model=CameraResponse)
+@router.put("/{camera_id}")
 async def update_camera(camera_id: str, request: UpdateCameraRequest):
     """
     Actualizar una cámara existente.
@@ -354,8 +368,12 @@ async def update_camera(camera_id: str, request: UpdateCameraRequest):
         
         # Actualizar cámara
         camera = await camera_manager_service.update_camera(camera_id, updates)
+        camera_response = _build_camera_response(camera)
         
-        return _build_camera_response(camera)
+        return create_response(
+            success=True,
+            data=camera_response.dict()
+        )
         
     except CameraNotFoundError:
         raise HTTPException(
@@ -480,7 +498,7 @@ async def disconnect_camera(camera_id: str):
         )
 
 
-@router.post("/test-connection", response_model=TestConnectionResponse)
+@router.post("/test-connection")
 async def test_connection(request: TestConnectionRequest):
     """
     Probar conexión a una cámara sin guardarla.
@@ -511,16 +529,27 @@ async def test_connection(request: TestConnectionRequest):
         
         success, message = await camera_manager_service.test_camera_connection(connection_data)
         
-        return TestConnectionResponse(
+        response_data = TestConnectionResponse(
             success=success,
             message=message
         )
         
+        return create_response(
+            success=True,
+            data=response_data.dict()
+        )
+        
     except Exception as e:
         logger.error(f"Error probando conexión: {e}")
-        return TestConnectionResponse(
+        response_data = TestConnectionResponse(
             success=False,
             message=str(e)
+        )
+        
+        return create_response(
+            success=False,
+            error=str(e),
+            data=response_data.dict()
         )
 
 

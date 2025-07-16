@@ -1,66 +1,47 @@
 /**
  * Hook personalizado para gestión de cámaras
+ * Actualizado para la estructura v2 con base de datos 3FN
  */
 
 import { useState, useCallback } from 'react';
-import { useCameraStore } from '../stores/cameraStore';
-import { cameraService } from '../services/python/cameraService';
-import { ConnectionConfig } from '../types/service.types';
+import { useCameraStoreV2 } from '../stores/cameraStore.v2';
+import { cameraServiceV2 } from '../services/python/cameraService.v2';
+import { ConnectionStatus } from '../types/camera.types.v2';
 
 export const useCamera = (cameraId: string) => {
-  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const { 
     cameras, 
-    updateCameraStatus,
-    updateCameraConnection 
-  } = useCameraStore();
+    connectCamera,
+    disconnectCamera,
+    updateCamera,
+    isConnecting,
+    errors
+  } = useCameraStoreV2();
   
-  const camera = cameras.find(cam => cam.camera_id === cameraId);
+  const camera = cameras.get(cameraId);
+  const isConnectingCamera = isConnecting.get(cameraId) || false;
+  const cameraError = errors.get(cameraId);
 
-  const connect = useCallback(async (config?: ConnectionConfig) => {
+  const connect = useCallback(async () => {
     if (!camera) {
       setError('Cámara no encontrada');
       return false;
     }
 
-    setIsConnecting(true);
     setError(null);
 
     try {
-      // Actualizar estado a "conectando"
-      updateCameraStatus(cameraId, 'connecting');
-
-      // Configuración por defecto si no se proporciona
-      const connectionConfig: ConnectionConfig = config || {
-        ip: camera.ip,
-        username: 'admin',
-        password: camera.camera_id === 'cam_192.168.1.172' 
-          ? '3gfwb3ToWfeWNqm22223DGbzcH-4si' // Credencial real para Dahua
-          : 'admin',
-        protocol: 'ONVIF',
-        port: 80
-      };
-
-      // Conectar usando el servicio
-      await cameraService.connectCamera(cameraId, connectionConfig);
-
-      // Actualizar estado a "conectado"
-      updateCameraConnection(cameraId, true);
-      updateCameraStatus(cameraId, 'connected');
-      
-      setIsConnecting(false);
+      // Conectar usando el store v2 que maneja todo internamente
+      await connectCamera(cameraId);
       return true;
     } catch (err) {
       console.error('Error conectando cámara:', err);
       setError(err instanceof Error ? err.message : 'Error de conexión');
-      updateCameraStatus(cameraId, 'error');
-      updateCameraConnection(cameraId, false);
-      setIsConnecting(false);
       return false;
     }
-  }, [camera, cameraId, updateCameraStatus, updateCameraConnection]);
+  }, [camera, cameraId, connectCamera]);
 
   const disconnect = useCallback(async () => {
     if (!camera) {
@@ -69,20 +50,15 @@ export const useCamera = (cameraId: string) => {
     }
 
     try {
-      // Desconectar usando el servicio
-      await cameraService.disconnectCamera(cameraId);
-
-      // Actualizar estado
-      updateCameraConnection(cameraId, false);
-      updateCameraStatus(cameraId, 'disconnected');
-      
+      // Desconectar usando el store v2
+      await disconnectCamera(cameraId);
       return true;
     } catch (err) {
       console.error('Error desconectando cámara:', err);
       setError(err instanceof Error ? err.message : 'Error al desconectar');
       return false;
     }
-  }, [camera, cameraId, updateCameraConnection, updateCameraStatus]);
+  }, [camera, cameraId, disconnectCamera]);
 
   const captureSnapshot = useCallback(async () => {
     if (!camera || !camera.is_connected) {
@@ -91,8 +67,10 @@ export const useCamera = (cameraId: string) => {
     }
 
     try {
-      const snapshot = await cameraService.captureSnapshot(cameraId);
-      return snapshot;
+      // TODO: Implementar captura de snapshot en v2
+      console.log('Captura de snapshot pendiente de implementación en v2');
+      setError('Función en desarrollo');
+      return null;
     } catch (err) {
       console.error('Error capturando snapshot:', err);
       setError(err instanceof Error ? err.message : 'Error al capturar');
@@ -102,8 +80,8 @@ export const useCamera = (cameraId: string) => {
 
   return {
     camera,
-    isConnecting,
-    error,
+    isConnecting: isConnectingCamera,
+    error: error || cameraError,
     connect,
     disconnect,
     captureSnapshot,

@@ -72,7 +72,8 @@ class ExportFormat(Enum):
 class DataServiceConfig:
     """Configuración del DataService."""
     database_type: DatabaseType = DatabaseType.SQLITE
-    database_path: str = "data/camera_data.db"
+    # Usar ruta absoluta basada en el proyecto
+    database_path: str = str(Path(__file__).parent.parent.parent / "data" / "camera_data.db")
     cache_size_mb: int = 50
     cache_ttl_hours: int = 24
     auto_cleanup_days: int = 30
@@ -1315,12 +1316,15 @@ class DataService:
                     """, (datetime.now(), camera_id))
                 
                 # Insertar log de conexión
+                import uuid
                 cursor.execute("""
                     INSERT INTO connection_logs (
-                        camera_id, status, duration_ms, timestamp
-                    ) VALUES (?, ?, ?, ?)
-                """, (camera_id, 'success' if success else 'failed', 
-                     duration_ms, datetime.now()))
+                        camera_id, session_id, status, duration_seconds, started_at
+                    ) VALUES (?, ?, ?, ?, ?)
+                """, (camera_id, str(uuid.uuid4()), 
+                     'connected' if success else 'failed', 
+                     int(duration_ms / 1000) if duration_ms > 0 else 0, 
+                     datetime.now()))
                 
                 self._db_connection.commit()
                 return True

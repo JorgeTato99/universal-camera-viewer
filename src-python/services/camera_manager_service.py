@@ -11,7 +11,7 @@ from datetime import datetime
 
 from services.base_service import BaseService
 from services.data_service import DataService, get_data_service
-from services.connection_service import ConnectionService
+from services.connection_service import ConnectionService, ConnectionType
 from models.camera_model import CameraModel, ConnectionConfig, StreamConfig, CameraCapabilities, ProtocolType, ConnectionStatus
 from utils.exceptions import (
     CameraNotFoundError,
@@ -61,6 +61,11 @@ class CameraManagerService(BaseService):
             # Inicializar servicios dependientes
             await self._data_service.initialize()
             
+            # Iniciar ConnectionService
+            if not self._connection_service.is_running:
+                await self._connection_service.start_async()
+                self.logger.info("ConnectionService iniciado")
+            
             # Cargar cámaras existentes
             await self._load_cameras_from_db()
             
@@ -73,6 +78,11 @@ class CameraManagerService(BaseService):
     async def _load_cameras_from_db(self) -> None:
         """Carga todas las cámaras desde la base de datos."""
         try:
+            # Limpiar caché existente
+            async with self._cache_lock:
+                self._cameras_cache.clear()
+                self.logger.info("Caché de cámaras limpiado")
+            
             # Obtener IDs de cámaras activas
             camera_ids = await self._data_service.get_all_camera_ids()
             
@@ -193,21 +203,28 @@ class CameraManagerService(BaseService):
             supported_protocols=supported_protocols
         )
         
-        # Crear modelo
+        # Crear modelo con ID de la base de datos
         camera = CameraModel(
             brand=data['brand'],
             model=data['model'],
             display_name=data.get('display_name', f"{data['brand']} {data['model']}"),
             connection_config=connection_config,
             stream_config=stream_config,
-            capabilities=capabilities
+            capabilities=capabilities,
+            camera_id=data['camera_id']  # Pasar el ID desde la DB
         )
-        
-        # Establecer campos adicionales
-        camera.camera_id = data['camera_id']
         camera.is_active = data.get('is_active', True)
         camera.location = data.get('location')
         camera.description = data.get('description')
+        
+        # Establecer el protocolo principal o el primero disponible
+        primary_protocol = next((p for p in protocols if p.get('is_primary')), None)
+        if primary_protocol:
+            camera.protocol = ProtocolType(primary_protocol['type'].lower())
+        elif supported_protocols:
+            camera.protocol = supported_protocols[0]
+        
+        self.logger.info(f"Cámara {camera.camera_id} cargada con protocolo: {camera.protocol.value if camera.protocol else 'None'}")
         
         # Cargar endpoints descubiertos
         for endpoint in data.get('endpoints', []):
@@ -331,6 +348,18 @@ class CameraManagerService(BaseService):
             Lista de CameraModel
         """
         async with self._cache_lock:
+            # Si el caché está vacío, cargar desde DB
+            if not self._cameras_cache:
+                self.logger.warning("Caché de cámaras vacío, recargando desde DB")
+                # Liberar el lock temporalmente para evitar deadlock
+                pass
+        
+        # Cargar desde DB si es necesario (fuera del lock)
+        if not self._cameras_cache:
+            await self._load_cameras_from_db()
+        
+        # Devolver cámaras del caché
+        async with self._cache_lock:
             return list(self._cameras_cache.values())
     
     async def update_camera(self, camera_id: str, updates: Dict[str, Any]) -> CameraModel:
@@ -426,12 +455,25 @@ class CameraManagerService(BaseService):
         Returns:
             True si se conectó exitosamente
         """
+        self.logger.info(f"[MANAGER] Iniciando conexión para cámara: {camera_id}")
+        
         camera = await self.get_camera(camera_id)
         
+        # Log detalles de la cámara
+        self.logger.info(f"[MANAGER] Detalles de cámara:")
+        self.logger.info(f"  - ID: {camera.camera_id}")
+        self.logger.info(f"  - Nombre: {camera.display_name}")
+        self.logger.info(f"  - IP: {camera.connection_config.ip}")
+        self.logger.info(f"  - Marca: {camera.brand}")
+        self.logger.info(f"  - Protocolo: {camera.protocol}")
+        self.logger.info(f"  - Puerto ONVIF: {camera.connection_config.onvif_port}")
+        self.logger.info(f"  - Puerto RTSP: {camera.connection_config.rtsp_port}")
+        self.logger.info(f"  - Usuario: {camera.connection_config.username}")
+        
         # Usar ConnectionService para conectar
-        success = await self._connection_service.connect_camera(
+        success = await self._connection_service.connect_camera_async(
             camera=camera,
-            preferred_protocol=camera.capabilities.supported_protocols[0] if camera.capabilities.supported_protocols else ProtocolType.ONVIF
+            connection_type=ConnectionType.RTSP_STREAM
         )
         
         # Actualizar estadísticas
@@ -455,7 +497,7 @@ class CameraManagerService(BaseService):
         camera = await self.get_camera(camera_id)
         
         # Usar ConnectionService para desconectar
-        return await self._connection_service.disconnect_camera(camera)
+        return await self._connection_service.disconnect_camera_async(camera.camera_id)
     
     async def save_discovered_endpoint(self, camera_id: str, endpoint_type: str, 
                                      url: str, verified: bool = True) -> bool:

@@ -20,7 +20,7 @@ import {
 
 export class CameraServiceV2 {
   private api: ApiClient;
-  private baseUrl = '/api/v2/cameras';
+  private baseUrl = '/v2/cameras';
 
   constructor(api: ApiClient = apiClient) {
     this.api = api;
@@ -36,15 +36,36 @@ export class CameraServiceV2 {
       params.append('protocol', protocol);
     }
 
-    const response = await this.api.get<CameraListResponse>(
-      `${this.baseUrl}?${params.toString()}`
-    );
+    console.log('Fetching cameras from:', `${this.baseUrl}?${params.toString()}`);
+    
+    try {
+      const response = await this.api.get<CameraListResponse>(
+        `${this.baseUrl}?${params.toString()}`
+      );
 
-    if (response.success && response.data) {
-      return response.data.cameras;
+      console.log('Raw response:', response);
+
+      // La respuesta siempre viene envuelta en ApiResponse
+      if (response.success && response.data) {
+        console.log('ApiResponse data:', response.data);
+        // response.data es el CameraListResponse serializado
+        return response.data.cameras || [];
+      }
+
+      // Si hay error
+      if (!response.success) {
+        console.error('API returned error:', response.error);
+        throw new Error(response.error || 'Error fetching cameras');
+      }
+
+      // Caso por defecto - array vacío
+      console.warn('Unexpected response format:', response);
+      return [];
+      
+    } catch (error) {
+      console.error('Error fetching cameras:', error);
+      throw new Error('Error fetching cameras');
     }
-
-    throw new Error(response.error || 'Error fetching cameras');
   }
 
   /**

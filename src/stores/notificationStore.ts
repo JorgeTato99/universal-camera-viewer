@@ -84,3 +84,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     get().addNotification({ type: "info", title, message, duration });
   },
 }));
+
+// Export alias for backward compatibility
+export const notificationStore = useNotificationStore.getState();

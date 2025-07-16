@@ -25,34 +25,62 @@ class ONVIFStreamManager(RTSPStreamManager):
         """Inicializa el manager ONVIF."""
         super().__init__(*args, **kwargs)
         self._onvif_handler: Optional[ONVIFHandler] = None
+        self._rtsp_url: Optional[str] = None
     
     async def _initialize_connection(self) -> None:
         """Inicializa la conexión ONVIF y obtiene URL RTSP."""
         try:
+            self.logger.info(f"Inicializando conexión ONVIF para {self.connection_config.ip}")
+            self.logger.debug(f"Config - IP: {self.connection_config.ip}, Username: {self.connection_config.username}, ONVIF Port: {self.connection_config.onvif_port}")
+            
             # Crear handler ONVIF
-            self._onvif_handler = ONVIFHandler()
+            try:
+                # Log de conexión config
+                self.logger.debug(f"ConnectionConfig para ONVIFHandler:")
+                self.logger.debug(f"  - IP: {self.connection_config.ip}")
+                self.logger.debug(f"  - Username: {self.connection_config.username}")
+                self.logger.debug(f"  - Password (longitud): {len(self.connection_config.password) if self.connection_config.password else 0}")
+                self.logger.debug(f"  - ONVIF Port: {self.connection_config.onvif_port}")
+                
+                # ONVIFHandler espera ConnectionConfig y StreamingConfig
+                from services.protocol_service import StreamingConfig
+                streaming_config = StreamingConfig()
+                self._onvif_handler = ONVIFHandler(self.connection_config, streaming_config)
+                self.logger.debug("ONVIFHandler creado exitosamente")
+            except Exception as e:
+                self.logger.error(f"Error creando ONVIFHandler: {e}")
+                self.logger.error(f"Tipo de error: {type(e).__name__}")
+                import traceback
+                self.logger.error(f"Traceback:\n{traceback.format_exc()}")
+                raise
             
             # Conectar a la cámara ONVIF
             self.logger.info(f"Conectando a cámara ONVIF en {self.connection_config.ip}")
             
-            connection_result = await self._onvif_handler.connect(
-                ip=self.connection_config.ip,
-                username=self.connection_config.username,
-                password=self.connection_config.password,
-                port=self.connection_config.port or 80
-            )
-            
-            if not connection_result['success']:
-                raise ConnectionError(f"Error conectando ONVIF: {connection_result.get('error')}")
+            try:
+                # El ONVIFHandler ya tiene la configuración desde el constructor
+                connection_success = await self._onvif_handler.connect()
+                self.logger.debug(f"Resultado de conexión ONVIF: {connection_success}")
+                
+                if not connection_success:
+                    raise ConnectionError("Error conectando ONVIF: No se pudo establecer conexión")
+            except Exception as e:
+                self.logger.error(f"Error en connect de ONVIFHandler: {e}")
+                import traceback
+                self.logger.error(f"Traceback:\n{traceback.format_exc()}")
+                raise
             
             # Obtener información del dispositivo
-            device_info = await self._onvif_handler.get_device_info()
-            if device_info['success']:
-                self.stream_model.metadata.update({
-                    'manufacturer': device_info['data'].get('manufacturer'),
-                    'model': device_info['data'].get('model'),
-                    'firmware': device_info['data'].get('firmware_version')
-                })
+            try:
+                device_info = await self._onvif_handler.get_device_info()
+                if isinstance(device_info, dict) and device_info.get('success'):
+                    self.stream_model.metadata.update({
+                        'manufacturer': device_info['data'].get('manufacturer'),
+                        'model': device_info['data'].get('model'),
+                        'firmware': device_info['data'].get('firmware_version')
+                    })
+            except Exception as e:
+                self.logger.warning(f"No se pudo obtener información del dispositivo: {e}")
             
             # Obtener URL del stream principal
             stream_url_result = await self._get_stream_url()
@@ -60,11 +88,11 @@ class ONVIFStreamManager(RTSPStreamManager):
                 raise ValueError("No se pudo obtener URL del stream ONVIF")
             
             # Guardar URL RTSP para uso posterior
-            self.connection_config.rtsp_url = stream_url_result
+            self._rtsp_url = stream_url_result
             
             self.logger.info(f"URL RTSP obtenida via ONVIF: {self._sanitize_url(stream_url_result)}")
             
-            # Delegar a la implementación RTSP
+            # La implementación base de RTSP usará _build_rtsp_url que sobrescribimos
             await super()._initialize_connection()
             
         except Exception as e:
@@ -82,61 +110,130 @@ class ONVIFStreamManager(RTSPStreamManager):
             return None
         
         try:
-            # Obtener perfiles de media
-            profiles_result = await self._onvif_handler.get_profiles()
-            if not profiles_result['success'] or not profiles_result['data']:
-                self.logger.error("No se pudieron obtener perfiles ONVIF")
-                return None
+            # Para cámaras Dahua, usar directamente la URL estándar
+            # ya que las URLs de ONVIF con proto=Onvif requieren autenticación especial
+            brand = getattr(self.connection_config, 'brand', '').lower()
+            if brand == 'dahua':
+                self.logger.info("Cámara Dahua detectada, usando URL RTSP estándar")
+                rtsp_url = self._build_fallback_rtsp_url()
+                if rtsp_url:
+                    self.logger.info(f"URL RTSP para Dahua: {self._sanitize_url(rtsp_url)}")
+                    return rtsp_url
             
-            profiles = profiles_result['data']
-            
-            # Buscar el perfil principal (usualmente el primero)
-            main_profile = None
-            for profile in profiles:
-                # Preferir perfiles con mayor resolución
-                if main_profile is None:
-                    main_profile = profile
-                else:
-                    # Comparar resoluciones si están disponibles
-                    if 'video_encoder' in profile:
-                        current_res = profile['video_encoder'].get('resolution', {})
-                        main_res = main_profile.get('video_encoder', {}).get('resolution', {})
-                        
-                        current_pixels = current_res.get('width', 0) * current_res.get('height', 0)
-                        main_pixels = main_res.get('width', 0) * main_res.get('height', 0)
-                        
-                        if current_pixels > main_pixels:
+            # Para otras marcas, intentar obtener perfiles ONVIF
+            try:
+                profiles_result = await self._onvif_handler.get_profiles()
+                if profiles_result['success'] and profiles_result['data']:
+                    profiles = profiles_result['data']
+                    
+                    # Buscar el perfil principal (usualmente el primero)
+                    main_profile = None
+                    for profile in profiles:
+                        # Preferir perfiles con mayor resolución
+                        if main_profile is None:
                             main_profile = profile
+                        else:
+                            # Comparar resoluciones si están disponibles
+                            if 'video_encoder' in profile:
+                                current_res = profile['video_encoder'].get('resolution', {})
+                                main_res = main_profile.get('video_encoder', {}).get('resolution', {})
+                                
+                                current_pixels = current_res.get('width', 0) * current_res.get('height', 0)
+                                main_pixels = main_res.get('width', 0) * main_res.get('height', 0)
+                                
+                                if current_pixels > main_pixels:
+                                    main_profile = profile
+                    
+                    if main_profile:
+                        # Obtener URL del stream para el perfil
+                        profile_token = main_profile.get('token')
+                        if profile_token:
+                            stream_result = await self._onvif_handler.get_stream_uri(profile_token)
+                            if stream_result['success']:
+                                stream_url = stream_result['data']
+                                
+                                # Para Dahua, si la URL contiene proto=Onvif, usar la URL estándar
+                                if 'proto=Onvif' in stream_url:
+                                    self.logger.info("URL ONVIF con proto=Onvif detectada, usando URL estándar")
+                                    rtsp_url = self._build_fallback_rtsp_url()
+                                    if rtsp_url:
+                                        return rtsp_url
+                                
+                                # Actualizar metadata con información del perfil
+                                self.stream_model.metadata.update({
+                                    'profile_name': main_profile.get('name', 'Unknown'),
+                                    'profile_token': profile_token,
+                                    'video_encoding': main_profile.get('video_encoder', {}).get('encoding'),
+                                    'video_resolution': main_profile.get('video_encoder', {}).get('resolution')
+                                })
+                                
+                                self.logger.info(f"URL RTSP obtenida desde ONVIF: {self._sanitize_url(stream_url)}")
+                                return stream_url
+                            else:
+                                self.logger.error(f"Error obteniendo stream URI: {stream_result.get('error')}")
+            except Exception as e:
+                self.logger.warning(f"No se pudieron obtener perfiles ONVIF: {e}")
             
-            if not main_profile:
-                self.logger.error("No se encontró un perfil válido")
-                return None
+            # Fallback: usar URL RTSP estándar de la cámara
+            self.logger.info("Usando fallback de URL RTSP estándar")
             
-            # Obtener URL del stream para el perfil
-            profile_token = main_profile.get('token')
-            if not profile_token:
-                self.logger.error("Perfil sin token")
-                return None
+            # Construir URL RTSP manual basado en la marca
+            rtsp_url = self._build_fallback_rtsp_url()
+            if rtsp_url:
+                self.logger.info(f"URL RTSP fallback: {self._sanitize_url(rtsp_url)}")
+                return rtsp_url
             
-            stream_result = await self._onvif_handler.get_stream_uri(profile_token)
-            if not stream_result['success']:
-                self.logger.error(f"Error obteniendo stream URI: {stream_result.get('error')}")
-                return None
-            
-            stream_url = stream_result['data']
-            
-            # Actualizar metadata con información del perfil
-            self.stream_model.metadata.update({
-                'profile_name': main_profile.get('name', 'Unknown'),
-                'profile_token': profile_token,
-                'video_encoding': main_profile.get('video_encoder', {}).get('encoding'),
-                'video_resolution': main_profile.get('video_encoder', {}).get('resolution')
-            })
-            
-            return stream_url
+            return None
             
         except Exception as e:
             self.logger.error(f"Error obteniendo stream URL ONVIF: {e}")
+            return None
+    
+    def _build_fallback_rtsp_url(self) -> Optional[str]:
+        """
+        Construye URL RTSP de fallback cuando ONVIF falla.
+        
+        Returns:
+            URL RTSP basada en la marca de la cámara
+        """
+        try:
+            config = self.connection_config
+            
+            # Si ya hay una URL rtsp_main configurada, usarla
+            if hasattr(config, 'rtsp_main') and config.rtsp_main:
+                return config.rtsp_main
+            
+            # Construir URL basada en credenciales y puerto
+            if config.username and config.password:
+                auth = f"{config.username}:{config.password}@"
+            else:
+                auth = ""
+            
+            # Puerto RTSP por defecto o configurado
+            rtsp_port = getattr(config, 'rtsp_port', 554)
+            
+            # Path según la marca detectada
+            brand = getattr(config, 'brand', 'dahua').lower()
+            
+            # Paths conocidos por marca
+            brand_paths = {
+                'dahua': '/cam/realmonitor?channel=1&subtype=0',
+                'hikvision': '/Streaming/Channels/101',
+                'axis': '/axis-media/media.amp',
+                'bosch': '/rtsp_tunnel',
+                'panasonic': '/MediaInput/h264/stream_1',
+                'default': '/cam/realmonitor?channel=1&subtype=0'  # Dahua por defecto
+            }
+            
+            path = brand_paths.get(brand, brand_paths['default'])
+            
+            # Construir URL completa
+            rtsp_url = f"rtsp://{auth}{config.ip}:{rtsp_port}{path}"
+            
+            return rtsp_url
+            
+        except Exception as e:
+            self.logger.error(f"Error construyendo URL RTSP fallback: {e}")
             return None
     
     async def _close_connection(self) -> None:
@@ -148,5 +245,16 @@ class ONVIFStreamManager(RTSPStreamManager):
         
         # Cerrar RTSP
         await super()._close_connection()
+    
+    def _build_rtsp_url(self) -> str:
+        """
+        Construye URL RTSP - sobrescribe el método de RTSPStreamManager.
         
-        self.logger.debug("Conexiones ONVIF y RTSP cerradas")
+        Returns:
+            URL RTSP obtenida via ONVIF
+        """
+        if self._rtsp_url:
+            return self._rtsp_url
+        else:
+            # Fallback al método base si no tenemos URL de ONVIF
+            return super()._build_rtsp_url()

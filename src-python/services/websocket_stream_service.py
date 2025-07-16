@@ -14,10 +14,12 @@ import subprocess
 import platform
 
 from services.base_service import BaseService
+from services.camera_manager_service import camera_manager_service
 from presenters.streaming.video_stream_presenter import VideoStreamPresenter
 from models import ConnectionConfig
 from models.streaming import StreamProtocol
 from config.settings import settings
+from utils.exceptions import StreamingError
 
 
 class WebSocketStreamService(BaseService):
@@ -316,35 +318,53 @@ class WebSocketStreamService(BaseService):
         Returns:
             Configuración de la cámara
         """
-        # Por ahora, configuración hardcodeada para la cámara Dahua
-        # TODO: Obtener desde base de datos o servicio de configuración
-        
-        if camera_id == "cam_192.168.1.172":
-            return {
-                'ip': '192.168.1.172',
-                'username': 'admin',
-                'password': '3gfwb3ToWfeWNqm22223DGbzcH-4si',
-                'rtsp_port': 554,
-                'onvif_port': 80,
-                'http_port': 80,
-                'protocol': 'rtsp',
-                'brand': 'dahua',
-                'rtsp_path': '/cam/realmonitor?channel=1&subtype=0',
-                'timeout': 10,
-                'max_retries': 3
+        try:
+            # Obtener cámara desde el servicio
+            camera = await camera_manager_service.get_camera(camera_id)
+            
+            # Construir configuración desde el modelo de cámara
+            self.logger.debug(f"[WebSocketStream] Construyendo config para {camera_id}:")
+            self.logger.debug(f"  - Username: {camera.connection_config.username}")
+            self.logger.debug(f"  - Password (longitud): {len(camera.connection_config.password) if camera.connection_config.password else 0}")
+            self.logger.debug(f"  - Password (primeros 3): {camera.connection_config.password[:3] if camera.connection_config.password and len(camera.connection_config.password) >= 3 else 'N/A'}")
+            
+            config = {
+                'ip': camera.connection_config.ip,
+                'username': camera.connection_config.username,
+                'password': camera.connection_config.password,
+                'rtsp_port': camera.connection_config.rtsp_port,
+                'onvif_port': camera.connection_config.onvif_port,
+                'http_port': camera.connection_config.http_port,
+                'protocol': camera.protocol.value if camera.protocol else 'rtsp',
+                'brand': camera.brand,
+                'timeout': camera.connection_config.timeout,
+                'max_retries': camera.connection_config.max_retries
             }
-        else:
-            # Configuración genérica
-            return {
-                'ip': camera_id.replace('cam_', '').replace('_', '.'),
-                'username': 'admin',
-                'password': '',
-                'rtsp_port': 554,
-                'protocol': 'rtsp',
-                'brand': 'generic',
-                'timeout': 10,
-                'max_retries': 3
-            }
+            
+            # Agregar información adicional desde endpoints descubiertos
+            rtsp_endpoint = camera.get_endpoint_url('rtsp_main')
+            if rtsp_endpoint:
+                # Extraer el path de la URL completa
+                import urllib.parse
+                parsed = urllib.parse.urlparse(rtsp_endpoint)
+                config['rtsp_path'] = parsed.path
+            else:
+                # Path por defecto según la marca
+                if camera.brand.lower() == 'dahua':
+                    config['rtsp_path'] = '/cam/realmonitor?channel=1&subtype=0'
+                else:
+                    config['rtsp_path'] = '/stream1'
+            
+            self.logger.info(f"Configuración obtenida para cámara {camera_id}: IP={config['ip']}, Protocol={config['protocol']}")
+            return config
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo configuración de cámara {camera_id}: {e}")
+            raise StreamingError(
+                message=f"No se pudo obtener configuración de cámara: {str(e)}",
+                error_code="CAMERA_CONFIG_ERROR",
+                context={'camera_id': camera_id}
+            )
             
     def _create_connection_config(self, camera_config: Dict[str, Any]) -> ConnectionConfig:
         """

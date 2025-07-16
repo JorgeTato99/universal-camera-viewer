@@ -15,9 +15,9 @@ from PIL import Image
 import requests
 from requests.auth import HTTPDigestAuth
 
-from .base_handler import BaseHandler
-from ..protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
-from ...models import ConnectionConfig
+from services.protocol_handlers.base_handler import BaseHandler
+from services.protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
+from models import ConnectionConfig
 
 
 class AmcrestHandler(BaseHandler):

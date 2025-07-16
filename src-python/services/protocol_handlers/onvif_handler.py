@@ -19,9 +19,9 @@ try:
 except ImportError:
     ONVIF_AVAILABLE = False
 
-from .base_handler import BaseHandler
-from ..protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
-from ...models import ConnectionConfig
+from services.protocol_handlers.base_handler import BaseHandler
+from services.protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
+from models import ConnectionConfig
 
 
 class ONVIFHandler(BaseHandler):
@@ -107,15 +107,19 @@ class ONVIFHandler(BaseHandler):
         
         try:
             self.logger.info(f"Iniciando conexión ONVIF a {self.ip}:{self.onvif_port}")
+            self.logger.debug(f"Credenciales - Usuario: {self.username}, Password: {'*' * len(self.password) if self.password else 'None'}")
             
             # Crear cámara ONVIF en thread separado para evitar bloqueo
             loop = asyncio.get_event_loop()
+            self.logger.debug("Creando instancia de cámara ONVIF...")
+            
             self._camera = await loop.run_in_executor(
                 None,
                 self._create_onvif_camera
             )
             
             if not self._camera:
+                self.logger.error("No se pudo crear instancia de cámara ONVIF")
                 raise ConnectionError("No se pudo crear cámara ONVIF")
             
             # Crear servicios
@@ -155,11 +159,13 @@ class ONVIFHandler(BaseHandler):
             return True
             
         except ONVIFError as e:
-            self.logger.error(f"Error ONVIF: {str(e)}")
+            self.logger.error(f"Error ONVIF específico: {type(e).__name__}: {str(e)}")
             self._set_state(ConnectionState.ERROR)
             return False
         except Exception as e:
-            self.logger.error(f"Error de conexión ONVIF: {str(e)}")
+            self.logger.error(f"Error de conexión ONVIF: {type(e).__name__}: {str(e)}")
+            import traceback
+            self.logger.error(f"Traceback:\n{traceback.format_exc()}")
             self._set_state(ConnectionState.ERROR)
             return False
     
@@ -171,14 +177,25 @@ class ONVIFHandler(BaseHandler):
             Instancia de ONVIFCamera o None si falla
         """
         try:
-            return ONVIFCamera(
+            self.logger.debug(f"Creando ONVIFCamera con IP: {self.ip}, Puerto: {self.onvif_port}")
+            self.logger.debug(f"Usuario: {self.username}")
+            self.logger.debug(f"Password (longitud): {len(self.password) if self.password else 0}")
+            self.logger.debug(f"Password (primeros 3 chars): {self.password[:3] if self.password and len(self.password) >= 3 else 'N/A'}")
+            
+            camera = ONVIFCamera(
                 self.ip,
                 self.onvif_port,
                 self.username,
                 self.password
             )
+            
+            self.logger.debug("ONVIFCamera creada exitosamente")
+            return camera
+            
         except Exception as e:
-            self.logger.error(f"Error creando cámara ONVIF: {str(e)}")
+            self.logger.error(f"Error creando cámara ONVIF: {type(e).__name__}: {str(e)}")
+            import traceback
+            self.logger.error(f"Traceback:\n{traceback.format_exc()}")
             return None
     
     async def _setup_media_uris(self):
@@ -570,14 +587,100 @@ class ONVIFHandler(BaseHandler):
             self.logger.error(f"Error obteniendo información del dispositivo: {str(e)}")
             return None
     
-    def get_profiles(self) -> List[Any]:
+    def get_profiles(self) -> Dict[str, Any]:
         """
         Obtiene la lista de perfiles de media disponibles.
         
         Returns:
-            Lista de perfiles ONVIF
+            Diccionario con success y data
         """
-        return self._profiles.copy() if self._profiles else []
+        try:
+            if self._profiles:
+                # Convertir perfiles ONVIF a formato estándar
+                profiles_data = []
+                for profile in self._profiles:
+                    profile_data = {
+                        'token': self._get_profile_token(profile),
+                        'name': getattr(profile, 'Name', 'Unknown')
+                    }
+                    
+                    # Agregar información de codificación si está disponible
+                    if hasattr(profile, 'VideoEncoderConfiguration'):
+                        encoder = profile.VideoEncoderConfiguration
+                        profile_data['video_encoder'] = {
+                            'encoding': getattr(encoder, 'Encoding', 'H264'),
+                            'resolution': {
+                                'width': getattr(getattr(encoder, 'Resolution', None), 'Width', 0),
+                                'height': getattr(getattr(encoder, 'Resolution', None), 'Height', 0)
+                            }
+                        }
+                    
+                    profiles_data.append(profile_data)
+                
+                return {
+                    'success': True,
+                    'data': profiles_data
+                }
+            else:
+                return {
+                    'success': False,
+                    'data': [],
+                    'error': 'No profiles available'
+                }
+        except Exception as e:
+            self.logger.error(f"Error obteniendo perfiles: {e}")
+            return {
+                'success': False,
+                'data': [],
+                'error': str(e)
+            }
+    
+    async def get_stream_uri(self, profile_token: str) -> Dict[str, Any]:
+        """
+        Obtiene la URI del stream para un perfil específico.
+        
+        Args:
+            profile_token: Token del perfil
+            
+        Returns:
+            Diccionario con success y data (URL)
+        """
+        if not self._media_service:
+            return {
+                'success': False,
+                'error': 'Media service not available'
+            }
+        
+        try:
+            loop = asyncio.get_event_loop()
+            stream_uri = await loop.run_in_executor(
+                None,
+                lambda: self._media_service.GetStreamUri({
+                    'StreamSetup': {
+                        'Stream': 'RTP-Unicast',
+                        'Transport': {'Protocol': 'RTSP'}
+                    },
+                    'ProfileToken': profile_token
+                })
+            )
+            
+            if stream_uri and hasattr(stream_uri, 'Uri'):
+                return {
+                    'success': True,
+                    'data': stream_uri.Uri
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'No URI in response'
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo stream URI: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     # Método de compatibilidad síncrono
     def get_device_info_sync(self) -> Optional[Dict[str, Any]]:

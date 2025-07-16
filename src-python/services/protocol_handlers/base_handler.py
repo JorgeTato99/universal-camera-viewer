@@ -15,8 +15,8 @@ from datetime import datetime
 from typing import Any, Dict, Optional, List, Callable
 
 # Imports directos de la nueva arquitectura
-from ...models import ConnectionConfig
-from ..protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
+from models import ConnectionConfig
+from services.protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
 
 
 class BaseHandler(ABC):

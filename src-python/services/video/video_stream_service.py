@@ -109,12 +109,21 @@ class VideoStreamService(BaseService):
                 self.add_frame_callback(camera_id, on_frame_callback)
             
             # Crear stream manager específico según protocolo
-            stream_manager = self._manager_factory.create_stream_manager(
-                protocol=protocol,
-                stream_model=stream_model,
-                connection_config=connection_config,
-                frame_converter=self._frame_converter
-            )
+            self.logger.info(f"Creating stream manager for protocol: {protocol.value}")
+            try:
+                stream_manager = self._manager_factory.create_stream_manager(
+                    protocol=protocol,
+                    stream_model=stream_model,
+                    connection_config=connection_config,
+                    frame_converter=self._frame_converter
+                )
+                self.logger.info(f"Stream manager created successfully")
+            except Exception as e:
+                self.logger.error(f"Error in create_stream_manager: {e}")
+                self.logger.error(f"Error type: {type(e).__name__}")
+                import traceback
+                self.logger.error(f"Traceback:\n{traceback.format_exc()}")
+                raise
             
             # Configurar callback interno para recibir frames
             stream_manager.set_frame_callback(self._on_frame_received)
@@ -340,15 +349,54 @@ class VideoStreamService(BaseService):
     
     async def _notify_stream_error(self, camera_id: str, error_message: str) -> None:
         """Notifica error a callbacks con frame de error."""
-        # TODO: Generar frame de error visual
-        error_frame = f"ERROR:{error_message}"
-        
-        callbacks = self._frame_callbacks.get(camera_id, [])
-        for callback in callbacks:
-            try:
-                callback(camera_id, error_frame)
-            except Exception as e:
-                self.logger.error(f"Error notificando error de stream: {e}")
+        try:
+            # Generar una imagen de error real
+            import numpy as np
+            import cv2
+            import base64
+            
+            # Crear imagen negra con texto de error
+            width, height = 640, 480
+            error_image = np.zeros((height, width, 3), dtype=np.uint8)
+            
+            # Agregar texto de error
+            text = "Error de Conexion"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 1
+            thickness = 2
+            color = (0, 0, 255)  # Rojo en BGR
+            
+            # Calcular posición del texto para centrarlo
+            text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+            text_x = (width - text_size[0]) // 2
+            text_y = (height + text_size[1]) // 2
+            
+            # Dibujar el texto principal
+            cv2.putText(error_image, text, (text_x, text_y - 30), font, font_scale, color, thickness)
+            
+            # Agregar mensaje de error más pequeño
+            font_scale_small = 0.5
+            error_text = error_message[:50] + "..." if len(error_message) > 50 else error_message
+            text_size_small = cv2.getTextSize(error_text, font, font_scale_small, 1)[0]
+            text_x_small = (width - text_size_small[0]) // 2
+            cv2.putText(error_image, error_text, (text_x_small, text_y + 20), font, font_scale_small, (255, 255, 255), 1)
+            
+            # Convertir a JPEG y luego a base64
+            _, buffer = cv2.imencode('.jpg', error_image)
+            error_frame_base64 = base64.b64encode(buffer).decode('utf-8')
+            
+            # Notificar con frame de error válido
+            callbacks = self._frame_callbacks.get(camera_id, [])
+            for callback in callbacks:
+                try:
+                    callback(camera_id, error_frame_base64)
+                except Exception as e:
+                    self.logger.error(f"Error notificando error de stream: {e}")
+                    
+        except Exception as e:
+            self.logger.error(f"Error generando frame de error: {e}")
+            # Si falla la generación de imagen, no enviar nada
+            # para evitar que el frontend reciba datos inválidos
     
     async def cleanup(self) -> None:
         """Limpieza completa del servicio."""
