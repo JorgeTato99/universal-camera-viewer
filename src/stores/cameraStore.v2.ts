@@ -44,8 +44,10 @@ interface CameraStateV2 {
   loadCameras: () => Promise<void>;
   reloadCamera: (cameraId: string) => Promise<void>;
   addCamera: (camera: CameraResponse) => void;
+  createCamera: (cameraData: any) => Promise<void>;
   updateCamera: (cameraId: string, updates: Partial<CameraResponse>) => void;
   removeCamera: (cameraId: string) => void;
+  deleteCamera: (cameraId: string) => Promise<void>;
   setSelectedCamera: (camera: CameraResponse | null) => void;
 
   // Actions - Frame Management
@@ -285,6 +287,57 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
       }),
 
     setSelectedCamera: (camera) => set({ selectedCamera: camera }),
+
+    // Create new camera
+    createCamera: async (cameraData) => {
+      try {
+        const response = await cameraServiceV2.createCamera(cameraData);
+        
+        // Add the new camera to the store
+        get().addCamera(response);
+        
+        notificationStore.addNotification({
+          type: 'success',
+          message: `Camera "${response.display_name}" created successfully`,
+        });
+      } catch (error) {
+        console.error('Error creating camera:', error);
+        notificationStore.addNotification({
+          type: 'error',
+          message: `Failed to create camera: ${error}`,
+        });
+        throw error;
+      }
+    },
+
+    // Delete camera from backend
+    deleteCamera: async (cameraId) => {
+      try {
+        // First disconnect if connected
+        const camera = get().cameras.get(cameraId);
+        if (camera?.is_connected) {
+          await get().disconnectCamera(cameraId);
+        }
+        
+        // Delete from backend
+        await cameraServiceV2.deleteCamera(cameraId);
+        
+        // Remove from store
+        get().removeCamera(cameraId);
+        
+        notificationStore.addNotification({
+          type: 'success',
+          message: 'Camera deleted successfully',
+        });
+      } catch (error) {
+        console.error('Error deleting camera:', error);
+        notificationStore.addNotification({
+          type: 'error',
+          message: `Failed to delete camera: ${error}`,
+        });
+        throw error;
+      }
+    },
 
     // Frame management
     updateCameraFrame: (cameraId, frameData) =>

@@ -10,7 +10,7 @@ import logging
 import random
 import time
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import base64
 import numpy as np
 import cv2
@@ -70,11 +70,6 @@ class StreamHandler:
         
         logger.debug(f"[{self.camera_id}] Action: {action}, Params: {params}")
         
-        # Manejar mensajes de heartbeat
-        if message.get("type") == "ping":
-            await self.send_pong()
-            return
-            
         if action == "start_stream":
             await self.start_stream(params)
         elif action == "stop_stream":
@@ -84,7 +79,7 @@ class StreamHandler:
         elif action == "update_fps":
             await self.update_fps(params.get("fps", 30))
         elif action is None:
-            # Ignore messages without action (like ping already handled above)
+            # Ignore messages without action
             logger.debug(f"[{self.camera_id}] Message without action, ignoring")
         else:
             await self.send_error(f"Unrecognized action: {action}")
@@ -225,48 +220,35 @@ class StreamHandler:
     
     async def send_frame(self, frame_data: str, capture_timestamp: Optional[float] = None) -> None:
         """
-        Enviar frame al cliente.
+        Enviar frame al cliente con timestamp de captura para cálculo de latencia.
         
         Args:
             frame_data: Frame en base64
             capture_timestamp: Timestamp de captura en milisegundos (opcional)
         """
-        # Calcular latencia real si tenemos timestamp de captura
-        real_latency = None
-        if capture_timestamp:
-            current_time_ms = time.time() * 1000  # Convertir a milisegundos
-            real_latency = round(current_time_ms - capture_timestamp)
-            
-            # Actualizar latencia real en métricas
-            self.metrics.update_latency(real_latency)
-        
-        # Obtener métricas (incluirá latencia simulada si no hay real)
+        # Obtener métricas sin latencia (el frontend la calculará)
         metrics = self.calculate_metrics()
         
-        # Si tenemos latencia real, sobrescribir la simulada
-        if real_latency is not None:
-            metrics["latency"] = real_latency
-            metrics["latency_type"] = "real"  # Indicar que es latencia real
-        else:
-            metrics["latency_type"] = "simulated"  # Indicar que es simulada
+        # Si no hay timestamp de captura, usar el actual
+        if capture_timestamp is None:
+            capture_timestamp = time.time() * 1000  # Convertir a milisegundos
+            logger.warning(f"[{self.camera_id}] Frame sin timestamp de captura, usando timestamp actual")
+        
+        # Crear timestamp ISO para el mensaje
+        capture_time_iso = datetime.fromtimestamp(capture_timestamp / 1000, tz=timezone.utc).isoformat()
         
         message = {
             "type": "frame",
             "camera_id": self.camera_id,
             "data": frame_data,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.utcnow().isoformat() + "Z",  # Timestamp del mensaje
+            "capture_timestamp": capture_time_iso,  # Timestamp de captura del frame
             "frame_number": self.frame_count,
             "metrics": metrics
         }
         
-        await self.connection.send_json(message)
-    
-    async def send_pong(self) -> None:
-        """Enviar respuesta pong al ping del cliente."""
-        message = {
-            "type": "pong",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
-        }
+        logger.debug(f"[{self.camera_id}] Enviando frame #{self.frame_count} con capture_timestamp: {capture_time_iso}")
+        
         await self.connection.send_json(message)
     
     async def send_error(self, error: str) -> None:
@@ -337,13 +319,16 @@ class StreamHandler:
                         logger.debug("WebSocket desconectado, ignorando frame")
                         return
                     
-                    # Enviar frame
-                    await self.send_frame(frame_data)
+                    # Capturar timestamp cuando recibimos el frame
+                    capture_timestamp = time.time() * 1000  # En milisegundos
+                    
+                    # Enviar frame con timestamp de captura
+                    await self.send_frame(frame_data, capture_timestamp)
                     self.frame_count += 1
                     
-                    # Log cada 30 frames
+                    # Log cada 30 frames con timestamp
                     if self.frame_count % 30 == 0:
-                        logger.info(f"Frames enviados: {self.frame_count}")
+                        logger.info(f"[{self.camera_id}] Frames enviados: {self.frame_count} (último timestamp: {capture_timestamp:.0f}ms)")
                     
                     # Log el primer frame
                     if self.frame_count == 1:
@@ -425,9 +410,12 @@ class StreamHandler:
                 if time_since_last < self.frame_interval:
                     await asyncio.sleep(self.frame_interval - time_since_last)
                 
-                # Generar y enviar frame
+                # Capturar timestamp antes de generar frame
+                capture_timestamp = time.time() * 1000  # En milisegundos
+                
+                # Generar y enviar frame con timestamp
                 frame_data = await self.generate_mock_frame()
-                await self.send_frame(frame_data)
+                await self.send_frame(frame_data, capture_timestamp)
                 
                 self.frame_count += 1
                 self.last_sent_time = asyncio.get_event_loop().time()
@@ -438,50 +426,44 @@ class StreamHandler:
     
     def calculate_metrics(self) -> Dict[str, Any]:
         """
-        Calcular métricas del stream.
+        Calcular métricas del stream (sin latencia, que ahora calcula el frontend).
         
         Returns:
-            Diccionario con métricas incluyendo latencia
+            Diccionario con métricas del stream
         """
-        if not self.start_time:
-            return {}
-        
-        elapsed = (datetime.utcnow() - self.start_time).total_seconds()
-        actual_fps = self.frame_count / elapsed if elapsed > 0 else 0
-        
-        # Actualizar FPS en el modelo de métricas
-        self.metrics.update_fps(actual_fps)
-        
-        # Calcular latencia simulada basada en calidad
-        # Valores más realistas para cámaras IP
-        latency_map = {
-            "low": 150,     # 150ms para baja calidad
-            "medium": 100,  # 100ms para calidad media  
-            "high": 200     # 200ms para alta calidad (más datos = más latencia)
-        }
-        base_latency = latency_map.get(self.quality, 100)
-        
-        # Agregar variabilidad para simular condiciones reales de red
-        # ±20ms de variación
-        latency = base_latency + random.randint(-20, 20)
-        latency = max(latency, 10)  # Mínimo 10ms para ser realista
-        
-        # Actualizar latencia en el modelo de métricas
-        self.metrics.update_latency(latency)
-        
-        return {
-            "fps": round(actual_fps, 1),
-            "target_fps": self.fps,
-            "quality": self.quality,
-            "format": self.format,
-            "frames_sent": self.frame_count,
-            "uptime_seconds": round(elapsed, 1),
-            "latency": latency,
-            # Métricas adicionales del modelo
-            "avg_fps": round(self.metrics.get_average_fps(), 1),
-            "avg_latency": round(self.metrics.get_average_latency(), 1),
-            "health_score": round(self.metrics.get_health_score(), 1)
-        }
+        try:
+            if not self.start_time:
+                return {}
+            
+            elapsed = (datetime.utcnow() - self.start_time).total_seconds()
+            actual_fps = self.frame_count / elapsed if elapsed > 0 else 0
+            
+            # Actualizar FPS en el modelo de métricas
+            self.metrics.update_fps(actual_fps)
+            
+            return {
+                "fps": round(actual_fps, 1),
+                "target_fps": self.fps,
+                "quality": self.quality,
+                "format": self.format,
+                "frames_sent": self.frame_count,
+                "uptime_seconds": round(elapsed, 1),
+                # Métricas adicionales del modelo (sin latencia)
+                "avg_fps": round(self.metrics.get_average_fps(), 1),
+                "health_score": round(self.metrics.get_health_score(), 1)
+            }
+        except Exception as e:
+            logger.error(f"[{self.camera_id}] Error calculando métricas: {e}")
+            return {
+                "fps": 0,
+                "target_fps": self.fps,
+                "quality": self.quality,
+                "format": self.format,
+                "frames_sent": self.frame_count,
+                "uptime_seconds": 0,
+                "avg_fps": 0,
+                "health_score": 0
+            }
 
 
 class StreamManager:

@@ -9,13 +9,27 @@ import { Videocam as VideocamIcon } from '@mui/icons-material';
 import { colorTokens } from '../../../design-system/tokens';
 import { streamingService } from '../../../services/python/streamingService';
 
+interface StreamMetrics {
+  fps: number;
+  latency: number;
+  isStreaming: boolean;
+  latencyType?: 'real' | 'simulated';
+  avgFps?: number;
+  avgLatency?: number;
+  healthScore?: number;
+  rtt?: number;
+  avgRtt?: number;
+  minRtt?: number;
+  maxRtt?: number;
+}
+
 interface VideoStreamProps {
   cameraId: string;
   isConnected: boolean;
   aspectRatio?: string;
   height?: string;
   onError?: (error: string) => void;
-  onMetricsUpdate?: (metrics: { fps: number; latency: number; isStreaming: boolean }) => void;
+  onMetricsUpdate?: (metrics: StreamMetrics) => void;
 }
 
 export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
@@ -32,6 +46,11 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
   const animationIdRef = useRef<number>();
   const isLoadingRef = useRef(true);
   const [isFirstFrame, setIsFirstFrame] = React.useState(true);
+  
+  // Para throttling de métricas
+  const lastMetricsUpdateRef = useRef<number>(0);
+  const latestMetricsRef = useRef<StreamMetrics | null>(null);
+  const rttInfoRef = useRef<{ current: number; average: number; min: number; max: number } | null>(null);
 
   // Convertir base64 a blob para mejor performance
   const base64ToBlob = useCallback((base64: string): Blob => {
@@ -78,6 +97,15 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
     animationIdRef.current = requestAnimationFrame(renderFrame);
   }, []);
 
+  // Manejar actualizaciones de RTT
+  const handleRTTUpdate = useCallback((rtt: number) => {
+    // Obtener información completa de RTT
+    const rttInfo = streamingService.getRTTInfo(cameraId);
+    if (rttInfo) {
+      rttInfoRef.current = rttInfo;
+    }
+  }, [cameraId]);
+
   // Manejar frames del WebSocket
   const handleFrame = useCallback((frameData: any) => {
     if (frameData.camera_id !== cameraId) return;
@@ -102,13 +130,34 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
       // Actualizar la fuente de la imagen
       imageRef.current.src = blobUrlRef.current;
       
-      // Actualizar métricas si están disponibles
-      if (onMetricsUpdate) {
-        onMetricsUpdate({
-          fps: frameData.metrics?.fps || 0,
-          latency: frameData.metrics?.latency || 0,
+      // Actualizar métricas con throttling (máximo 1 vez por segundo)
+      if (frameData.metrics) {
+        const metrics: StreamMetrics = {
+          fps: frameData.metrics.fps || 0,
+          latency: frameData.metrics.latency || 0,
           isStreaming: true,
-        });
+          latencyType: frameData.metrics.latency_type,
+          avgFps: frameData.metrics.avg_fps,
+          avgLatency: frameData.metrics.avg_latency,
+          healthScore: frameData.metrics.health_score,
+          // Incluir información de RTT si está disponible
+          rtt: rttInfoRef.current?.current || 0,
+          avgRtt: rttInfoRef.current?.average || 0,
+          minRtt: rttInfoRef.current?.min || 0,
+          maxRtt: rttInfoRef.current?.max || 0,
+        };
+        
+        // Guardar las métricas más recientes
+        latestMetricsRef.current = metrics;
+        
+        // Solo actualizar si ha pasado al menos 1 segundo desde la última actualización
+        const now = Date.now();
+        if (now - lastMetricsUpdateRef.current >= 1000) {
+          lastMetricsUpdateRef.current = now;
+          if (onMetricsUpdate) {
+            onMetricsUpdate(metrics);
+          }
+        }
       }
     } catch (error) {
       console.error('Error procesando frame:', error);
@@ -122,6 +171,20 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
   useEffect(() => {
     console.log(`[VideoStream ${cameraId}] isConnected changed to:`, isConnected);
   }, [cameraId, isConnected]);
+
+  // Efecto para actualizar métricas periódicamente
+  useEffect(() => {
+    if (!isConnected || !onMetricsUpdate) return;
+    
+    // Intervalo para asegurar actualización de métricas cada segundo
+    const metricsInterval = setInterval(() => {
+      if (latestMetricsRef.current) {
+        onMetricsUpdate(latestMetricsRef.current);
+      }
+    }, 1000);
+    
+    return () => clearInterval(metricsInterval);
+  }, [isConnected, onMetricsUpdate]);
 
   // Efecto principal para manejar streaming
   useEffect(() => {
@@ -141,12 +204,20 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
       isLoadingRef.current = true;
       setIsFirstFrame(true);
       
+      // Resetear refs de métricas
+      lastMetricsUpdateRef.current = 0;
+      latestMetricsRef.current = null;
+      
       // Notificar que el streaming se detuvo
       if (onMetricsUpdate) {
         onMetricsUpdate({
           fps: 0,
           latency: 0,
           isStreaming: false,
+          latencyType: 'simulated',
+          avgFps: 0,
+          avgLatency: 0,
+          healthScore: 0,
         });
       }
       return;
@@ -164,7 +235,10 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
     renderFrame();
     
     // Suscribirse a frames del WebSocket
-    const unsubscribe = streamingService.onFrame(cameraId, handleFrame);
+    const unsubscribeFrame = streamingService.onFrame(cameraId, handleFrame);
+    
+    // Suscribirse a actualizaciones de RTT
+    const unsubscribeRTT = streamingService.onRTT(cameraId, handleRTTUpdate);
     
     // Cleanup
     return () => {
@@ -174,7 +248,8 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
       }
       
       // Desuscribirse del WebSocket
-      unsubscribe();
+      unsubscribeFrame();
+      unsubscribeRTT();
       
       // Limpiar blob URL
       if (blobUrlRef.current) {
@@ -186,8 +261,16 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
       if (imageRef.current) {
         imageRef.current.src = '';
       }
+      
+      // Enviar las últimas métricas al desconectar
+      if (latestMetricsRef.current && onMetricsUpdate) {
+        onMetricsUpdate({
+          ...latestMetricsRef.current,
+          isStreaming: false,
+        });
+      }
     };
-  }, [isConnected, cameraId, handleFrame, renderFrame, onMetricsUpdate]);
+  }, [isConnected, cameraId, handleFrame, handleRTTUpdate, renderFrame, onMetricsUpdate]);
 
   // Si no está conectado, mostrar placeholder
   if (!isConnected) {

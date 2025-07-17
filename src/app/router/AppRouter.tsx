@@ -6,7 +6,7 @@ const LiveViewPage = React.lazy(
   () => import("../../features/cameras/pages/LiveViewPage")
 );
 const RegisterPage = React.lazy(
-  () => import("../../features/cameras/pages/RegisterPage")
+  () => import("../../features/cameras/pages/management/CameraManagementPage")
 );
 const ScannerPage = React.lazy(
   () => import("../../features/scanner/ScannerPage")

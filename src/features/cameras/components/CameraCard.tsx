@@ -25,6 +25,7 @@ import {
   NetworkCheck as NetworkIcon,
   Timer as TimerIcon,
   Speed as SpeedIcon,
+  HealthAndSafety as HealthIcon,
 } from "@mui/icons-material";
 import { cardStyles, statusStyles } from "../../../design-system/components";
 import { colorTokens } from "../../../design-system/tokens";
@@ -64,6 +65,10 @@ export const CameraCard: React.FC<CameraCardProps> = ({
     fps: 0,
     latency: 0,
     isStreaming: false,
+    latencyType: 'simulated' as 'real' | 'simulated',
+    avgFps: 0,
+    avgLatency: 0,
+    healthScore: 0,
   });
   
   // Estado para el tiempo conectado
@@ -81,6 +86,10 @@ export const CameraCard: React.FC<CameraCardProps> = ({
         fps: 0,
         latency: 0,
         isStreaming: false,
+        latencyType: 'simulated',
+        avgFps: 0,
+        avgLatency: 0,
+        healthScore: 0,
       });
       setConnectionTime(null);
       setDisplayTime("--:--:--");
@@ -188,21 +197,59 @@ export const CameraCard: React.FC<CameraCardProps> = ({
             mb: 1,
           }}
         >
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              color: (theme) => theme.palette.text.primary,
-              transition: "color 0.2s ease-in-out",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "60%",
-            }}
-          >
-            {name}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                color: (theme) => theme.palette.text.primary,
+                transition: "color 0.2s ease-in-out",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+              }}
+            >
+              {name}
+            </Typography>
+            {streamMetrics.isStreaming && streamMetrics.healthScore > 0 && (
+              <Tooltip title={`Salud del stream: ${streamMetrics.healthScore}%`}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.3,
+                  }}
+                >
+                  <HealthIcon
+                    sx={{
+                      fontSize: "0.9rem",
+                      color: streamMetrics.healthScore > 80 
+                        ? colorTokens.status.connected 
+                        : streamMetrics.healthScore > 60 
+                        ? colorTokens.status.connecting 
+                        : colorTokens.status.error,
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: "0.65rem",
+                      fontWeight: 600,
+                      color: streamMetrics.healthScore > 80 
+                        ? colorTokens.status.connected 
+                        : streamMetrics.healthScore > 60 
+                        ? colorTokens.status.connecting 
+                        : colorTokens.status.error,
+                    }}
+                  >
+                    {Math.round(streamMetrics.healthScore)}%
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
+          </Box>
           <Chip
             label={getStatusLabel()}
             size="small"
@@ -281,26 +328,42 @@ export const CameraCard: React.FC<CameraCardProps> = ({
             </Box>
 
             {/* FPS */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <SpeedIcon
-                sx={{
-                  fontSize: "0.8rem",
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-              <Typography
-                variant="caption"
-                sx={{
-                  fontSize: "0.7rem",
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              >
-                {streamMetrics.isStreaming ? `${streamMetrics.fps} FPS` : "-- FPS"}
-              </Typography>
-            </Box>
+            <Tooltip 
+              title={streamMetrics.avgFps > 0 ? `Promedio: ${streamMetrics.avgFps} FPS` : ""}
+              disableHoverListener={!streamMetrics.isStreaming || streamMetrics.avgFps === 0}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <SpeedIcon
+                  sx={{
+                    fontSize: "0.8rem",
+                    color: (theme) => theme.palette.text.secondary,
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: "0.7rem",
+                    color: (theme) => theme.palette.text.secondary,
+                    cursor: streamMetrics.avgFps > 0 ? "help" : "default",
+                  }}
+                >
+                  {streamMetrics.isStreaming ? `${streamMetrics.fps} FPS` : "-- FPS"}
+                </Typography>
+              </Box>
+            </Tooltip>
 
             {/* Latencia */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Tooltip 
+              title={
+                streamMetrics.rtt && streamMetrics.rtt > 0
+                  ? `RTT: ${streamMetrics.rtt}ms (Promedio: ${streamMetrics.avgRtt}ms, Min: ${streamMetrics.minRtt}ms, Max: ${streamMetrics.maxRtt}ms)`
+                  : streamMetrics.avgLatency > 0
+                  ? `Promedio: ${Math.round(streamMetrics.avgLatency)}ms`
+                  : ""
+              }
+              disableHoverListener={!streamMetrics.isStreaming || (streamMetrics.avgLatency === 0 && (!streamMetrics.rtt || streamMetrics.rtt === 0))}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
               <NetworkIcon
                 sx={{
                   fontSize: "0.8rem",
@@ -312,11 +375,41 @@ export const CameraCard: React.FC<CameraCardProps> = ({
                 sx={{
                   fontSize: "0.7rem",
                   color: (theme) => theme.palette.text.secondary,
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 0.2,
+                  cursor: (streamMetrics.avgLatency > 0 || (streamMetrics.rtt && streamMetrics.rtt > 0)) ? "help" : "default",
                 }}
               >
-                {streamMetrics.isStreaming ? `${streamMetrics.latency}ms` : "-- ms"}
+                {streamMetrics.isStreaming ? (
+                  <>
+                    {streamMetrics.rtt && streamMetrics.rtt > 0 ? (
+                      // Mostrar RTT real cuando esté disponible
+                      <>{streamMetrics.rtt}ms</>
+                    ) : (
+                      // Mostrar latencia simulada cuando no hay RTT
+                      <>
+                        {streamMetrics.latency}ms
+                        {streamMetrics.latencyType === 'simulated' && (
+                          <Typography
+                            component="sup"
+                            sx={{
+                              fontSize: "0.5rem",
+                              opacity: 0.7,
+                            }}
+                          >
+                            *
+                          </Typography>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  "-- ms"
+                )}
               </Typography>
             </Box>
+            </Tooltip>
           </Box>
         </Box>
 

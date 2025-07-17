@@ -42,12 +42,15 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ### 🎯 Enhanced - Métricas de Streaming
 
-#### 📈 Latencia en Tiempo Real
+#### 📈 Sistema de Latencia Basado en Timestamp de Captura
 
-- **Campo `latency` en milisegundos** añadido a las métricas
-- **Latencia simulada** basada en calidad (100-200ms)
-- **Variabilidad realista** de ±20ms para simular jitter
-- **Infraestructura para latencia real** con timestamps de captura
+- **Nueva medición de latencia real** usando timestamp de captura del frame
+- **Eliminado sistema RTT (ping/pong)** para mayor eficiencia
+- **Cálculo preciso**: `latencia = tiempo_actual - timestamp_captura`
+- **Validación inteligente**: Descarta valores negativos o > 10 segundos
+- **Reducción de tráfico**: Elimina 12 mensajes/minuto de ping/pong
+- **Campo `capture_timestamp`** añadido a mensajes de frame
+- **Latencia -1** cuando no está disponible (transparencia total)
 
 #### 📊 Métricas Avanzadas
 

@@ -16,28 +16,31 @@ export interface FrameData {
   camera_id: string;
   data: string; // base64
   timestamp: string;
+  capture_timestamp: string; // ISO timestamp de cuando se capturó el frame
   frame_number: number;
   metrics?: StreamMetrics;
 }
 
 export interface StreamMessage {
-  type: 'frame' | 'status' | 'error' | 'connection';
+  type: 'frame' | 'status' | 'error' | 'connection' | 'pong';
   camera_id?: string;
   status?: string;
   error?: string;
   timestamp: string;
+  ping_id?: string;
   [key: string]: any;
 }
 
 export type StreamEventCallback = (data: FrameData) => void;
 export type StatusEventCallback = (status: string, data?: any) => void;
 export type ErrorEventCallback = (error: string) => void;
+export type RTTUpdateCallback = (rtt: number) => void;
 
 export class StreamingService {
   // Múltiples conexiones WebSocket - una por cámara
   private connections: Map<string, {
     ws: WebSocket;
-    heartbeatInterval: NodeJS.Timeout | null;
+    heartbeatInterval: NodeJS.Timeout | null;  // Ya no se usa, pero mantenido por compatibilidad
     reconnectTimeout: NodeJS.Timeout | null;
     isConnecting: boolean;
     shouldReconnect: boolean;
@@ -45,6 +48,10 @@ export class StreamingService {
     lastFrameTime: number;
     connectionStartTime: number;
     recentFrameTimes: number[];
+    // Latency tracking (antes era RTT)
+    recentRTTs: number[];  // Ahora almacena latencias
+    averageRTT: number;    // Promedio de latencias
+    lastRTT: number;       // Última latencia
   }> = new Map();
   
   private wsUrl: string = 'ws://localhost:8000/ws';
@@ -54,9 +61,14 @@ export class StreamingService {
   private onFrameCallbacks: Map<string, Set<StreamEventCallback>> = new Map();
   private onStatusCallbacks: Map<string, Set<StatusEventCallback>> = new Map();
   private onErrorCallbacks: Map<string, Set<ErrorEventCallback>> = new Map();
+  private onRTTCallbacks: Map<string, Set<RTTUpdateCallback>> = new Map();
   
   // Para cálculo de FPS más preciso (ventana deslizante)
   private fpsWindowSize: number = 30; // Calcular FPS sobre los últimos 30 frames
+  
+  // Para cálculo de latencia (ventana deslizante) - antes era RTT
+  private rttWindowSize: number = 10; // Mantener últimas 10 mediciones de latencia
+  private pingInterval: number = 5000; // @deprecated - Ya no se usa
 
   constructor(wsUrl?: string) {
     if (wsUrl) {
@@ -119,7 +131,11 @@ export class StreamingService {
       frameCount: 0,
       lastFrameTime: 0,
       connectionStartTime: 0,
-      recentFrameTimes: [] as number[]
+      recentFrameTimes: [] as number[],
+      // Latency tracking (reutilizamos variables RTT para compatibilidad)
+      recentRTTs: [] as number[],  // Ahora almacena latencias calculadas
+      averageRTT: 0,  // Promedio de latencias
+      lastRTT: 0  // Última latencia calculada
     };
     
     this.connections.set(cameraId, connection);
@@ -207,6 +223,7 @@ export class StreamingService {
     this.onFrameCallbacks.delete(cameraId);
     this.onStatusCallbacks.delete(cameraId);
     this.onErrorCallbacks.delete(cameraId);
+    this.onRTTCallbacks.delete(cameraId);
   }
   
   /**
@@ -329,6 +346,10 @@ export class StreamingService {
           this.emitStatus(cameraId, 'room_joined', message);
           break;
           
+        case 'pong':
+          // Ya no manejamos pong, la latencia se calcula con capture_timestamp
+          break;
+          
         default:
           console.warn(`Tipo de mensaje desconocido para cámara ${cameraId}:`, message.type);
       }
@@ -348,7 +369,48 @@ export class StreamingService {
     const now = Date.now();
     connection.lastFrameTime = now;
     
-    // Agregar tiempo del frame actual a la ventana deslizante
+    // Calcular latencia usando capture_timestamp
+    let latency = -1;
+    if (frameData.capture_timestamp) {
+      try {
+        // Parse timestamp ISO con timezone UTC
+        const captureTime = new Date(frameData.capture_timestamp).getTime();
+        latency = now - captureTime;
+        
+        // Validar que la latencia sea razonable (no negativa y menor a 10 segundos)
+        if (latency < 0 || latency > 10000) {
+          console.warn(`[${cameraId}] Latencia inválida calculada: ${latency}ms. Timestamp captura: ${frameData.capture_timestamp}`);
+          latency = -1;
+        } else {
+          // Actualizar RTT con la latencia calculada (para mantener compatibilidad)
+          connection.lastRTT = latency;
+          connection.recentRTTs.push(latency);
+          
+          // Mantener solo los últimos N valores
+          if (connection.recentRTTs.length > this.rttWindowSize) {
+            connection.recentRTTs.shift();
+          }
+          
+          // Calcular promedio
+          if (connection.recentRTTs.length > 0) {
+            const sum = connection.recentRTTs.reduce((a, b) => a + b, 0);
+            connection.averageRTT = Math.round(sum / connection.recentRTTs.length);
+          }
+          
+          console.debug(`[${cameraId}] Latencia calculada: ${latency}ms (promedio: ${connection.averageRTT}ms)`);
+          
+          // Emitir actualización de latencia (usando el mismo callback que RTT para compatibilidad)
+          this.emitRTT(cameraId, latency);
+        }
+      } catch (error) {
+        console.error(`[${cameraId}] Error calculando latencia:`, error);
+        latency = -1;
+      }
+    } else {
+      console.debug(`[${cameraId}] Frame sin capture_timestamp, latencia no disponible`);
+    }
+    
+    // Agregar tiempo del frame actual a la ventana deslizante para FPS
     connection.recentFrameTimes.push(now);
     
     // Mantener solo los últimos N frames
@@ -368,6 +430,7 @@ export class StreamingService {
       });
     }
   }
+
 
   /**
    * Programar reconexión para una cámara específica
@@ -396,32 +459,17 @@ export class StreamingService {
    * Iniciar heartbeat para una cámara específica
    */
   private startHeartbeat(cameraId: string): void {
-    const connection = this.connections.get(cameraId);
-    if (!connection) return;
-    
-    this.stopHeartbeat(cameraId);
-    
-    // Ping cada 30 segundos para mantener la conexión viva
-    connection.heartbeatInterval = setInterval(() => {
-      if (connection.ws && connection.ws.readyState === WebSocket.OPEN) {
-        this.send(cameraId, { type: 'ping' });
-        console.log(`[Heartbeat] Ping enviado para cámara ${cameraId}`);
-      } else {
-        console.warn(`[Heartbeat] WebSocket no está abierto para cámara ${cameraId}, deteniendo heartbeat`);
-        this.stopHeartbeat(cameraId);
-      }
-    }, 30000); // 30 segundos
+    // Ya no necesitamos heartbeat para medir latencia
+    // La latencia ahora se calcula usando capture_timestamp del frame
+    return;
   }
 
   /**
    * Detener heartbeat para una cámara específica
    */
   private stopHeartbeat(cameraId: string): void {
-    const connection = this.connections.get(cameraId);
-    if (connection && connection.heartbeatInterval) {
-      clearInterval(connection.heartbeatInterval);
-      connection.heartbeatInterval = null;
-    }
+    // Ya no necesitamos heartbeat
+    return;
   }
 
   /**
@@ -451,6 +499,22 @@ export class StreamingService {
           callback(error);
         } catch (error) {
           console.error(`Error en callback de error para cámara ${cameraId}:`, error);
+        }
+      });
+    }
+  }
+
+  /**
+   * Emitir actualización de RTT para una cámara específica
+   */
+  private emitRTT(cameraId: string, rtt: number): void {
+    const callbacks = this.onRTTCallbacks.get(cameraId);
+    if (callbacks) {
+      callbacks.forEach(callback => {
+        try {
+          callback(rtt);
+        } catch (error) {
+          console.error(`Error en callback de RTT para cámara ${cameraId}:`, error);
         }
       });
     }
@@ -515,6 +579,25 @@ export class StreamingService {
   }
 
   /**
+   * Registrar callback para actualizaciones de RTT de una cámara específica
+   */
+  onRTT(cameraId: string, callback: RTTUpdateCallback): () => void {
+    if (!this.onRTTCallbacks.has(cameraId)) {
+      this.onRTTCallbacks.set(cameraId, new Set());
+    }
+    
+    const callbacks = this.onRTTCallbacks.get(cameraId)!;
+    callbacks.add(callback);
+    
+    return () => {
+      callbacks.delete(callback);
+      if (callbacks.size === 0) {
+        this.onRTTCallbacks.delete(cameraId);
+      }
+    };
+  }
+
+  /**
    * Obtener estado de conexión para una cámara específica
    */
   isConnected(cameraId: string): boolean {
@@ -542,6 +625,10 @@ export class StreamingService {
     frameCount: number;
     connectionTime: number;
     fps: number;
+    rtt: number;
+    averageRTT: number;
+    minRTT: number;
+    maxRTT: number;
   } | null {
     const connection = this.connections.get(cameraId);
     if (!connection) {
@@ -564,10 +651,22 @@ export class StreamingService {
       }
     }
     
+    // Calcular estadísticas de RTT
+    let minRTT = 0;
+    let maxRTT = 0;
+    if (connection.recentRTTs.length > 0) {
+      minRTT = Math.min(...connection.recentRTTs);
+      maxRTT = Math.max(...connection.recentRTTs);
+    }
+    
     return {
       frameCount: connection.frameCount,
       connectionTime: Math.round(connectionTime),
-      fps: Math.round(fps * 10) / 10 // Redondear a 1 decimal
+      fps: Math.round(fps * 10) / 10, // Redondear a 1 decimal
+      rtt: connection.lastRTT,
+      averageRTT: connection.averageRTT,
+      minRTT,
+      maxRTT
     };
   }
 
@@ -583,6 +682,55 @@ export class StreamingService {
    */
   setReconnectDelay(delay: number): void {
     this.reconnectDelay = Math.max(1000, delay);
+  }
+
+  /**
+   * Configurar intervalo de ping
+   * @deprecated Ya no se usa ping/pong. La latencia se calcula con timestamp de captura
+   */
+  setPingInterval(interval: number): void {
+    console.warn('setPingInterval está deprecado. La latencia ahora se calcula con timestamp de captura');
+  }
+
+  /**
+   * Obtener intervalo de ping actual
+   * @deprecated Ya no se usa ping/pong
+   */
+  getPingInterval(): number {
+    console.warn('getPingInterval está deprecado. Ya no se usa ping/pong');
+    return 0;
+  }
+
+  /**
+   * Obtener información de latencia para una cámara específica
+   * Nota: Aunque se llama RTT por compatibilidad, ahora retorna latencias calculadas
+   */
+  getRTTInfo(cameraId: string): {
+    current: number;
+    average: number;
+    min: number;
+    max: number;
+    samples: number;
+  } | null {
+    const connection = this.connections.get(cameraId);
+    if (!connection) {
+      return null;
+    }
+    
+    let min = 0;
+    let max = 0;
+    if (connection.recentRTTs.length > 0) {
+      min = Math.min(...connection.recentRTTs);
+      max = Math.max(...connection.recentRTTs);
+    }
+    
+    return {
+      current: connection.lastRTT,
+      average: connection.averageRTT,
+      min,
+      max,
+      samples: connection.recentRTTs.length
+    };
   }
 }
 
