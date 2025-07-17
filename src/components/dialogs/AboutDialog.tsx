@@ -51,6 +51,7 @@ import {
   spacingTokens,
 } from "../../design-system/tokens";
 import { LicenseDialog } from "./LicenseDialog";
+import { APP_CONFIG, getAppVersion } from "../../config/appConfig";
 
 interface AboutDialogProps {
   open: boolean;
@@ -821,7 +822,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
                       Mejoras en el rendimiento del streaming
                     </Typography>
                     <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
-                      Soporte para nuevos modelos de cámaras Hikvision
+                      Soporte para nuevos modelos de cámaras {APP_CONFIG.technical.supportedCameras[3]}
                     </Typography>
                     <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
                       Corrección de errores en el escaneo de red
@@ -950,14 +951,13 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
               >
                 <Typography variant="body2" component="pre" sx={{ m: 0 }}>
 {`LICENCIA DE SOFTWARE PROPIETARIO
-Version 1.0 - Enero 2025
+Version 1.0 - Enero ${APP_CONFIG.company.year}
 
 TÉRMINOS Y CONDICIONES
 
 1. CONCESIÓN DE LICENCIA
-Kipustec le otorga una licencia no exclusiva e 
-intransferible para usar el software Universal 
-Camera Viewer.
+${APP_CONFIG.company.name} le otorga una licencia no exclusiva e 
+intransferible para usar el software ${APP_CONFIG.app.name}.
 
 2. RESTRICCIONES
 Usted NO puede:
@@ -967,7 +967,7 @@ Usted NO puede:
 - Sublicenciar o transferir la licencia
 
 3. PROPIEDAD
-Este software es propiedad de Kipustec y está 
+Este software es propiedad de ${APP_CONFIG.company.name} y está 
 protegido por leyes de propiedad intelectual.
 
 4. GARANTÍA LIMITADA
@@ -975,7 +975,7 @@ El software se proporciona "tal cual" sin
 garantías de ningún tipo.
 
 5. LIMITACIÓN DE RESPONSABILIDAD
-Kipustec no será responsable por daños 
+${APP_CONFIG.company.name} no será responsable por daños 
 indirectos o consecuentes.`}
                 </Typography>
               </Box>

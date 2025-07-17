@@ -11,6 +11,7 @@ import {
   getVerifiedEndpoint,
 } from "../types/camera.types.v2";
 import { cameraServiceV2 } from "../services/python/cameraService.v2";
+import { streamingService } from "../services/python/streamingService";
 import { notificationStore } from "./notificationStore";
 
 interface CameraStateV2 {
@@ -134,9 +135,17 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
         const gridItems = new Map<string, CameraGridItem>();
         
         cameras.forEach(camera => {
-          camerasMap.set(camera.camera_id, camera);
+          // Asegurar que todas las cámaras empiecen desconectadas al cargar
+          const cameraWithCorrectState = {
+            ...camera,
+            is_connected: false,
+            is_streaming: false,
+            status: ConnectionStatus.DISCONNECTED,
+          };
+          
+          camerasMap.set(camera.camera_id, cameraWithCorrectState);
           gridItems.set(camera.camera_id, {
-            camera,
+            camera: cameraWithCorrectState,
             streaming_url: getVerifiedEndpoint(camera, 'rtsp_main')?.url,
           });
         });
@@ -164,7 +173,15 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
 
       try {
         const camera = await cameraServiceV2.getCamera(cameraId);
-        get().updateCamera(cameraId, camera);
+        // Mantener el estado de conexión actual
+        const currentCamera = get().cameras.get(cameraId);
+        const updatedCamera = {
+          ...camera,
+          is_connected: currentCamera?.is_connected || false,
+          is_streaming: currentCamera?.is_streaming || false,
+          status: currentCamera?.status || ConnectionStatus.DISCONNECTED,
+        };
+        get().updateCamera(cameraId, updatedCamera);
       } catch (error) {
         console.error(`Error reloading camera ${cameraId}:`, error);
       } finally {
@@ -205,6 +222,14 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
             updated_at: new Date().toISOString(),
           };
           newCameras.set(cameraId, updatedCamera);
+          
+          console.log('[STORE] Camera updated:', {
+            cameraId,
+            oldStatus: existingCamera.status,
+            oldConnected: existingCamera.is_connected,
+            newStatus: updatedCamera.status,
+            newConnected: updatedCamera.is_connected,
+          });
 
           // Update grid item
           const newGridItems = new Map(state.cameraGridItems);
@@ -337,23 +362,50 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
 
       try {
         console.log('[STORE] Calling API to connect camera:', cameraId);
-        await cameraServiceV2.connectCamera(cameraId);
+        const response = await cameraServiceV2.connectCamera(cameraId);
+        console.log('[STORE] Connect response:', response);
         
-        // Update status
+        // Update status to connected
+        console.log('[STORE] Updating camera status to CONNECTED');
         get().updateCamera(cameraId, {
-          status: ConnectionStatus.CONNECTING,
-          is_connected: false,
+          status: ConnectionStatus.CONNECTED,
+          is_connected: true,
+          is_streaming: true,
         });
 
         notificationStore.addNotification({
-          type: 'info',
-          message: 'Connecting to camera...',
+          type: 'success',
+          message: 'Camera connected successfully',
         });
 
-        // Reload camera after a delay to get updated status
-        setTimeout(() => {
-          get().reloadCamera(cameraId);
-        }, 2000);
+        // NO recargar la cámara ya que perdería el estado de conexión
+        // await get().reloadCamera(cameraId);
+        
+        // Start WebSocket streaming after successful connection
+        const camera = get().cameras.get(cameraId);
+        if (camera) {
+          console.log('[STORE] Starting WebSocket streaming for camera:', cameraId);
+          try {
+            // Connect to WebSocket for this camera
+            await streamingService.connect(cameraId);
+            console.log('[STORE] WebSocket connected for camera:', cameraId);
+            
+            // Start streaming with default configuration
+            await streamingService.startStream(cameraId, {
+              quality: 'medium',
+              fps: 15,
+              format: 'jpeg'
+            });
+            console.log('[STORE] Streaming started for camera:', cameraId);
+          } catch (wsError) {
+            console.error('[STORE] Failed to start streaming:', wsError);
+            // Don't fail the whole connection if streaming fails
+            notificationStore.addNotification({
+              type: 'warning',
+              message: 'Camera connected but streaming failed to start',
+            });
+          }
+        }
       } catch (error) {
         console.error(`Error connecting camera ${cameraId}:`, error);
         get().updateCameraError(cameraId, String(error));
@@ -370,8 +422,25 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
 
     disconnectCamera: async (cameraId) => {
       try {
+        // Stop streaming first if WebSocket exists
+        try {
+          // Verificar si hay conexión activa antes de intentar detenerla
+          if (streamingService.isConnected(cameraId)) {
+            await streamingService.stopStream(cameraId);
+            streamingService.disconnect(cameraId);
+            console.log('[STORE] Streaming stopped for camera:', cameraId);
+          } else {
+            console.log('[STORE] No active WebSocket connection for camera:', cameraId);
+          }
+        } catch (wsError) {
+          console.warn('[STORE] Error stopping streaming (non-critical):', wsError);
+          // No es crítico si el streaming ya estaba detenido
+        }
+        
+        // Then disconnect from backend
         await cameraServiceV2.disconnectCamera(cameraId);
         
+        // Update camera state
         get().updateCamera(cameraId, {
           status: ConnectionStatus.DISCONNECTED,
           is_connected: false,
@@ -384,6 +453,14 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
         });
       } catch (error) {
         console.error(`Error disconnecting camera ${cameraId}:`, error);
+        
+        // Aún así actualizar el estado local aunque falle el backend
+        get().updateCamera(cameraId, {
+          status: ConnectionStatus.DISCONNECTED,
+          is_connected: false,
+          is_streaming: false,
+        });
+        
         notificationStore.addNotification({
           type: 'error',
           message: `Failed to disconnect: ${error}`,

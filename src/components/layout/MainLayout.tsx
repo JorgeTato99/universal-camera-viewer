@@ -7,6 +7,7 @@ import React, { useState, useEffect } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
+import { BottomMenu } from "./BottomMenu";
 import { colorTokens } from "../../design-system/tokens";
 
 interface MainLayoutProps {
@@ -110,7 +111,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Área de contenido */}
         <Box
           sx={{
-            height: "calc(100vh - 32px)",
+            height: "calc(100vh - 32px - 32px)", // Resta TopBar (32px) y BottomMenu (32px)
             overflow: "auto",
             position: "relative",
           }}
@@ -118,6 +119,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           {children}
         </Box>
       </Box>
+
+      {/* BottomMenu fijo */}
+      <BottomMenu sidebarCollapsed={sidebarCollapsed} />
     </Box>
   );
 };

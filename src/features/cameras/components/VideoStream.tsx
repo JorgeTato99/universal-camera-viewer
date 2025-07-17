@@ -1,0 +1,283 @@
+/**
+ * 🎬 Video Stream Component - Optimized for WebSocket Streaming
+ * Componente optimizado para streaming sin parpadeo usando Canvas
+ */
+
+import React, { useEffect, useRef, useCallback } from 'react';
+import { Box, CircularProgress, Typography } from '@mui/material';
+import { Videocam as VideocamIcon } from '@mui/icons-material';
+import { colorTokens } from '../../../design-system/tokens';
+import { streamingService } from '../../../services/python/streamingService';
+
+interface VideoStreamProps {
+  cameraId: string;
+  isConnected: boolean;
+  aspectRatio?: string;
+  height?: string;
+  onError?: (error: string) => void;
+  onMetricsUpdate?: (metrics: { fps: number; latency: number; isStreaming: boolean }) => void;
+}
+
+export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
+  cameraId,
+  isConnected,
+  aspectRatio = '16:9',
+  height = '100%',
+  onError,
+  onMetricsUpdate,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageRef = useRef<HTMLImageElement>();
+  const blobUrlRef = useRef<string | null>(null);
+  const animationIdRef = useRef<number>();
+  const isLoadingRef = useRef(true);
+  const [isFirstFrame, setIsFirstFrame] = React.useState(true);
+
+  // Convertir base64 a blob para mejor performance
+  const base64ToBlob = useCallback((base64: string): Blob => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: 'image/jpeg' });
+  }, []);
+
+  // Render loop con requestAnimationFrame
+  const renderFrame = useCallback(() => {
+    const canvas = canvasRef.current;
+    const image = imageRef.current;
+    
+    if (!canvas || !image) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Solo dibujar si la imagen está completamente cargada
+    if (image.complete && image.naturalHeight !== 0) {
+      // Ajustar el tamaño del canvas al tamaño de la imagen si es necesario
+      if (canvas.width !== image.naturalWidth || canvas.height !== image.naturalHeight) {
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+      }
+      
+      // Dibujar la imagen en el canvas
+      ctx.drawImage(image, 0, 0);
+      
+      // Ocultar el loading después del primer frame
+      if (isLoadingRef.current) {
+        isLoadingRef.current = false;
+        setIsFirstFrame(false);
+      }
+    }
+    
+    // Continuar el loop de animación
+    animationIdRef.current = requestAnimationFrame(renderFrame);
+  }, []);
+
+  // Manejar frames del WebSocket
+  const handleFrame = useCallback((frameData: any) => {
+    if (frameData.camera_id !== cameraId) return;
+    
+    try {
+      // Convertir base64 a blob
+      const blob = base64ToBlob(frameData.data);
+      
+      // Limpiar URL anterior para evitar memory leaks
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+      
+      // Crear nueva URL del blob
+      blobUrlRef.current = URL.createObjectURL(blob);
+      
+      // Crear nueva imagen si no existe
+      if (!imageRef.current) {
+        imageRef.current = new Image();
+      }
+      
+      // Actualizar la fuente de la imagen
+      imageRef.current.src = blobUrlRef.current;
+      
+      // Actualizar métricas si están disponibles
+      if (onMetricsUpdate) {
+        onMetricsUpdate({
+          fps: frameData.metrics?.fps || 0,
+          latency: frameData.metrics?.latency || 0,
+          isStreaming: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error procesando frame:', error);
+      if (onError) {
+        onError('Error al procesar frame de video');
+      }
+    }
+  }, [cameraId, base64ToBlob, onMetricsUpdate, onError]);
+
+  // Log solo cuando cambia isConnected
+  useEffect(() => {
+    console.log(`[VideoStream ${cameraId}] isConnected changed to:`, isConnected);
+  }, [cameraId, isConnected]);
+
+  // Efecto principal para manejar streaming
+  useEffect(() => {
+    if (!isConnected) {
+      // Limpiar cuando se desconecta
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+      }
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+      if (imageRef.current) {
+        imageRef.current.src = '';
+        imageRef.current = undefined;
+      }
+      isLoadingRef.current = true;
+      setIsFirstFrame(true);
+      
+      // Notificar que el streaming se detuvo
+      if (onMetricsUpdate) {
+        onMetricsUpdate({
+          fps: 0,
+          latency: 0,
+          isStreaming: false,
+        });
+      }
+      return;
+    }
+
+    // Inicializar cuando se conecta
+    isLoadingRef.current = true;
+    
+    // Crear imagen si no existe
+    if (!imageRef.current) {
+      imageRef.current = new Image();
+    }
+    
+    // Iniciar render loop
+    renderFrame();
+    
+    // Suscribirse a frames del WebSocket
+    const unsubscribe = streamingService.onFrame(cameraId, handleFrame);
+    
+    // Cleanup
+    return () => {
+      // Cancelar animation frame
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+      }
+      
+      // Desuscribirse del WebSocket
+      unsubscribe();
+      
+      // Limpiar blob URL
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+      
+      // Limpiar imagen
+      if (imageRef.current) {
+        imageRef.current.src = '';
+      }
+    };
+  }, [isConnected, cameraId, handleFrame, renderFrame, onMetricsUpdate]);
+
+  // Si no está conectado, mostrar placeholder
+  if (!isConnected) {
+    return (
+      <Box
+        sx={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? colorTokens.background.dark
+              : colorTokens.background.light,
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: (theme) => `1px solid ${theme.palette.divider}`,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 0.5,
+            color: (theme) => theme.palette.text.disabled,
+          }}
+        >
+          <VideocamIcon sx={{ fontSize: 32 }} />
+          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+            Sin conexión
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#000',
+        borderRadius: '6px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: (theme) => `1px solid ${theme.palette.divider}`,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Canvas para renderizar el video */}
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: isFirstFrame ? 'none' : 'block',
+        }}
+      />
+      
+      {/* Loading mientras carga el primer frame */}
+      {isFirstFrame && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            color: '#fff',
+          }}
+        >
+          <CircularProgress size={30} sx={{ color: '#fff' }} />
+          <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
+            Cargando video...
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+});
+
+VideoStream.displayName = 'VideoStream';

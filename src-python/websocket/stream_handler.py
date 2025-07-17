@@ -7,6 +7,8 @@ delegando toda la lógica de negocio al servicio correspondiente.
 
 import asyncio
 import logging
+import random
+import time
 from typing import Dict, Any, Optional
 from datetime import datetime
 import base64
@@ -16,6 +18,7 @@ import cv2
 from fastapi import WebSocket
 from .connection_manager import manager, WebSocketConnection
 from services.websocket_stream_service import websocket_stream_service
+from models.streaming.stream_metrics import StreamMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,9 @@ class StreamHandler:
         # Métricas
         self.frame_count = 0
         self.start_time = None
+        
+        # Modelo de métricas avanzadas
+        self.metrics = StreamMetrics(stream_id=f"{camera_id}_{client_id}")
         
         # Control de FPS para frames simulados
         self.frame_interval = 1.0 / self.fps
@@ -217,14 +223,32 @@ class StreamHandler:
         
         return base64.b64encode(buffer).decode('utf-8')
     
-    async def send_frame(self, frame_data: str) -> None:
+    async def send_frame(self, frame_data: str, capture_timestamp: Optional[float] = None) -> None:
         """
         Enviar frame al cliente.
         
         Args:
             frame_data: Frame en base64
+            capture_timestamp: Timestamp de captura en milisegundos (opcional)
         """
+        # Calcular latencia real si tenemos timestamp de captura
+        real_latency = None
+        if capture_timestamp:
+            current_time_ms = time.time() * 1000  # Convertir a milisegundos
+            real_latency = round(current_time_ms - capture_timestamp)
+            
+            # Actualizar latencia real en métricas
+            self.metrics.update_latency(real_latency)
+        
+        # Obtener métricas (incluirá latencia simulada si no hay real)
         metrics = self.calculate_metrics()
+        
+        # Si tenemos latencia real, sobrescribir la simulada
+        if real_latency is not None:
+            metrics["latency"] = real_latency
+            metrics["latency_type"] = "real"  # Indicar que es latencia real
+        else:
+            metrics["latency_type"] = "simulated"  # Indicar que es simulada
         
         message = {
             "type": "frame",
@@ -417,7 +441,7 @@ class StreamHandler:
         Calcular métricas del stream.
         
         Returns:
-            Diccionario con métricas
+            Diccionario con métricas incluyendo latencia
         """
         if not self.start_time:
             return {}
@@ -425,13 +449,38 @@ class StreamHandler:
         elapsed = (datetime.utcnow() - self.start_time).total_seconds()
         actual_fps = self.frame_count / elapsed if elapsed > 0 else 0
         
+        # Actualizar FPS en el modelo de métricas
+        self.metrics.update_fps(actual_fps)
+        
+        # Calcular latencia simulada basada en calidad
+        # Valores más realistas para cámaras IP
+        latency_map = {
+            "low": 150,     # 150ms para baja calidad
+            "medium": 100,  # 100ms para calidad media  
+            "high": 200     # 200ms para alta calidad (más datos = más latencia)
+        }
+        base_latency = latency_map.get(self.quality, 100)
+        
+        # Agregar variabilidad para simular condiciones reales de red
+        # ±20ms de variación
+        latency = base_latency + random.randint(-20, 20)
+        latency = max(latency, 10)  # Mínimo 10ms para ser realista
+        
+        # Actualizar latencia en el modelo de métricas
+        self.metrics.update_latency(latency)
+        
         return {
             "fps": round(actual_fps, 1),
             "target_fps": self.fps,
             "quality": self.quality,
             "format": self.format,
             "frames_sent": self.frame_count,
-            "uptime_seconds": round(elapsed, 1)
+            "uptime_seconds": round(elapsed, 1),
+            "latency": latency,
+            # Métricas adicionales del modelo
+            "avg_fps": round(self.metrics.get_average_fps(), 1),
+            "avg_latency": round(self.metrics.get_average_latency(), 1),
+            "health_score": round(self.metrics.get_health_score(), 1)
         }
 
 

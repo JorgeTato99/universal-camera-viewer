@@ -1413,6 +1413,1597 @@ class DataService:
             self.logger.error(f"Error obteniendo IDs de cámaras: {e}")
             return []
     
+    # === Métodos de Gestión de Credenciales ===
+    
+    async def get_camera_credentials(self, camera_id: str) -> List[Dict[str, Any]]:
+        """
+        Obtiene todas las credenciales de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            Lista de credenciales con todos los campos
+        """
+        if not self._db_connection:
+            return []
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT 
+                        credential_id,
+                        credential_name,
+                        username,
+                        password_encrypted,
+                        auth_type,
+                        is_active,
+                        is_default,
+                        last_used,
+                        created_at,
+                        updated_at
+                    FROM camera_credentials
+                    WHERE camera_id = ?
+                    ORDER BY is_default DESC, credential_name
+                """, (camera_id,))
+                
+                credentials = []
+                for row in cursor.fetchall():
+                    credentials.append({
+                        'credential_id': row[0],
+                        'credential_name': row[1],
+                        'username': row[2],
+                        'password_encrypted': row[3],
+                        'auth_type': row[4],
+                        'is_active': bool(row[5]),
+                        'is_default': bool(row[6]),
+                        'last_used': row[7],
+                        'created_at': row[8],
+                        'updated_at': row[9]
+                    })
+                
+                return credentials
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo credenciales de {camera_id}: {e}")
+            return []
+    
+    async def get_credential_by_id(self, camera_id: str, credential_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene una credencial específica.
+        
+        Args:
+            camera_id: ID de la cámara
+            credential_id: ID de la credencial
+            
+        Returns:
+            Credencial o None si no existe
+        """
+        if not self._db_connection:
+            return None
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT 
+                        credential_id,
+                        credential_name,
+                        username,
+                        password_encrypted,
+                        auth_type,
+                        is_active,
+                        is_default,
+                        last_used,
+                        created_at,
+                        updated_at
+                    FROM camera_credentials
+                    WHERE camera_id = ? AND credential_id = ?
+                """, (camera_id, credential_id))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'credential_id': row[0],
+                        'credential_name': row[1],
+                        'username': row[2],
+                        'password_encrypted': row[3],
+                        'auth_type': row[4],
+                        'is_active': bool(row[5]),
+                        'is_default': bool(row[6]),
+                        'last_used': row[7],
+                        'created_at': row[8],
+                        'updated_at': row[9]
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo credencial {credential_id}: {e}")
+            return None
+    
+    async def add_camera_credential(self, camera_id: str, credential_data: Dict[str, Any]) -> int:
+        """
+        Agrega una nueva credencial a una cámara.
+        
+        La contraseña se encripta automáticamente antes de almacenar.
+        
+        Args:
+            camera_id: ID de la cámara
+            credential_data: Datos de la credencial con campos:
+                - credential_name: Nombre único de la credencial
+                - username: Nombre de usuario
+                - password: Contraseña sin encriptar
+                - auth_type: Tipo de autenticación (default: 'basic')
+                - is_default: Si es la credencial predeterminada (default: False)
+            
+        Returns:
+            ID de la credencial creada
+            
+        Raises:
+            Exception: Si la base de datos no está inicializada
+            sqlite3.IntegrityError: Si viola restricciones únicas
+            Exception: Error al encriptar o insertar datos
+        """
+        if not self._db_connection:
+            raise Exception("Base de datos no inicializada")
+            
+        credential_id = None
+        try:
+            # Encriptar contraseña
+            password_encrypted = self._encryption_service.encrypt(
+                credential_data['password']
+            )
+            
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                
+                # Verificar si ya existe una credencial con el mismo nombre
+                cursor.execute("""
+                    SELECT COUNT(*) FROM camera_credentials 
+                    WHERE camera_id = ? AND credential_name = ?
+                """, (camera_id, credential_data['credential_name']))
+                
+                if cursor.fetchone()[0] > 0:
+                    raise ValueError(f"Ya existe una credencial con el nombre '{credential_data['credential_name']}'")
+                
+                # Insertar nueva credencial
+                cursor.execute("""
+                    INSERT INTO camera_credentials (
+                        camera_id, credential_name, username, 
+                        password_encrypted, auth_type, is_default
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    camera_id,
+                    credential_data['credential_name'],
+                    credential_data['username'],
+                    password_encrypted,
+                    credential_data.get('auth_type', 'basic'),
+                    credential_data.get('is_default', False)
+                ))
+                
+                credential_id = cursor.lastrowid
+                self._db_connection.commit()
+                
+                self.logger.info(f"Credencial {credential_id} creada para cámara {camera_id}")
+                return credential_id
+                
+        except ValueError:
+            # Re-lanzar errores de validación
+            raise
+        except sqlite3.IntegrityError as e:
+            self.logger.error(f"Error de integridad al agregar credencial: {e}")
+            if self._db_connection:
+                self._db_connection.rollback()
+            raise ValueError("Error de integridad: posible duplicado de credencial")
+        except Exception as e:
+            self.logger.error(f"Error agregando credencial: {e}", exc_info=True)
+            if self._db_connection:
+                self._db_connection.rollback()
+            raise Exception(f"Error al agregar credencial: {str(e)}")
+    
+    async def update_credential(self, camera_id: str, credential_id: int, updates: Dict[str, Any]) -> bool:
+        """
+        Actualiza una credencial existente.
+        
+        Args:
+            camera_id: ID de la cámara
+            credential_id: ID de la credencial
+            updates: Campos a actualizar
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            # Construir query dinámicamente
+            set_clauses = []
+            params = []
+            
+            if 'credential_name' in updates:
+                set_clauses.append("credential_name = ?")
+                params.append(updates['credential_name'])
+            
+            if 'username' in updates:
+                set_clauses.append("username = ?")
+                params.append(updates['username'])
+                
+            if 'password' in updates:
+                set_clauses.append("password_encrypted = ?")
+                params.append(self._encryption_service.encrypt(updates['password']))
+                
+            if 'auth_type' in updates:
+                set_clauses.append("auth_type = ?")
+                params.append(updates['auth_type'])
+                
+            if 'is_default' in updates:
+                set_clauses.append("is_default = ?")
+                params.append(updates['is_default'])
+            
+            if not set_clauses:
+                return True  # Nada que actualizar
+            
+            # Agregar updated_at
+            set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+            
+            # Agregar condiciones WHERE
+            params.extend([camera_id, credential_id])
+            
+            query = f"""
+                UPDATE camera_credentials 
+                SET {', '.join(set_clauses)}
+                WHERE camera_id = ? AND credential_id = ?
+            """
+            
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute(query, params)
+                self._db_connection.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self.logger.error(f"Error actualizando credencial: {e}")
+            return False
+    
+    async def delete_credential(self, camera_id: str, credential_id: int) -> bool:
+        """
+        Elimina una credencial.
+        
+        Args:
+            camera_id: ID de la cámara
+            credential_id: ID de la credencial
+            
+        Returns:
+            True si se eliminó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    DELETE FROM camera_credentials
+                    WHERE camera_id = ? AND credential_id = ?
+                """, (camera_id, credential_id))
+                
+                self._db_connection.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self.logger.error(f"Error eliminando credencial: {e}")
+            return False
+    
+    async def clear_default_credentials(self, camera_id: str) -> bool:
+        """
+        Quita el flag de default de todas las credenciales de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    UPDATE camera_credentials
+                    SET is_default = 0
+                    WHERE camera_id = ?
+                """, (camera_id,))
+                
+                self._db_connection.commit()
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Error limpiando credenciales default: {e}")
+            return False
+    
+    async def set_credential_as_default(self, camera_id: str, credential_id: int) -> bool:
+        """
+        Establece una credencial como predeterminada.
+        
+        Args:
+            camera_id: ID de la cámara
+            credential_id: ID de la credencial
+            
+        Returns:
+            True si se estableció correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                # Primero quitar default de todas
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    UPDATE camera_credentials
+                    SET is_default = 0
+                    WHERE camera_id = ?
+                """, (camera_id,))
+                
+                # Luego establecer la nueva como default
+                cursor.execute("""
+                    UPDATE camera_credentials
+                    SET is_default = 1, updated_at = CURRENT_TIMESTAMP
+                    WHERE camera_id = ? AND credential_id = ?
+                """, (camera_id, credential_id))
+                
+                self._db_connection.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self.logger.error(f"Error estableciendo credencial default: {e}")
+            return False
+    
+    # === Métodos de Gestión de Stream Profiles ===
+    
+    async def get_stream_profiles(self, camera_id: str) -> List[Dict[str, Any]]:
+        """
+        Obtiene todos los perfiles de streaming de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            Lista de perfiles con todos los campos
+        """
+        if not self._db_connection:
+            return []
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT 
+                        profile_id,
+                        profile_name,
+                        profile_token,
+                        stream_type,
+                        encoding,
+                        resolution,
+                        framerate,
+                        bitrate,
+                        quality,
+                        gop_interval,
+                        channel,
+                        subtype,
+                        is_default,
+                        is_active,
+                        endpoint_id,
+                        created_at,
+                        updated_at
+                    FROM camera_stream_profiles
+                    WHERE camera_id = ?
+                    ORDER BY is_default DESC, stream_type, profile_name
+                """, (camera_id,))
+                
+                profiles = []
+                for row in cursor.fetchall():
+                    profiles.append({
+                        'profile_id': row[0],
+                        'profile_name': row[1],
+                        'profile_token': row[2],
+                        'stream_type': row[3],
+                        'encoding': row[4],
+                        'resolution': row[5],
+                        'framerate': row[6],
+                        'bitrate': row[7],
+                        'quality': row[8],
+                        'gop_interval': row[9],
+                        'channel': row[10],
+                        'subtype': row[11],
+                        'is_default': bool(row[12]),
+                        'is_active': bool(row[13]),
+                        'endpoint_id': row[14],
+                        'created_at': row[15],
+                        'updated_at': row[16]
+                    })
+                
+                return profiles
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo perfiles de streaming de {camera_id}: {e}")
+            return []
+    
+    async def get_stream_profile_by_id(self, camera_id: str, profile_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene un perfil de streaming específico.
+        
+        Args:
+            camera_id: ID de la cámara
+            profile_id: ID del perfil
+            
+        Returns:
+            Perfil o None si no existe
+        """
+        if not self._db_connection:
+            return None
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT 
+                        profile_id,
+                        profile_name,
+                        profile_token,
+                        stream_type,
+                        encoding,
+                        resolution,
+                        framerate,
+                        bitrate,
+                        quality,
+                        gop_interval,
+                        channel,
+                        subtype,
+                        is_default,
+                        is_active,
+                        endpoint_id,
+                        created_at,
+                        updated_at
+                    FROM camera_stream_profiles
+                    WHERE camera_id = ? AND profile_id = ?
+                """, (camera_id, profile_id))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'profile_id': row[0],
+                        'profile_name': row[1],
+                        'profile_token': row[2],
+                        'stream_type': row[3],
+                        'encoding': row[4],
+                        'resolution': row[5],
+                        'framerate': row[6],
+                        'bitrate': row[7],
+                        'quality': row[8],
+                        'gop_interval': row[9],
+                        'channel': row[10],
+                        'subtype': row[11],
+                        'is_default': bool(row[12]),
+                        'is_active': bool(row[13]),
+                        'endpoint_id': row[14],
+                        'created_at': row[15],
+                        'updated_at': row[16]
+                    }
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo perfil {profile_id}: {e}")
+            return None
+    
+    async def add_stream_profile(self, camera_id: str, profile_data: Dict[str, Any]) -> int:
+        """
+        Agrega un nuevo perfil de streaming.
+        
+        Maneja automáticamente la asignación de perfil default si es el primero
+        de su tipo o si se especifica explícitamente. Solo puede haber un perfil
+        default por tipo de stream (main, sub, third, mobile).
+        
+        Args:
+            camera_id: ID de la cámara (UUID)
+            profile_data: Datos del perfil con campos:
+                - profile_name (str): Nombre único del perfil
+                - stream_type (str): Tipo de stream (main/sub/third/mobile)
+                - resolution (str): Resolución en formato WIDTHxHEIGHT
+                - framerate (int): FPS del stream
+                - bitrate (int): Bitrate en kbps
+                - encoding (str, opcional): Codec de video, default 'H264'
+                - quality (str, opcional): Nivel de calidad, default 'high'
+                - gop_interval (int, opcional): Intervalo GOP
+                - channel (int, opcional): Canal de la cámara, default 1
+                - subtype (int, opcional): Subtipo del stream, default 0
+                - is_default (bool, opcional): Si debe ser el perfil default
+            
+        Returns:
+            ID del perfil creado
+            
+        Raises:
+            ValueError: Si hay errores de validación o nombre duplicado
+            sqlite3.IntegrityError: Si viola constraints de unicidad en BD
+        """
+        if not self._db_connection:
+            raise ValueError("Sin conexión a base de datos")
+            
+        try:
+            # Verificar si ya existe un perfil con el mismo nombre
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT COUNT(*) FROM camera_stream_profiles
+                    WHERE camera_id = ? AND profile_name = ?
+                """, (camera_id, profile_data['profile_name']))
+                
+                if cursor.fetchone()[0] > 0:
+                    raise ValueError(f"Ya existe un perfil con el nombre '{profile_data['profile_name']}'")
+                
+                # Si es default, quitar default de otros perfiles del mismo tipo
+                if profile_data.get('is_default', False):
+                    cursor.execute("""
+                        UPDATE camera_stream_profiles
+                        SET is_default = 0
+                        WHERE camera_id = ? AND stream_type = ?
+                    """, (camera_id, profile_data['stream_type']))
+                    self.logger.debug(
+                        f"Quitando flag default de perfiles tipo {profile_data['stream_type']} "
+                        f"para cámara {camera_id}"
+                    )
+                
+                # Insertar el nuevo perfil
+                cursor.execute("""
+                    INSERT INTO camera_stream_profiles (
+                        camera_id, profile_name, stream_type, encoding,
+                        resolution, framerate, bitrate, quality,
+                        gop_interval, channel, subtype, is_default
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    camera_id,
+                    profile_data['profile_name'],
+                    profile_data['stream_type'],
+                    profile_data.get('encoding', 'H264'),
+                    profile_data['resolution'],
+                    profile_data['framerate'],
+                    profile_data['bitrate'],
+                    profile_data.get('quality', 'high'),
+                    profile_data.get('gop_interval'),
+                    profile_data.get('channel', 1),
+                    profile_data.get('subtype', 0),
+                    1 if profile_data.get('is_default', False) else 0
+                ))
+                
+                profile_id = cursor.lastrowid
+                self._db_connection.commit()
+                
+                self.logger.info(f"Perfil de streaming {profile_id} creado para cámara {camera_id}")
+                return profile_id
+                
+        except sqlite3.IntegrityError as e:
+            self._db_connection.rollback()
+            self.logger.error(f"Error de integridad al crear perfil: {e}")
+            raise ValueError("Violación de constraint de unicidad")
+        except Exception as e:
+            self._db_connection.rollback()
+            self.logger.error(f"Error creando perfil de streaming: {e}")
+            raise
+    
+    async def update_stream_profile(self, camera_id: str, profile_id: int, updates: Dict[str, Any]) -> bool:
+        """
+        Actualiza un perfil de streaming existente.
+        
+        Args:
+            camera_id: ID de la cámara
+            profile_id: ID del perfil
+            updates: Campos a actualizar
+            
+        Returns:
+            True si se actualizó correctamente
+            
+        Raises:
+            ValueError: Si el perfil no existe o hay errores de validación
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                # Verificar que el perfil existe
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT stream_type FROM camera_stream_profiles
+                    WHERE camera_id = ? AND profile_id = ?
+                """, (camera_id, profile_id))
+                
+                result = cursor.fetchone()
+                if not result:
+                    raise ValueError(f"Perfil {profile_id} no encontrado")
+                
+                stream_type = result[0]
+                
+                # Si cambia el nombre, verificar que no exista
+                if 'profile_name' in updates:
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM camera_stream_profiles
+                        WHERE camera_id = ? AND profile_name = ? AND profile_id != ?
+                    """, (camera_id, updates['profile_name'], profile_id))
+                    
+                    if cursor.fetchone()[0] > 0:
+                        raise ValueError(f"Ya existe otro perfil con el nombre '{updates['profile_name']}'")
+                
+                # Si se marca como default, quitar default de otros
+                if updates.get('is_default', False):
+                    cursor.execute("""
+                        UPDATE camera_stream_profiles
+                        SET is_default = 0
+                        WHERE camera_id = ? AND stream_type = ? AND profile_id != ?
+                    """, (camera_id, stream_type, profile_id))
+                
+                # Construir query de actualización
+                set_clauses = []
+                params = []
+                for field, value in updates.items():
+                    if field in ['profile_name', 'resolution', 'framerate', 'bitrate', 
+                               'encoding', 'quality', 'gop_interval', 'is_default']:
+                        set_clauses.append(f"{field} = ?")
+                        params.append(value)
+                
+                if not set_clauses:
+                    return True  # Nada que actualizar
+                
+                set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+                params.extend([camera_id, profile_id])
+                
+                query = f"""
+                    UPDATE camera_stream_profiles
+                    SET {', '.join(set_clauses)}
+                    WHERE camera_id = ? AND profile_id = ?
+                """
+                
+                cursor.execute(query, params)
+                self._db_connection.commit()
+                
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self._db_connection.rollback()
+            self.logger.error(f"Error actualizando perfil {profile_id}: {e}")
+            raise
+    
+    async def delete_stream_profile(self, camera_id: str, profile_id: int) -> bool:
+        """
+        Elimina un perfil de streaming.
+        
+        Args:
+            camera_id: ID de la cámara
+            profile_id: ID del perfil
+            
+        Returns:
+            True si se eliminó correctamente
+            
+        Raises:
+            ValueError: Si no se puede eliminar (ej: único perfil activo)
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                
+                # Verificar que el perfil existe y obtener info
+                cursor.execute("""
+                    SELECT stream_type, is_default, is_active
+                    FROM camera_stream_profiles
+                    WHERE camera_id = ? AND profile_id = ?
+                """, (camera_id, profile_id))
+                
+                result = cursor.fetchone()
+                if not result:
+                    raise ValueError(f"Perfil {profile_id} no encontrado")
+                
+                stream_type, is_default, is_active = result
+                
+                # Verificar si es el único perfil activo
+                if is_active:
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM camera_stream_profiles
+                        WHERE camera_id = ? AND is_active = 1
+                    """, (camera_id,))
+                    
+                    active_count = cursor.fetchone()[0]
+                    if active_count == 1:
+                        raise ValueError(
+                            "No se puede eliminar el único perfil activo. "
+                            "Desactive el perfil o agregue otro antes de eliminarlo."
+                        )
+                    
+                    self.logger.debug(
+                        f"Verificado: hay {active_count} perfiles activos, se puede eliminar"
+                    )
+                
+                # Eliminar el perfil
+                cursor.execute("""
+                    DELETE FROM camera_stream_profiles
+                    WHERE camera_id = ? AND profile_id = ?
+                """, (camera_id, profile_id))
+                
+                # Si era default, asignar otro como default
+                if is_default:
+                    cursor.execute("""
+                        UPDATE camera_stream_profiles
+                        SET is_default = 1
+                        WHERE camera_id = ? AND stream_type = ? AND is_active = 1
+                        AND profile_id = (
+                            SELECT profile_id FROM camera_stream_profiles
+                            WHERE camera_id = ? AND stream_type = ? AND is_active = 1
+                            ORDER BY created_at ASC
+                            LIMIT 1
+                        )
+                    """, (camera_id, stream_type, camera_id, stream_type))
+                
+                self._db_connection.commit()
+                return True
+                
+        except Exception as e:
+            self._db_connection.rollback()
+            self.logger.error(f"Error eliminando perfil {profile_id}: {e}")
+            raise
+    
+    async def clear_default_profiles(self, camera_id: str, stream_type: str) -> bool:
+        """
+        Quita el flag de default de todos los perfiles de un tipo específico.
+        
+        Args:
+            camera_id: ID de la cámara
+            stream_type: Tipo de stream
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    UPDATE camera_stream_profiles
+                    SET is_default = 0
+                    WHERE camera_id = ? AND stream_type = ?
+                """, (camera_id, stream_type))
+                
+                self._db_connection.commit()
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Error limpiando perfiles default: {e}")
+            return False
+    
+    async def set_stream_profile_as_default(self, camera_id: str, profile_id: int) -> bool:
+        """
+        Establece un perfil como predeterminado.
+        
+        Args:
+            camera_id: ID de la cámara
+            profile_id: ID del perfil
+            
+        Returns:
+            True si se estableció correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                # Obtener el tipo de stream del perfil
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT stream_type, is_active
+                    FROM camera_stream_profiles
+                    WHERE camera_id = ? AND profile_id = ?
+                """, (camera_id, profile_id))
+                
+                result = cursor.fetchone()
+                if not result:
+                    raise ValueError(f"Perfil {profile_id} no encontrado")
+                
+                stream_type, is_active = result
+                
+                if not is_active:
+                    raise ValueError("No se puede establecer como default un perfil inactivo")
+                
+                # Quitar default de todos los perfiles del mismo tipo
+                cursor.execute("""
+                    UPDATE camera_stream_profiles
+                    SET is_default = 0
+                    WHERE camera_id = ? AND stream_type = ?
+                """, (camera_id, stream_type))
+                
+                # Establecer el nuevo como default
+                cursor.execute("""
+                    UPDATE camera_stream_profiles
+                    SET is_default = 1, updated_at = CURRENT_TIMESTAMP
+                    WHERE camera_id = ? AND profile_id = ?
+                """, (camera_id, profile_id))
+                
+                self._db_connection.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self.logger.error(f"Error estableciendo perfil default: {e}")
+            raise
+    
+    # === Métodos de Gestión de Protocolos ===
+    
+    async def get_camera_protocols(self, camera_id: str) -> List[Dict[str, Any]]:
+        """
+        Obtiene todos los protocolos configurados de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            Lista de protocolos con todos los campos
+        """
+        if not self._db_connection:
+            return []
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    SELECT 
+                        p.protocol_id,
+                        p.protocol_type,
+                        p.port,
+                        p.is_enabled,
+                        p.is_primary,
+                        p.is_verified,
+                        p.version,
+                        p.path,
+                        p.last_tested,
+                        p.last_error,
+                        p.response_time_ms,
+                        p.created_at,
+                        p.updated_at
+                    FROM camera_protocols p
+                    WHERE p.camera_id = ?
+                    ORDER BY p.is_primary DESC, p.protocol_type
+                """, (camera_id,))
+                
+                protocols = []
+                for row in cursor.fetchall():
+                    # Obtener capacidades si existen
+                    cursor.execute("""
+                        SELECT capability_name, capability_value
+                        FROM protocol_capabilities
+                        WHERE protocol_id = ?
+                    """, (row[0],))
+                    
+                    capabilities = {}
+                    for cap in cursor.fetchall():
+                        capabilities[cap[0]] = cap[1]
+                    
+                    protocols.append({
+                        'protocol_id': row[0],
+                        'protocol_type': row[1],
+                        'port': row[2],
+                        'is_enabled': bool(row[3]),
+                        'is_primary': bool(row[4]),
+                        'is_verified': bool(row[5]),
+                        'version': row[6],
+                        'path': row[7],
+                        'last_tested': row[8],
+                        'last_error': row[9],
+                        'response_time_ms': row[10],
+                        'created_at': row[11],
+                        'updated_at': row[12],
+                        'status': self._determine_protocol_status(row),
+                        'capabilities': capabilities if capabilities else None
+                    })
+                
+                return protocols
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo protocolos de {camera_id}: {e}")
+            return []
+    
+    def _determine_protocol_status(self, row) -> str:
+        """
+        Determina el estado del protocolo basado en sus campos.
+        
+        Args:
+            row: Tupla con datos del protocolo (is_enabled en pos 3, 
+                 is_verified en pos 5, last_error en pos 9)
+                 
+        Returns:
+            Estado del protocolo: 'disabled', 'active', 'failed' o 'unknown'
+        """
+        is_enabled, is_verified, last_error = row[3], row[5], row[9]
+        
+        if not is_enabled:
+            return 'disabled'
+        elif is_verified and not last_error:
+            return 'active'
+        elif last_error:
+            return 'failed'
+        else:
+            return 'unknown'
+    
+    async def get_protocol_by_type(self, camera_id: str, protocol_type: str) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene un protocolo específico por tipo.
+        
+        Args:
+            camera_id: ID de la cámara
+            protocol_type: Tipo de protocolo
+            
+        Returns:
+            Protocolo o None si no existe
+        """
+        if not self._db_connection:
+            return None
+            
+        try:
+            protocols = await self.get_camera_protocols(camera_id)
+            return next((p for p in protocols if p['protocol_type'] == protocol_type), None)
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo protocolo {protocol_type}: {e}")
+            return None
+    
+    async def add_camera_protocol(self, camera_id: str, protocol_data: Dict[str, Any]) -> int:
+        """
+        Agrega un nuevo protocolo a una cámara.
+        
+        Solo puede existir un protocolo de cada tipo por cámara.
+        Si se marca como primario, automáticamente quita el flag 
+        primario de otros protocolos.
+        
+        Args:
+            camera_id: ID de la cámara (UUID)
+            protocol_data: Datos del protocolo con campos:
+                - protocol_type (str): Tipo de protocolo (onvif, rtsp, etc)
+                - port (int): Puerto del protocolo
+                - is_enabled (bool, opcional): Si está habilitado, default True
+                - is_primary (bool, opcional): Si es primario, default False
+                - is_verified (bool, opcional): Si está verificado, default False
+                - version (str, opcional): Versión del protocolo
+                - path (str, opcional): Path específico
+            
+        Returns:
+            ID del protocolo creado
+            
+        Raises:
+            ValueError: Si ya existe el protocolo o falta conexión BD
+        """
+        if not self._db_connection:
+            raise ValueError("Sin conexión a base de datos")
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                
+                # Verificar que no exista
+                cursor.execute("""
+                    SELECT COUNT(*) FROM camera_protocols
+                    WHERE camera_id = ? AND protocol_type = ?
+                """, (camera_id, protocol_data['protocol_type']))
+                
+                if cursor.fetchone()[0] > 0:
+                    raise ValueError(f"Ya existe el protocolo {protocol_data['protocol_type']}")
+                
+                # Si es primary, quitar primary de otros
+                if protocol_data.get('is_primary', False):
+                    cursor.execute("""
+                        UPDATE camera_protocols
+                        SET is_primary = 0
+                        WHERE camera_id = ?
+                    """, (camera_id,))
+                
+                # Insertar protocolo
+                cursor.execute("""
+                    INSERT INTO camera_protocols (
+                        camera_id, protocol_type, port, is_enabled,
+                        is_primary, is_verified, version, path
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    camera_id,
+                    protocol_data['protocol_type'],
+                    protocol_data['port'],
+                    1 if protocol_data.get('is_enabled', True) else 0,
+                    1 if protocol_data.get('is_primary', False) else 0,
+                    1 if protocol_data.get('is_verified', False) else 0,
+                    protocol_data.get('version'),
+                    protocol_data.get('path')
+                ))
+                
+                protocol_id = cursor.lastrowid
+                self._db_connection.commit()
+                
+                self.logger.info(f"Protocolo {protocol_data['protocol_type']} agregado para {camera_id}")
+                return protocol_id
+                
+        except Exception as e:
+            self._db_connection.rollback()
+            self.logger.error(f"Error agregando protocolo: {e}")
+            raise
+    
+    async def update_protocol_config(self, camera_id: str, protocol_id: int, updates: Dict[str, Any]) -> bool:
+        """
+        Actualiza la configuración de un protocolo.
+        
+        Args:
+            camera_id: ID de la cámara
+            protocol_id: ID del protocolo
+            updates: Campos a actualizar
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                # Si se marca como primary, quitar primary de otros
+                if updates.get('is_primary', False):
+                    cursor = self._db_connection.cursor()
+                    cursor.execute("""
+                        UPDATE camera_protocols
+                        SET is_primary = 0
+                        WHERE camera_id = ? AND protocol_id != ?
+                    """, (camera_id, protocol_id))
+                
+                # Construir query de actualización
+                set_clauses = []
+                params = []
+                for field, value in updates.items():
+                    if field in ['port', 'is_enabled', 'is_primary', 'version', 'path']:
+                        set_clauses.append(f"{field} = ?")
+                        if field.startswith('is_'):
+                            params.append(1 if value else 0)
+                        else:
+                            params.append(value)
+                
+                if not set_clauses:
+                    return True
+                
+                set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+                params.extend([camera_id, protocol_id])
+                
+                query = f"""
+                    UPDATE camera_protocols
+                    SET {', '.join(set_clauses)}
+                    WHERE camera_id = ? AND protocol_id = ?
+                """
+                
+                cursor.execute(query, params)
+                self._db_connection.commit()
+                
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self._db_connection.rollback()
+            self.logger.error(f"Error actualizando protocolo: {e}")
+            return False
+    
+    async def clear_primary_protocols(self, camera_id: str) -> bool:
+        """
+        Quita el flag de primary de todos los protocolos.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    UPDATE camera_protocols
+                    SET is_primary = 0
+                    WHERE camera_id = ?
+                """, (camera_id,))
+                
+                self._db_connection.commit()
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Error limpiando protocolos primary: {e}")
+            return False
+    
+    async def update_protocol_test_result(self, camera_id: str, protocol_id: int,
+                                        success: bool, response_time_ms: int = None,
+                                        version: str = None, error: str = None) -> bool:
+        """
+        Actualiza el resultado de una prueba de protocolo.
+        
+        Args:
+            camera_id: ID de la cámara
+            protocol_id: ID del protocolo
+            success: Si la prueba fue exitosa
+            response_time_ms: Tiempo de respuesta
+            version: Versión detectada
+            error: Mensaje de error si falló
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    UPDATE camera_protocols
+                    SET last_tested = CURRENT_TIMESTAMP,
+                        is_verified = ?,
+                        response_time_ms = ?,
+                        version = ?,
+                        last_error = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE camera_id = ? AND protocol_id = ?
+                """, (
+                    1 if success else 0,
+                    response_time_ms,
+                    version,
+                    error,
+                    camera_id,
+                    protocol_id
+                ))
+                
+                self._db_connection.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self.logger.error(f"Error actualizando resultado de test: {e}")
+            return False
+    
+    async def update_camera_discovery_status(self, camera_id: str, status: str, message: str) -> bool:
+        """
+        Actualiza el estado del discovery de protocolos.
+        
+        Args:
+            camera_id: ID de la cámara
+            status: Estado del discovery (discovering, completed, failed)
+            message: Mensaje descriptivo
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        if not self._db_connection:
+            return False
+            
+        try:
+            with self._db_lock:
+                cursor = self._db_connection.cursor()
+                cursor.execute("""
+                    UPDATE cameras
+                    SET discovery_status = ?,
+                        discovery_message = ?,
+                        discovery_timestamp = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE camera_id = ?
+                """, (status, message, camera_id))
+                
+                self._db_connection.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            self.logger.error(f"Error actualizando estado de discovery: {e}")
+            return False
+    
+    # === Métodos de Solo Lectura (Fase 4) ===
+    
+    async def get_camera_capabilities_detail(self, camera_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene las capacidades detalladas de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            Dict con capacidades o None si no existen
+        """
+        query = """
+            SELECT 
+                c.camera_id,
+                cap.last_discovered,
+                cap.discovery_method,
+                cap.capabilities_json
+            FROM cameras c
+            LEFT JOIN camera_capabilities cap ON c.id = cap.camera_id
+            WHERE c.camera_id = ?
+        """
+        
+        result = await self.execute_query(query, (camera_id,), fetch_one=True)
+        
+        if not result or not result['capabilities_json']:
+            return None
+        
+        import json
+        capabilities = json.loads(result['capabilities_json'])
+        
+        # Estructurar por categorías
+        return {
+            'camera_id': camera_id,
+            'last_updated': result['last_discovered'],
+            'discovery_method': result['discovery_method'] or 'manual',
+            'categories': self._categorize_capabilities(capabilities),
+            'raw_capabilities': capabilities
+        }
+    
+    def _categorize_capabilities(self, capabilities: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+        """Categoriza las capacidades en grupos."""
+        categories = {
+            'video': [],
+            'audio': [],
+            'ptz': [],
+            'analytics': [],
+            'events': [],
+            'network': [],
+            'storage': []
+        }
+        
+        # Mapear capacidades a categorías (ejemplo básico)
+        if capabilities.get('has_video'):
+            categories['video'].append({
+                'name': 'video_streaming',
+                'supported': True,
+                'details': capabilities.get('video_details')
+            })
+        
+        if capabilities.get('has_audio'):
+            categories['audio'].append({
+                'name': 'audio_streaming',
+                'supported': True,
+                'details': capabilities.get('audio_details')
+            })
+        
+        if capabilities.get('has_ptz'):
+            categories['ptz'].append({
+                'name': 'pan_tilt_zoom',
+                'supported': True,
+                'details': capabilities.get('ptz_details')
+            })
+        
+        return categories
+    
+    async def get_camera_events(
+        self,
+        camera_id: str,
+        event_type: Optional[str] = None,
+        severity: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        page: int = 1,
+        page_size: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Obtiene eventos paginados de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            event_type: Tipo de evento
+            severity: Severidad
+            start_date: Fecha inicial
+            end_date: Fecha final
+            page: Página
+            page_size: Tamaño de página
+            
+        Returns:
+            Dict con eventos paginados
+        """
+        # Construir query base
+        query_count = """
+            SELECT COUNT(*) as total
+            FROM camera_events ce
+            JOIN cameras c ON ce.camera_id = c.id
+            WHERE c.camera_id = ?
+        """
+        
+        query = """
+            SELECT 
+                ce.id as event_id,
+                ce.event_type,
+                ce.severity,
+                ce.timestamp,
+                ce.message,
+                ce.details_json,
+                ce.user,
+                ce.ip_address
+            FROM camera_events ce
+            JOIN cameras c ON ce.camera_id = c.id
+            WHERE c.camera_id = ?
+        """
+        
+        params = [camera_id]
+        
+        # Aplicar filtros
+        if event_type:
+            query_count += " AND ce.event_type = ?"
+            query += " AND ce.event_type = ?"
+            params.append(event_type)
+        
+        if severity:
+            query_count += " AND ce.severity = ?"
+            query += " AND ce.severity = ?"
+            params.append(severity)
+        
+        if start_date:
+            query_count += " AND ce.timestamp >= ?"
+            query += " AND ce.timestamp >= ?"
+            params.append(start_date)
+        
+        if end_date:
+            query_count += " AND ce.timestamp <= ?"
+            query += " AND ce.timestamp <= ?"
+            params.append(end_date)
+        
+        # Obtener total
+        count_result = await self.execute_query(query_count, params, fetch_one=True)
+        total = count_result['total'] if count_result else 0
+        
+        # Aplicar paginación
+        offset = (page - 1) * page_size
+        query += " ORDER BY ce.timestamp DESC LIMIT ? OFFSET ?"
+        params.extend([page_size, offset])
+        
+        # Obtener eventos
+        results = await self.execute_query(query, params, fetch_all=True)
+        
+        events = []
+        for row in results:
+            event = {
+                'event_id': row['event_id'],
+                'event_type': row['event_type'],
+                'severity': row['severity'],
+                'timestamp': row['timestamp'],
+                'message': row['message'],
+                'user': row['user'],
+                'ip_address': row['ip_address']
+            }
+            
+            if row['details_json']:
+                import json
+                event['details'] = json.loads(row['details_json'])
+            else:
+                event['details'] = None
+            
+            events.append(event)
+        
+        return {
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'events': events
+        }
+    
+    async def get_camera_logs(
+        self,
+        camera_id: str,
+        level: Optional[str] = None,
+        component: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        page: int = 1,
+        page_size: int = 100
+    ) -> Dict[str, Any]:
+        """
+        Obtiene logs paginados de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            level: Nivel de log
+            component: Componente
+            start_date: Fecha inicial
+            end_date: Fecha final
+            page: Página
+            page_size: Tamaño de página
+            
+        Returns:
+            Dict con logs paginados
+        """
+        # Construir query base
+        query_count = """
+            SELECT COUNT(*) as total
+            FROM camera_logs cl
+            JOIN cameras c ON cl.camera_id = c.id
+            WHERE c.camera_id = ?
+        """
+        
+        query = """
+            SELECT 
+                cl.id as log_id,
+                cl.timestamp,
+                cl.level,
+                cl.component,
+                cl.message,
+                cl.context_json,
+                cl.duration_ms
+            FROM camera_logs cl
+            JOIN cameras c ON cl.camera_id = c.id
+            WHERE c.camera_id = ?
+        """
+        
+        params = [camera_id]
+        
+        # Aplicar filtros
+        if level:
+            query_count += " AND cl.level = ?"
+            query += " AND cl.level = ?"
+            params.append(level)
+        
+        if component:
+            query_count += " AND cl.component = ?"
+            query += " AND cl.component = ?"
+            params.append(component)
+        
+        if start_date:
+            query_count += " AND cl.timestamp >= ?"
+            query += " AND cl.timestamp >= ?"
+            params.append(start_date)
+        
+        if end_date:
+            query_count += " AND cl.timestamp <= ?"
+            query += " AND cl.timestamp <= ?"
+            params.append(end_date)
+        
+        # Obtener total
+        count_result = await self.execute_query(query_count, params, fetch_one=True)
+        total = count_result['total'] if count_result else 0
+        
+        # Aplicar paginación
+        offset = (page - 1) * page_size
+        query += " ORDER BY cl.timestamp DESC LIMIT ? OFFSET ?"
+        params.extend([page_size, offset])
+        
+        # Obtener logs
+        results = await self.execute_query(query, params, fetch_all=True)
+        
+        logs = []
+        for row in results:
+            log_entry = {
+                'log_id': row['log_id'],
+                'timestamp': row['timestamp'],
+                'level': row['level'],
+                'component': row['component'],
+                'message': row['message'],
+                'duration_ms': row['duration_ms']
+            }
+            
+            if row['context_json']:
+                import json
+                log_entry['context'] = json.loads(row['context_json'])
+            else:
+                log_entry['context'] = None
+            
+            logs.append(log_entry)
+        
+        return {
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'logs': logs
+        }
+    
+    async def get_camera_snapshots(
+        self,
+        camera_id: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        trigger: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Dict[str, Any]:
+        """
+        Obtiene snapshots paginados de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            start_date: Fecha inicial
+            end_date: Fecha final
+            trigger: Tipo de trigger
+            page: Página
+            page_size: Tamaño de página
+            
+        Returns:
+            Dict con snapshots paginados
+        """
+        # Construir query base
+        query_count = """
+            SELECT COUNT(*) as total
+            FROM camera_snapshots cs
+            JOIN cameras c ON cs.camera_id = c.id
+            WHERE c.camera_id = ?
+        """
+        
+        query = """
+            SELECT 
+                cs.id as snapshot_id,
+                cs.filename,
+                cs.timestamp,
+                cs.file_size,
+                cs.width,
+                cs.height,
+                cs.format,
+                cs.stream_profile,
+                cs.trigger_type as trigger,
+                cs.storage_path,
+                cs.thumbnail_path
+            FROM camera_snapshots cs
+            JOIN cameras c ON cs.camera_id = c.id
+            WHERE c.camera_id = ?
+        """
+        
+        params = [camera_id]
+        
+        # Aplicar filtros
+        if trigger:
+            query_count += " AND cs.trigger_type = ?"
+            query += " AND cs.trigger_type = ?"
+            params.append(trigger)
+        
+        if start_date:
+            query_count += " AND cs.timestamp >= ?"
+            query += " AND cs.timestamp >= ?"
+            params.append(start_date)
+        
+        if end_date:
+            query_count += " AND cs.timestamp <= ?"
+            query += " AND cs.timestamp <= ?"
+            params.append(end_date)
+        
+        # Obtener total
+        count_result = await self.execute_query(query_count, params, fetch_one=True)
+        total = count_result['total'] if count_result else 0
+        
+        # Aplicar paginación
+        offset = (page - 1) * page_size
+        query += " ORDER BY cs.timestamp DESC LIMIT ? OFFSET ?"
+        params.extend([page_size, offset])
+        
+        # Obtener snapshots
+        results = await self.execute_query(query, params, fetch_all=True)
+        
+        snapshots = []
+        for row in results:
+            snapshot = {
+                'snapshot_id': row['snapshot_id'],
+                'filename': row['filename'],
+                'timestamp': row['timestamp'],
+                'file_size': row['file_size'],
+                'width': row['width'],
+                'height': row['height'],
+                'format': row['format'],
+                'stream_profile': row['stream_profile'],
+                'trigger': row['trigger'],
+                'storage_path': row['storage_path'],
+                'thumbnail_path': row['thumbnail_path']
+            }
+            snapshots.append(snapshot)
+        
+        return {
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'snapshots': snapshots
+        }
+    
     async def _close_database(self) -> None:
         """Cierra la conexión a la base de datos."""
         if self._db_connection:

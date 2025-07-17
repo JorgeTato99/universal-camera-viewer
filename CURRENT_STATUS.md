@@ -1,4 +1,4 @@
-# 📊 Estado Actual del Proyecto - v0.9.3 (16 Julio 2025)
+# 📊 Estado Actual del Proyecto - v0.9.8 (17 Julio 2025)
 
 > **Documento técnico consolidado** - Sistema con streaming funcional y base de datos profesional 3FN.
 
@@ -6,7 +6,7 @@
 ![Backend](https://img.shields.io/badge/Backend%20FastAPI-100%25%20Completo-brightgreen)
 ![Frontend](https://img.shields.io/badge/Frontend%20React-100%25%20Streaming-brightgreen)
 ![Database](https://img.shields.io/badge/Database-3FN%20Normalizada-brightgreen)
-![Versión](https://img.shields.io/badge/Versión-0.9.3-blue)
+![Versión](https://img.shields.io/badge/Versión-0.9.8-blue)
 
 ---
 
@@ -320,5 +320,5 @@ yarn tauri-build    # Generar instalador .exe/.msi
 ---
 
 > **El Universal Camera Viewer tiene ahora un ciclo completo funcional de streaming en tiempo real.**  
-> **Versión: 0.9.6 - Con base de datos normalizada y encriptación segura**  
-> **Última actualización: 16 de Julio 2025**
+> **Versión: 0.9.8 - Con reorganización de streaming y optimizaciones de UI**  
+> **Última actualización: 17 de Julio 2025**

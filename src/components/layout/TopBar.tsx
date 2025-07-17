@@ -29,6 +29,7 @@ import { ThemeToggle } from "../ui/ThemeToggle";
 import { colorTokens } from "../../design-system/tokens";
 import { AboutDialog } from "../dialogs";
 import { QuickSettingsMenu } from "../menus";
+import { APP_CONFIG } from "../../config/appConfig";
 
 interface TopBarProps {
   onMenuToggle?: () => void;
@@ -204,7 +205,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           {/* Logo y título */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Tooltip title="Universal Camera Viewer" arrow placement="bottom">
+            <Tooltip title={APP_CONFIG.app.name} arrow placement="bottom">
               <Box
                 sx={{
                   width: 16,
@@ -225,7 +226,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   },
                 }}
               >
-                U
+                {APP_CONFIG.app.shortName.charAt(0)}
               </Box>
             </Tooltip>
             <Typography
@@ -237,7 +238,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 userSelect: "none",
               }}
             >
-              Universal Camera Viewer
+              {APP_CONFIG.app.name}
             </Typography>
           </Box>
         </Box>

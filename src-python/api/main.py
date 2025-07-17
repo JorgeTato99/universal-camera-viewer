@@ -20,6 +20,7 @@ from api.dependencies import cleanup_services, create_response
 # Importar routers
 from routers import cameras, scanner, config, streaming
 from routers.cameras_v2 import router as cameras_v2_router
+from routers.stream_profiles import router as stream_profiles_router
 from services.camera_manager_service import camera_manager_service
 
 # Configurar logging
@@ -245,6 +246,7 @@ app.include_router(config.router, prefix=settings.api_prefix)
 
 # API v2 routers
 app.include_router(cameras_v2_router, prefix="/api/v2")
+app.include_router(stream_profiles_router, prefix="/api/v2")
 
 # WebSocket routers (sin prefijo API)
 app.include_router(streaming.router, prefix="/ws")

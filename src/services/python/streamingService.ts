@@ -34,28 +34,28 @@ export type StatusEventCallback = (status: string, data?: any) => void;
 export type ErrorEventCallback = (error: string) => void;
 
 export class StreamingService {
-  private ws: WebSocket | null = null;
-  private reconnectTimeout: NodeJS.Timeout | null = null;
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  // Múltiples conexiones WebSocket - una por cámara
+  private connections: Map<string, {
+    ws: WebSocket;
+    heartbeatInterval: NodeJS.Timeout | null;
+    reconnectTimeout: NodeJS.Timeout | null;
+    isConnecting: boolean;
+    shouldReconnect: boolean;
+    frameCount: number;
+    lastFrameTime: number;
+    connectionStartTime: number;
+    recentFrameTimes: number[];
+  }> = new Map();
   
-  private cameraId: string = '';
   private wsUrl: string = 'ws://localhost:8000/ws';
-  private isConnecting: boolean = false;
-  private shouldReconnect: boolean = true;
   private reconnectDelay: number = 3000;
   
-  // Callbacks
-  private onFrameCallbacks: Set<StreamEventCallback> = new Set();
-  private onStatusCallbacks: Set<StatusEventCallback> = new Set();
-  private onErrorCallbacks: Set<ErrorEventCallback> = new Set();
-  
-  // Métricas
-  private frameCount: number = 0;
-  private lastFrameTime: number = 0;
-  private connectionStartTime: number = 0;
+  // Callbacks por cámara
+  private onFrameCallbacks: Map<string, Set<StreamEventCallback>> = new Map();
+  private onStatusCallbacks: Map<string, Set<StatusEventCallback>> = new Map();
+  private onErrorCallbacks: Map<string, Set<ErrorEventCallback>> = new Map();
   
   // Para cálculo de FPS más preciso (ventana deslizante)
-  private recentFrameTimes: number[] = [];
   private fpsWindowSize: number = 30; // Calcular FPS sobre los últimos 30 frames
 
   constructor(wsUrl?: string) {
@@ -68,21 +68,32 @@ export class StreamingService {
    * Conectar al WebSocket de streaming
    */
   async connect(cameraId: string): Promise<void> {
-    // Si ya estamos conectados al mismo cameraId, no hacer nada
-    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.cameraId === cameraId) {
-      console.log('Ya conectado a esta cámara');
-      return Promise.resolve();
+    // Si ya hay una conexión activa para esta cámara, desconectar primero
+    const existing = this.connections.get(cameraId);
+    if (existing) {
+      if (existing.ws.readyState === WebSocket.OPEN) {
+        console.log(`Conexión existente encontrada para cámara ${cameraId}, reconectando...`);
+        // Desconectar la conexión existente
+        this.disconnect(cameraId);
+        // Esperar un poco antes de reconectar
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } else if (existing.ws.readyState === WebSocket.CONNECTING) {
+        // Si está conectando, cerrar y reintentar
+        existing.ws.close();
+        this.connections.delete(cameraId);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
     
-    // Si estamos conectando, esperar
-    if (this.isConnecting) {
-      console.log('Conexión en proceso, esperando...');
-      // Esperar hasta que termine la conexión actual
+    // Si hay una conexión en proceso, esperar
+    if (existing && existing.isConnecting) {
+      console.log(`Conexión en proceso para cámara ${cameraId}, esperando...`);
       return new Promise((resolve, reject) => {
         const checkInterval = setInterval(() => {
-          if (!this.isConnecting) {
+          const conn = this.connections.get(cameraId);
+          if (!conn || !conn.isConnecting) {
             clearInterval(checkInterval);
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            if (conn && conn.ws.readyState === WebSocket.OPEN) {
               resolve();
             } else {
               reject(new Error('Conexión falló'));
@@ -98,98 +109,121 @@ export class StreamingService {
       });
     }
     
-    // Si hay una conexión existente a otra cámara, desconectar primero
-    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.cameraId !== cameraId) {
-      console.log('Desconectando de cámara anterior');
-      this.disconnect();
-    }
-
-    this.cameraId = cameraId;
-    this.isConnecting = true;
-    this.shouldReconnect = true;
-    this.frameCount = 0;
-    this.recentFrameTimes = []; // Limpiar historial de frames
+    // Crear nueva conexión para esta cámara
+    const connection = {
+      ws: null as any,
+      heartbeatInterval: null,
+      reconnectTimeout: null,
+      isConnecting: true,
+      shouldReconnect: true,
+      frameCount: 0,
+      lastFrameTime: 0,
+      connectionStartTime: 0,
+      recentFrameTimes: [] as number[]
+    };
+    
+    this.connections.set(cameraId, connection);
 
     return new Promise((resolve, reject) => {
       try {
         const url = `${this.wsUrl}/stream/${cameraId}`;
-        console.log(`Conectando a WebSocket: ${url}`);
+        console.log(`Conectando a WebSocket para cámara ${cameraId}: ${url}`);
         
-        this.ws = new WebSocket(url);
+        const ws = new WebSocket(url);
+        connection.ws = ws;
         
-        this.ws.onopen = () => {
-          console.log('WebSocket conectado');
-          this.isConnecting = false;
-          this.connectionStartTime = Date.now();
-          this.startHeartbeat();
-          this.emitStatus('connected');
+        ws.onopen = () => {
+          console.log(`WebSocket conectado para cámara ${cameraId}`);
+          connection.isConnecting = false;
+          connection.connectionStartTime = Date.now();
+          this.startHeartbeat(cameraId);
+          this.emitStatus(cameraId, 'connected');
           resolve();
         };
         
-        this.ws.onmessage = (event) => {
-          this.handleMessage(event);
+        ws.onmessage = (event) => {
+          this.handleMessage(cameraId, event);
         };
         
-        this.ws.onerror = (error) => {
-          console.error('Error en WebSocket:', error);
-          this.isConnecting = false;
-          this.emitError('Error de conexión WebSocket');
+        ws.onerror = (error) => {
+          console.error(`Error en WebSocket para cámara ${cameraId}:`, error);
+          connection.isConnecting = false;
+          this.emitError(cameraId, 'Error de conexión WebSocket');
           reject(new Error('Error de conexión WebSocket'));
         };
         
-        this.ws.onclose = (event) => {
-          console.log('WebSocket cerrado:', event.code, event.reason);
-          this.isConnecting = false;
-          this.stopHeartbeat();
-          this.emitStatus('disconnected');
+        ws.onclose = (event) => {
+          console.log(`WebSocket cerrado para cámara ${cameraId}:`, event.code, event.reason);
+          connection.isConnecting = false;
+          this.stopHeartbeat(cameraId);
+          this.emitStatus(cameraId, 'disconnected');
           
           // Reconectar si no fue cierre intencional
-          if (this.shouldReconnect && event.code !== 1000) {
-            console.log('Conexión perdida, intentando reconectar...');
-            this.scheduleReconnect();
+          if (connection.shouldReconnect && event.code !== 1000) {
+            console.log(`Conexión perdida para cámara ${cameraId}, intentando reconectar...`);
+            this.scheduleReconnect(cameraId);
           } else if (event.code === 1000) {
-            console.log('Desconexión intencional, no se reconectará');
+            console.log(`Desconexión intencional para cámara ${cameraId}, no se reconectará`);
           } else {
-            console.warn('WebSocket cerrado inesperadamente:', event.code, event.reason);
+            console.warn(`WebSocket cerrado inesperadamente para cámara ${cameraId}:`, event.code, event.reason);
           }
         };
         
       } catch (error) {
-        this.isConnecting = false;
+        connection.isConnecting = false;
         reject(error);
       }
     });
   }
 
   /**
-   * Desconectar del WebSocket
+   * Desconectar de una cámara específica
    */
-  disconnect(): void {
-    this.shouldReconnect = false;
-    
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
+  disconnect(cameraId: string): void {
+    const connection = this.connections.get(cameraId);
+    if (!connection) {
+      return;
     }
     
-    this.stopHeartbeat();
+    connection.shouldReconnect = false;
     
-    if (this.ws) {
-      if (this.ws.readyState === WebSocket.OPEN) {
-        this.ws.close(1000, 'Desconexión solicitada');
+    if (connection.reconnectTimeout) {
+      clearTimeout(connection.reconnectTimeout);
+      connection.reconnectTimeout = null;
+    }
+    
+    this.stopHeartbeat(cameraId);
+    
+    if (connection.ws) {
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.close(1000, 'Desconexión solicitada');
       }
-      this.ws = null;
     }
     
-    this.emitStatus('disconnected');
+    this.emitStatus(cameraId, 'disconnected');
+    
+    // Limpiar conexión y callbacks
+    this.connections.delete(cameraId);
+    this.onFrameCallbacks.delete(cameraId);
+    this.onStatusCallbacks.delete(cameraId);
+    this.onErrorCallbacks.delete(cameraId);
+  }
+  
+  /**
+   * Desconectar todas las cámaras
+   */
+  disconnectAll(): void {
+    const cameraIds = Array.from(this.connections.keys());
+    cameraIds.forEach(cameraId => this.disconnect(cameraId));
   }
 
   /**
-   * Iniciar streaming
+   * Iniciar streaming para una cámara específica
    */
-  async startStream(config?: Partial<StreamConfig>): Promise<void> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket no conectado');
+  async startStream(cameraId: string, config?: Partial<StreamConfig>): Promise<void> {
+    const connection = this.connections.get(cameraId);
+    if (!connection || connection.ws.readyState !== WebSocket.OPEN) {
+      throw new Error(`WebSocket no conectado para cámara ${cameraId}`);
     }
 
     const defaultConfig: StreamConfig = {
@@ -200,267 +234,338 @@ export class StreamingService {
 
     const finalConfig = { ...defaultConfig, ...config };
 
-    this.send({
+    this.send(cameraId, {
       action: 'start_stream',
       params: finalConfig
     });
   }
 
   /**
-   * Detener streaming
+   * Detener streaming para una cámara específica
    */
-  async stopStream(): Promise<void> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket no conectado');
+  async stopStream(cameraId: string): Promise<void> {
+    const connection = this.connections.get(cameraId);
+    if (!connection || connection.ws.readyState !== WebSocket.OPEN) {
+      throw new Error(`WebSocket no conectado para cámara ${cameraId}`);
     }
 
-    this.send({
+    this.send(cameraId, {
       action: 'stop_stream'
     });
   }
 
   /**
-   * Actualizar calidad del stream
+   * Actualizar calidad del stream para una cámara específica
    */
-  async updateQuality(quality: StreamQuality): Promise<void> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket no conectado');
+  async updateQuality(cameraId: string, quality: StreamQuality): Promise<void> {
+    const connection = this.connections.get(cameraId);
+    if (!connection || connection.ws.readyState !== WebSocket.OPEN) {
+      throw new Error(`WebSocket no conectado para cámara ${cameraId}`);
     }
 
-    this.send({
+    this.send(cameraId, {
       action: 'update_quality',
       params: { quality }
     });
   }
 
   /**
-   * Actualizar FPS del stream
+   * Actualizar FPS del stream para una cámara específica
    */
-  async updateFPS(fps: number): Promise<void> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket no conectado');
+  async updateFPS(cameraId: string, fps: number): Promise<void> {
+    const connection = this.connections.get(cameraId);
+    if (!connection || connection.ws.readyState !== WebSocket.OPEN) {
+      throw new Error(`WebSocket no conectado para cámara ${cameraId}`);
     }
 
     if (fps < 1 || fps > 60) {
       throw new Error('FPS debe estar entre 1 y 60');
     }
 
-    this.send({
+    this.send(cameraId, {
       action: 'update_fps',
       params: { fps }
     });
   }
 
   /**
-   * Enviar mensaje al WebSocket
+   * Enviar mensaje al WebSocket de una cámara específica
    */
-  private send(data: any): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+  private send(cameraId: string, data: any): void {
+    const connection = this.connections.get(cameraId);
+    if (connection && connection.ws && connection.ws.readyState === WebSocket.OPEN) {
       const message = JSON.stringify(data);
-      console.log('Enviando mensaje WebSocket:', message);
-      this.ws.send(message);
+      console.log(`Enviando mensaje WebSocket para cámara ${cameraId}:`, message);
+      connection.ws.send(message);
     }
   }
 
   /**
-   * Manejar mensajes recibidos
+   * Manejar mensajes recibidos de una cámara específica
    */
-  private handleMessage(event: MessageEvent): void {
+  private handleMessage(cameraId: string, event: MessageEvent): void {
     try {
       const message: StreamMessage = JSON.parse(event.data);
       
       switch (message.type) {
         case 'frame':
-          this.handleFrame(message as FrameData);
+          this.handleFrame(cameraId, message as FrameData);
           break;
           
         case 'status':
-          this.emitStatus(message.status || 'unknown', message);
+          this.emitStatus(cameraId, message.status || 'unknown', message);
           break;
           
         case 'error':
-          this.emitError(message.error || 'Error desconocido');
+          this.emitError(cameraId, message.error || 'Error desconocido');
           break;
           
         case 'connection':
-          console.log('Mensaje de conexión:', message);
+          console.log(`Mensaje de conexión para cámara ${cameraId}:`, message);
+          break;
+          
+        case 'room_joined':
+          console.log(`Cliente unido a sala de cámara ${cameraId}`);
+          this.emitStatus(cameraId, 'room_joined', message);
           break;
           
         default:
-          console.warn('Tipo de mensaje desconocido:', message.type);
+          console.warn(`Tipo de mensaje desconocido para cámara ${cameraId}:`, message.type);
       }
     } catch (error) {
-      console.error('Error procesando mensaje:', error);
+      console.error(`Error procesando mensaje para cámara ${cameraId}:`, error);
     }
   }
 
   /**
-   * Manejar frame recibido
+   * Manejar frame recibido de una cámara específica
    */
-  private handleFrame(frameData: FrameData): void {
-    this.frameCount++;
+  private handleFrame(cameraId: string, frameData: FrameData): void {
+    const connection = this.connections.get(cameraId);
+    if (!connection) return;
+    
+    connection.frameCount++;
     const now = Date.now();
-    this.lastFrameTime = now;
+    connection.lastFrameTime = now;
     
     // Agregar tiempo del frame actual a la ventana deslizante
-    this.recentFrameTimes.push(now);
+    connection.recentFrameTimes.push(now);
     
     // Mantener solo los últimos N frames
-    if (this.recentFrameTimes.length > this.fpsWindowSize) {
-      this.recentFrameTimes.shift();
+    if (connection.recentFrameTimes.length > this.fpsWindowSize) {
+      connection.recentFrameTimes.shift();
     }
     
-    // Emitir a todos los callbacks registrados
-    this.onFrameCallbacks.forEach(callback => {
-      try {
-        callback(frameData);
-      } catch (error) {
-        console.error('Error en callback de frame:', error);
-      }
-    });
+    // Emitir a todos los callbacks registrados para esta cámara
+    const callbacks = this.onFrameCallbacks.get(cameraId);
+    if (callbacks) {
+      callbacks.forEach(callback => {
+        try {
+          callback(frameData);
+        } catch (error) {
+          console.error(`Error en callback de frame para cámara ${cameraId}:`, error);
+        }
+      });
+    }
   }
 
   /**
-   * Programar reconexión
+   * Programar reconexión para una cámara específica
    */
-  private scheduleReconnect(): void {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
+  private scheduleReconnect(cameraId: string): void {
+    const connection = this.connections.get(cameraId);
+    if (!connection) return;
+    
+    if (connection.reconnectTimeout) {
+      clearTimeout(connection.reconnectTimeout);
     }
     
-    console.log(`Reconectando en ${this.reconnectDelay}ms...`);
-    this.emitStatus('reconnecting');
+    console.log(`Reconectando cámara ${cameraId} en ${this.reconnectDelay}ms...`);
+    this.emitStatus(cameraId, 'reconnecting');
     
-    this.reconnectTimeout = setTimeout(() => {
-      if (this.shouldReconnect) {
-        this.connect(this.cameraId).catch(error => {
-          console.error('Error al reconectar:', error);
+    connection.reconnectTimeout = setTimeout(() => {
+      if (connection.shouldReconnect) {
+        this.connect(cameraId).catch(error => {
+          console.error(`Error al reconectar cámara ${cameraId}:`, error);
         });
       }
     }, this.reconnectDelay);
   }
 
   /**
-   * Iniciar heartbeat
+   * Iniciar heartbeat para una cámara específica
    */
-  private startHeartbeat(): void {
-    this.stopHeartbeat();
+  private startHeartbeat(cameraId: string): void {
+    const connection = this.connections.get(cameraId);
+    if (!connection) return;
+    
+    this.stopHeartbeat(cameraId);
     
     // Ping cada 30 segundos para mantener la conexión viva
-    this.heartbeatInterval = setInterval(() => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.send({ type: 'ping' });
-        console.log('[Heartbeat] Ping enviado');
+    connection.heartbeatInterval = setInterval(() => {
+      if (connection.ws && connection.ws.readyState === WebSocket.OPEN) {
+        this.send(cameraId, { type: 'ping' });
+        console.log(`[Heartbeat] Ping enviado para cámara ${cameraId}`);
       } else {
-        console.warn('[Heartbeat] WebSocket no está abierto, deteniendo heartbeat');
-        this.stopHeartbeat();
+        console.warn(`[Heartbeat] WebSocket no está abierto para cámara ${cameraId}, deteniendo heartbeat`);
+        this.stopHeartbeat(cameraId);
       }
     }, 30000); // 30 segundos
   }
 
   /**
-   * Detener heartbeat
+   * Detener heartbeat para una cámara específica
    */
-  private stopHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
+  private stopHeartbeat(cameraId: string): void {
+    const connection = this.connections.get(cameraId);
+    if (connection && connection.heartbeatInterval) {
+      clearInterval(connection.heartbeatInterval);
+      connection.heartbeatInterval = null;
     }
   }
 
   /**
-   * Emitir estado
+   * Emitir estado para una cámara específica
    */
-  private emitStatus(status: string, data?: any): void {
-    this.onStatusCallbacks.forEach(callback => {
-      try {
-        callback(status, data);
-      } catch (error) {
-        console.error('Error en callback de estado:', error);
-      }
-    });
+  private emitStatus(cameraId: string, status: string, data?: any): void {
+    const callbacks = this.onStatusCallbacks.get(cameraId);
+    if (callbacks) {
+      callbacks.forEach(callback => {
+        try {
+          callback(status, data);
+        } catch (error) {
+          console.error(`Error en callback de estado para cámara ${cameraId}:`, error);
+        }
+      });
+    }
   }
 
   /**
-   * Emitir error
+   * Emitir error para una cámara específica
    */
-  private emitError(error: string): void {
-    this.onErrorCallbacks.forEach(callback => {
-      try {
-        callback(error);
-      } catch (error) {
-        console.error('Error en callback de error:', error);
-      }
-    });
+  private emitError(cameraId: string, error: string): void {
+    const callbacks = this.onErrorCallbacks.get(cameraId);
+    if (callbacks) {
+      callbacks.forEach(callback => {
+        try {
+          callback(error);
+        } catch (error) {
+          console.error(`Error en callback de error para cámara ${cameraId}:`, error);
+        }
+      });
+    }
   }
 
   /**
-   * Registrar callback para frames
+   * Registrar callback para frames de una cámara específica
    */
-  onFrame(callback: StreamEventCallback): () => void {
-    this.onFrameCallbacks.add(callback);
+  onFrame(cameraId: string, callback: StreamEventCallback): () => void {
+    if (!this.onFrameCallbacks.has(cameraId)) {
+      this.onFrameCallbacks.set(cameraId, new Set());
+    }
+    
+    const callbacks = this.onFrameCallbacks.get(cameraId)!;
+    callbacks.add(callback);
     
     // Retornar función para desregistrar
     return () => {
-      this.onFrameCallbacks.delete(callback);
+      callbacks.delete(callback);
+      if (callbacks.size === 0) {
+        this.onFrameCallbacks.delete(cameraId);
+      }
     };
   }
 
   /**
-   * Registrar callback para estados
+   * Registrar callback para estados de una cámara específica
    */
-  onStatus(callback: StatusEventCallback): () => void {
-    this.onStatusCallbacks.add(callback);
+  onStatus(cameraId: string, callback: StatusEventCallback): () => void {
+    if (!this.onStatusCallbacks.has(cameraId)) {
+      this.onStatusCallbacks.set(cameraId, new Set());
+    }
+    
+    const callbacks = this.onStatusCallbacks.get(cameraId)!;
+    callbacks.add(callback);
     
     return () => {
-      this.onStatusCallbacks.delete(callback);
+      callbacks.delete(callback);
+      if (callbacks.size === 0) {
+        this.onStatusCallbacks.delete(cameraId);
+      }
     };
   }
 
   /**
-   * Registrar callback para errores
+   * Registrar callback para errores de una cámara específica
    */
-  onError(callback: ErrorEventCallback): () => void {
-    this.onErrorCallbacks.add(callback);
+  onError(cameraId: string, callback: ErrorEventCallback): () => void {
+    if (!this.onErrorCallbacks.has(cameraId)) {
+      this.onErrorCallbacks.set(cameraId, new Set());
+    }
+    
+    const callbacks = this.onErrorCallbacks.get(cameraId)!;
+    callbacks.add(callback);
     
     return () => {
-      this.onErrorCallbacks.delete(callback);
+      callbacks.delete(callback);
+      if (callbacks.size === 0) {
+        this.onErrorCallbacks.delete(cameraId);
+      }
     };
   }
 
   /**
-   * Obtener estado de conexión
+   * Obtener estado de conexión para una cámara específica
    */
-  isConnected(): boolean {
-    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  isConnected(cameraId: string): boolean {
+    const connection = this.connections.get(cameraId);
+    return connection ? connection.ws !== null && connection.ws.readyState === WebSocket.OPEN : false;
+  }
+  
+  /**
+   * Obtener todas las cámaras conectadas
+   */
+  getConnectedCameras(): string[] {
+    const connected: string[] = [];
+    this.connections.forEach((connection, cameraId) => {
+      if (connection.ws && connection.ws.readyState === WebSocket.OPEN) {
+        connected.push(cameraId);
+      }
+    });
+    return connected;
   }
 
   /**
-   * Obtener métricas actuales
+   * Obtener métricas actuales de una cámara específica
    */
-  getMetrics(): {
+  getMetrics(cameraId: string): {
     frameCount: number;
     connectionTime: number;
     fps: number;
-  } {
+  } | null {
+    const connection = this.connections.get(cameraId);
+    if (!connection) {
+      return null;
+    }
+    
     const now = Date.now();
-    const connectionTime = this.connectionStartTime ? 
-      (now - this.connectionStartTime) / 1000 : 0;
+    const connectionTime = connection.connectionStartTime ? 
+      (now - connection.connectionStartTime) / 1000 : 0;
     
     // Calcular FPS basado en frames recientes
     let fps = 0;
-    if (this.recentFrameTimes.length >= 2) {
-      const oldestFrame = this.recentFrameTimes[0];
-      const newestFrame = this.recentFrameTimes[this.recentFrameTimes.length - 1];
+    if (connection.recentFrameTimes.length >= 2) {
+      const oldestFrame = connection.recentFrameTimes[0];
+      const newestFrame = connection.recentFrameTimes[connection.recentFrameTimes.length - 1];
       const timeDiff = (newestFrame - oldestFrame) / 1000; // En segundos
       
       if (timeDiff > 0) {
-        fps = (this.recentFrameTimes.length - 1) / timeDiff;
+        fps = (connection.recentFrameTimes.length - 1) / timeDiff;
       }
     }
     
     return {
-      frameCount: this.frameCount,
+      frameCount: connection.frameCount,
       connectionTime: Math.round(connectionTime),
       fps: Math.round(fps * 10) / 10 // Redondear a 1 decimal
     };

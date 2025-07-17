@@ -2,8 +2,11 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 // Feature pages (will be created later)
-const CamerasPage = React.lazy(
-  () => import("../../features/cameras/CamerasPage")
+const LiveViewPage = React.lazy(
+  () => import("../../features/cameras/pages/LiveViewPage")
+);
+const RegisterPage = React.lazy(
+  () => import("../../features/cameras/pages/RegisterPage")
 );
 const ScannerPage = React.lazy(
   () => import("../../features/scanner/ScannerPage")
@@ -13,9 +16,6 @@ const AnalyticsPage = React.lazy(
 );
 const SettingsPage = React.lazy(
   () => import("../../features/settings/SettingsPage")
-);
-const StreamingPage = React.lazy(
-  () => import("../../features/streaming/StreamingPage")
 );
 
 // Error Boundary component
@@ -95,11 +95,12 @@ export const AppRouter: React.FC = () => {
       <React.Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* Default redirect to cameras */}
-          <Route path="/" element={<Navigate to="/cameras" replace />} />
+          <Route path="/" element={<Navigate to="/cameras/live" replace />} />
 
           {/* Main feature routes */}
-          <Route path="/cameras" element={<CamerasPage />} />
-          <Route path="/cameras/:cameraId" element={<StreamingPage />} />
+          <Route path="/cameras" element={<Navigate to="/cameras/live" replace />} />
+          <Route path="/cameras/live" element={<LiveViewPage />} />
+          <Route path="/cameras/register" element={<RegisterPage />} />
           <Route path="/scanner" element={<ScannerPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/settings" element={<SettingsPage />} />

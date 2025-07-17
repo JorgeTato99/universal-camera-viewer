@@ -3,13 +3,14 @@
  * Sidebar lateral izquierdo similar a VS Code
  */
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   IconButton,
   Tooltip,
   useTheme as useMuiTheme,
   alpha,
+  Collapse,
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -17,8 +18,13 @@ import {
   Search as ScannerIcon,
   Analytics as AnalyticsIcon,
   Settings as SettingsIcon,
-  PlayArrow as StreamingIcon,
   Dashboard as DashboardIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Visibility as ViewIcon,
+  Assignment as RegisterIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { useTheme } from "../../hooks/useTheme";
 import { colorTokens } from "../../design-system/tokens";
@@ -28,7 +34,7 @@ interface SidebarProps {
   onToggle?: () => void;
 }
 
-interface NavItem {
+interface SubItem {
   id: string;
   path: string;
   icon: React.ReactNode;
@@ -36,13 +42,37 @@ interface NavItem {
   tooltip: string;
 }
 
+interface NavItem {
+  id: string;
+  path?: string;
+  icon: React.ReactNode;
+  label: string;
+  tooltip: string;
+  subItems?: SubItem[];
+}
+
 const navItems: NavItem[] = [
   {
     id: "cameras",
-    path: "/cameras",
     icon: <CamerasIcon />,
     label: "Cámaras",
     tooltip: "Gestión de Cámaras",
+    subItems: [
+      {
+        id: "cameras-live",
+        path: "/cameras/live",
+        icon: <ViewIcon />,
+        label: "Vista en Vivo",
+        tooltip: "Ver cámaras en tiempo real",
+      },
+      {
+        id: "cameras-register",
+        path: "/cameras/register",
+        icon: <RegisterIcon />,
+        label: "Registro",
+        tooltip: "Gestionar cámaras registradas",
+      },
+    ],
   },
   {
     id: "scanner",
@@ -52,17 +82,10 @@ const navItems: NavItem[] = [
     tooltip: "Descubrimiento de Red",
   },
   {
-    id: "streaming",
-    path: "/streaming",
-    icon: <StreamingIcon />,
-    label: "Streaming",
-    tooltip: "Transmisión en Vivo",
-  },
-  {
     id: "analytics",
     path: "/analytics",
     icon: <AnalyticsIcon />,
-    label: "Analytics",
+    label: "Estadísticas",
     tooltip: "Métricas y Análisis",
   },
   {
@@ -82,14 +105,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { effectiveTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const [expandedItems, setExpandedItems] = useState<string[]>(["cameras"]);
 
   const handleNavigation = (path: string) => {
     navigate(path);
   };
 
-  const isActive = (path: string) => {
+  const isActive = (path?: string) => {
+    if (!path) return false;
     return (
       location.pathname === path || location.pathname.startsWith(`${path}/`)
+    );
+  };
+
+  const isParentActive = (subItems?: SubItem[]) => {
+    if (!subItems) return false;
+    return subItems.some(subItem => isActive(subItem.path));
+  };
+
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
     );
   };
 
@@ -97,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <Box
       sx={{
         width: collapsed ? "48px" : "240px",
-        height: "100vh",
+        height: "calc(100vh - 32px)", // Resta la altura del TopBar
         backgroundColor:
           effectiveTheme === "dark"
             ? colorTokens.background.darkPaper // Nivel 2: Intermedio
@@ -118,113 +156,237 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }}
     >
       {/* Sección de navegación principal */}
-      <Box sx={{ flex: 1, pt: 1 }}>
+      <Box sx={{ flex: 1, pt: 1, overflowY: "auto", overflowX: "hidden" }}>
         {navItems.map((item) => {
-          const active = isActive(item.path);
+          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const isExpanded = expandedItems.includes(item.id);
+          const active = item.path ? isActive(item.path) : isParentActive(item.subItems);
 
           return (
-            <Tooltip
-              key={item.id}
-              title={collapsed ? item.tooltip : ""}
-              placement="right"
-              arrow
-            >
-              <Box
-                sx={{
-                  position: "relative",
-                  mb: 0.5,
-                  mx: collapsed ? 0.5 : 1,
-                }}
+            <Box key={item.id}>
+              <Tooltip
+                title={collapsed ? item.tooltip : ""}
+                placement="right"
+                arrow
               >
-                {/* Indicador de estado activo */}
-                {active && (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      left: collapsed ? -4 : -8,
-                      top: 0,
-                      bottom: 0,
-                      width: 3,
-                      backgroundColor: colorTokens.primary[500],
-                      borderRadius: "0 2px 2px 0",
-                      zIndex: 1,
-                    }}
-                  />
-                )}
-
-                <IconButton
-                  onClick={() => handleNavigation(item.path)}
+                <Box
                   sx={{
-                    width: collapsed ? "40px" : "100%",
-                    height: "40px",
-                    borderRadius: collapsed ? "4px" : "6px",
-                    backgroundColor: active
-                      ? alpha(colorTokens.primary[500], 0.1)
-                      : "transparent",
-                    color: active
-                      ? colorTokens.primary[
-                          effectiveTheme === "dark" ? 400 : 600
-                        ]
-                      : effectiveTheme === "dark"
-                      ? colorTokens.neutral[300]
-                      : colorTokens.neutral[600],
-                    justifyContent: collapsed ? "center" : "flex-start",
-                    px: collapsed ? 0 : 1.5,
-                    gap: collapsed ? 0 : 1.5,
-                    fontSize: collapsed ? "20px" : "14px",
-                    "&:hover": {
-                      backgroundColor: active
-                        ? alpha(colorTokens.primary[500], 0.15)
-                        : alpha(
-                            effectiveTheme === "dark"
-                              ? colorTokens.neutral[100]
-                              : colorTokens.neutral[900],
-                            0.05
-                          ),
-                      color: active
-                        ? colorTokens.primary[
-                            effectiveTheme === "dark" ? 300 : 700
-                          ]
-                        : (theme) => theme.palette.text.primary,
-                    },
-                    transition: "all 0.2s ease",
+                    position: "relative",
+                    mb: 0.5,
+                    mx: collapsed ? 0.5 : 1,
                   }}
                 >
-                  {/* Icono */}
-                  <Box
-                    component="span"
+                  {/* Indicador de estado activo */}
+                  {active && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        left: collapsed ? -4 : -8,
+                        top: 0,
+                        bottom: 0,
+                        width: 3,
+                        backgroundColor: colorTokens.primary[500],
+                        borderRadius: "0 2px 2px 0",
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+
+                  <IconButton
+                    onClick={() => {
+                      if (hasSubItems) {
+                        toggleExpanded(item.id);
+                      } else if (item.path) {
+                        handleNavigation(item.path);
+                      }
+                    }}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "18px",
-                      minWidth: "20px",
+                      width: collapsed ? "44px" : "100%",
+                      height: "44px",
+                      borderRadius: collapsed ? "4px" : "6px",
+                      backgroundColor: active
+                        ? alpha(colorTokens.primary[500], 0.1)
+                        : "transparent",
+                      color: active
+                        ? colorTokens.primary[
+                            effectiveTheme === "dark" ? 400 : 600
+                          ]
+                        : effectiveTheme === "dark"
+                        ? colorTokens.neutral[300]
+                        : colorTokens.neutral[600],
+                      justifyContent: collapsed ? "center" : "flex-start",
+                      px: collapsed ? 0 : 1.5,
+                      gap: collapsed ? 0 : 1.5,
+                      fontSize: collapsed ? "20px" : "14px",
+                      "&:hover": {
+                        backgroundColor: active
+                          ? alpha(colorTokens.primary[500], 0.15)
+                          : alpha(
+                              effectiveTheme === "dark"
+                                ? colorTokens.neutral[100]
+                                : colorTokens.neutral[900],
+                              0.05
+                            ),
+                        color: active
+                          ? colorTokens.primary[
+                              effectiveTheme === "dark" ? 300 : 700
+                            ]
+                          : (theme) => theme.palette.text.primary,
+                      },
+                      transition: "all 0.2s ease",
                     }}
                   >
-                    {item.icon}
-                  </Box>
-
-                  {/* Label (solo cuando no está colapsado) */}
-                  {!collapsed && (
+                    {/* Icono */}
                     <Box
                       component="span"
                       sx={{
-                        fontSize: "13px",
-                        fontWeight: active ? 500 : 400,
-                        textTransform: "none",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        flex: 1,
-                        textAlign: "left",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "20px",
+                        minWidth: "22px",
                       }}
                     >
-                      {item.label}
+                      {item.icon}
                     </Box>
-                  )}
-                </IconButton>
-              </Box>
-            </Tooltip>
+
+                    {/* Label (solo cuando no está colapsado) */}
+                    {!collapsed && (
+                      <Box
+                        component="span"
+                        sx={{
+                          fontSize: "14px",
+                          fontWeight: active ? 600 : 400,
+                          textTransform: "none",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
+                          textAlign: "left",
+                        }}
+                      >
+                        {item.label}
+                      </Box>
+                    )}
+
+                    {/* Indicador de expansión para items con subopciones */}
+                    {!collapsed && hasSubItems && (
+                      <Box
+                        component="span"
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "16px",
+                          transition: "transform 0.2s ease",
+                          transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                        }}
+                      >
+                        <ExpandMoreIcon fontSize="small" />
+                      </Box>
+                    )}
+                  </IconButton>
+                </Box>
+              </Tooltip>
+
+              {/* Subitems */}
+              {!collapsed && hasSubItems && (
+                <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                  <Box sx={{ ml: 2.5, mt: 0.25 }}>
+                    {item.subItems?.map((subItem) => {
+                      const subActive = isActive(subItem.path);
+
+                      return (
+                        <Tooltip
+                          key={subItem.id}
+                          title=""
+                          placement="right"
+                          arrow
+                        >
+                          <Box
+                            sx={{
+                              position: "relative",
+                              mb: 0.5,
+                              mx: 1,
+                            }}
+                          >
+                            <IconButton
+                              onClick={() => handleNavigation(subItem.path)}
+                              sx={{
+                                width: "100%",
+                                height: "32px",
+                                borderRadius: "4px",
+                                backgroundColor: subActive
+                                  ? alpha(colorTokens.primary[500], 0.06)
+                                  : "transparent",
+                                color: subActive
+                                  ? colorTokens.primary[
+                                      effectiveTheme === "dark" ? 400 : 600
+                                    ]
+                                  : effectiveTheme === "dark"
+                                  ? colorTokens.neutral[500]
+                                  : colorTokens.neutral[600],
+                                justifyContent: "flex-start",
+                                px: 1.25,
+                                gap: 1.25,
+                                fontSize: "12px",
+                                "&:hover": {
+                                  backgroundColor: subActive
+                                    ? alpha(colorTokens.primary[500], 0.12)
+                                    : alpha(
+                                        effectiveTheme === "dark"
+                                          ? colorTokens.neutral[100]
+                                          : colorTokens.neutral[900],
+                                        0.04
+                                      ),
+                                  color: subActive
+                                    ? colorTokens.primary[
+                                        effectiveTheme === "dark" ? 300 : 700
+                                      ]
+                                    : (theme) => theme.palette.text.primary,
+                                },
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              {/* Icono */}
+                              <Box
+                                component="span"
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "14px",
+                                  minWidth: "16px",
+                                }}
+                              >
+                                {subItem.icon}
+                              </Box>
+
+                              {/* Label */}
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontSize: "12px",
+                                  fontWeight: subActive ? 500 : 400,
+                                  textTransform: "none",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  flex: 1,
+                                  textAlign: "left",
+                                }}
+                              >
+                                {subItem.label}
+                              </Box>
+                            </IconButton>
+                          </Box>
+                        </Tooltip>
+                      );
+                    })}
+                  </Box>
+                </Collapse>
+              )}
+            </Box>
           );
         })}
       </Box>
@@ -237,10 +399,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ? colorTokens.neutral[700]
               : colorTokens.neutral[300]
           }`,
-          p: 1,
+          px: 0.75,
+          py: 0.5,
           display: "flex",
           flexDirection: "column",
-          gap: 0.5,
+          gap: 0,
         }}
       >
         {/* Botón de colapsar/expandir */}
@@ -252,8 +415,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <IconButton
             onClick={onToggle}
             sx={{
-              width: collapsed ? "40px" : "100%",
-              height: "32px",
+              width: collapsed ? "32px" : "100%",
+              height: "24px",
               borderRadius: "4px",
               color:
                 effectiveTheme === "dark"
@@ -273,11 +436,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Box
               sx={{
-                transform: collapsed ? "rotate(0deg)" : "rotate(180deg)",
-                transition: "transform 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              ⮜
+              {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
             </Box>
             {!collapsed && (
               <Box
@@ -294,30 +458,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </IconButton>
         </Tooltip>
 
-        {/* Información de estado */}
-        {!collapsed && (
-          <Box
-            sx={{
-              px: 1,
-              py: 0.5,
-              fontSize: "10px",
-              color:
-                effectiveTheme === "dark"
-                  ? colorTokens.neutral[500]
-                  : colorTokens.neutral[600],
-              textAlign: "center",
-              borderRadius: "4px",
-              backgroundColor: alpha(
-                effectiveTheme === "dark"
-                  ? colorTokens.neutral[600]
-                  : colorTokens.neutral[400],
-                0.1
-              ),
-            }}
-          >
-            v2.0.0
-          </Box>
-        )}
       </Box>
     </Box>
   );

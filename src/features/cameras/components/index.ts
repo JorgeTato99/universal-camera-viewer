@@ -6,3 +6,4 @@
 export { CameraToolbar } from "./CameraToolbar";
 export { CameraCard } from "./CameraCard";
 export { CameraGrid } from "./CameraGrid";
+export { VideoStream } from "./VideoStream";

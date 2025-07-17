@@ -105,7 +105,7 @@ export const LicenseDialog: React.FC<LicenseDialogProps> = ({ open, onClose }) =
       printWindow.document.write(`
         <html>
           <head>
-            <title>Licencia - Universal Camera Viewer</title>
+            <title>Licencia - ${APP_CONFIG.app.name}</title>
             <style>
               body { font-family: Arial, sans-serif; padding: 20px; white-space: pre-wrap; }
               h1 { text-align: center; }
@@ -127,7 +127,7 @@ export const LicenseDialog: React.FC<LicenseDialogProps> = ({ open, onClose }) =
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Universal_Camera_Viewer_Licencia.txt';
+    a.download = `${APP_CONFIG.app.name.replace(/ /g, '_')}_Licencia.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

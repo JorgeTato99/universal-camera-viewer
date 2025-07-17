@@ -1,6 +1,6 @@
 # 🎥 Universal Camera Viewer
 
-[![Version](https://img.shields.io/badge/version-0.9.3-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
+[![Version](https://img.shields.io/badge/version-0.9.8-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
 [![Status](https://img.shields.io/badge/status-FUNCIONAL-brightgreen)](CURRENT_STATUS.md)
 [![Python](https://img.shields.io/badge/python-3.8+-green)](https://www.python.org/)
 [![React](https://img.shields.io/badge/react-19-61dafb)](https://react.dev/)

@@ -7,6 +7,71 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.8] - 2025-07-17 - 🔧 REORGANIZACIÓN Y OPTIMIZACIONES
+
+### ✨ Added - Funcionalidades de Streaming
+
+#### 🎥 Reorganización del Módulo de Streaming
+
+- **Eliminación del módulo streaming duplicado** y consolidación en cameras
+- **Integración completa de WebSocket** después de conexión exitosa
+- **Manejo automático de desconexión** con cleanup de recursos WebSocket
+- **Componente VideoStream optimizado** con Canvas y requestAnimationFrame
+- **Conversión base64 a Blob** para mejor rendimiento de memoria
+
+### 🎨 Enhanced - Optimizaciones de UI
+
+#### ⚡ Rendimiento y Re-renders
+
+- **React.memo en VideoStream** para prevenir re-renders innecesarios
+- **useCallback en CameraCard** para optimizar callbacks de métricas
+- **Eliminación de memoización incorrecta** en LiveViewPage
+- **Logs de debug optimizados** para reducir ruido en consola
+- **FPS real del streaming** mostrado correctamente (9-15 FPS)
+
+#### 🔄 Estado de Conexión
+
+- **Actualización correcta del UI** al conectar/desconectar cámaras
+- **Estado inicial correcto** - todas las cámaras empiezan desconectadas
+- **Prevención de reconexión automática** al recargar la página
+- **Manejo de errores de desconexión** cuando no existe WebSocket
+
+### 🐛 Fixed - Correcciones Importantes
+
+- **VideoPlayer is not defined** - Reemplazado con CameraVideoPreview/VideoStream
+- **streamingService.offFrame error** - Uso correcto de función unsubscribe
+- **Parpadeo/flickering de video** - Implementación con Canvas y Blob URLs
+- **Error de desconexión WebSocket** - Verificación de conexión antes de detener
+- **UI no actualizándose** - Eliminación de memoización incorrecta en filtros
+
+### 📝 Documentation - Backend Instructions
+
+- **backend-latency-implementation.md** creado con instrucciones para implementar métricas de latencia
+- **Documentación detallada** de la estructura esperada de métricas
+- **Ejemplos de implementación** con código real y simulado
+
+### 🔧 Technical - Detalles de Implementación
+
+#### Arquitectura de Streaming
+
+- WebSocket se conecta automáticamente después de conexión exitosa de cámara
+- VideoStream usa Canvas API para renderizado sin parpadeo
+- Blob URLs en lugar de base64 directo para mejor performance
+- RequestAnimationFrame para sincronización suave con browser
+
+#### Optimizaciones de Store
+
+- Store actualiza correctamente el estado de conexión
+- Eliminación de recargas innecesarias de cámara después de conectar
+- Verificación de conexión WebSocket antes de intentar desconectar
+
+### 📌 Notes - Problemas Conocidos
+
+- **Latencia siempre muestra 0ms** - Backend no envía el campo `latency` en métricas
+- **Múltiples logs de isConnected** - Reducidos pero algunos persisten por naturaleza de React
+
+---
+
 ## [0.9.7] - 2025-01-16 - 🎨 INTERFAZ DE USUARIO MEJORADA
 
 ### ✨ Added - Nuevas Funcionalidades

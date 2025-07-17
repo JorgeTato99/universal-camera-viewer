@@ -28,8 +28,7 @@ import {
 } from "@mui/icons-material";
 import { cardStyles, statusStyles } from "../../../design-system/components";
 import { colorTokens } from "../../../design-system/tokens";
-import { CameraVideoPreview } from "./CameraVideoPreview";
-import { VideoPlayer } from "../../streaming/components/VideoPlayer";
+import { VideoStream } from "./VideoStream";
 
 interface CameraCardProps {
   cameraId: string;
@@ -339,29 +338,26 @@ export const CameraCard: React.FC<CameraCardProps> = ({
             justifyContent: "center",
           }}
         >
-          {isConnected ? (
-            <VideoPlayer
-              cameraId={cameraId}
-              width="100%"
-              height="100%"
-              autoPlay={true}
-              showControls={false}
-              onError={(error) =>
-                console.error(`Error en cámara ${cameraId}:`, error)
-              }
-              onMetricsUpdate={(metrics) => setStreamMetrics(metrics)}
-            />
-          ) : (
-            <CameraVideoPreview
-              cameraId={cameraId}
-              isConnected={false}
-              aspectRatio="16/9"
-              height="100%"
-              onError={(error) =>
-                console.error(`Error en cámara ${cameraId}:`, error)
-              }
-            />
-          )}
+          <VideoStream
+            cameraId={cameraId}
+            isConnected={isConnected}
+            aspectRatio="16/9"
+            height="100%"
+            onError={React.useCallback(
+              (error) => console.error(`Error en cámara ${cameraId}:`, error),
+              [cameraId]
+            )}
+            onMetricsUpdate={React.useCallback(
+              isConnected ? (metrics) => {
+                // Solo logear cambios significativos (cada 10 frames)
+                if (metrics.fps && Math.floor(metrics.fps * 10) % 100 === 0) {
+                  console.log(`[CameraCard ${cameraId}] Métricas actualizadas:`, metrics);
+                }
+                setStreamMetrics(metrics);
+              } : undefined,
+              [isConnected, cameraId]
+            )}
+          />
         </Box>
 
         {/* Botones de acción - REBALANCEADOS A 1/3 CADA UNO */}
