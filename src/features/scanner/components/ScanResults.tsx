@@ -1,12 +1,13 @@
 /**
  * 🎯 Scan Results Component - Universal Camera Viewer
  * Muestra los resultados del escaneo de red
+ * Optimizado con virtualización para listas grandes
  */
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo, memo } from "react";
+import { FixedSizeList as List } from "react-window";
 import {
   Box,
-  List,
   ListItem,
   ListItemButton,
   ListItemIcon,
@@ -62,6 +63,18 @@ const slideIn = keyframes`
   }
 `;
 
+// Animación de fade in up para detalles expandibles
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
 export interface ScanResult {
   ip: string;
   mac?: string;
@@ -80,12 +93,26 @@ interface ScanResultsProps {
   selectedIP?: string;
 }
 
-export const ScanResults: React.FC<ScanResultsProps> = ({
-  results,
-  onSelectIP,
-  selectedIP,
-}) => {
-  const [expandedIP, setExpandedIP] = useState<string | null>(null);
+// Componente de ítem memoizado para rendimiento
+interface ResultItemProps {
+  index: number;
+  style: React.CSSProperties;
+  data: {
+    results: ScanResult[];
+    selectedIP?: string;
+    expandedIP: string | null;
+    onSelectIP: (ip: string) => void;
+    handleCopyIP: (e: React.MouseEvent, ip: string) => void;
+    handleToggleExpand: (ip: string) => void;
+  };
+}
+
+const ResultItem = memo<ResultItemProps>(({ index, style, data }) => {
+  const { results, selectedIP, expandedIP, onSelectIP, handleCopyIP, handleToggleExpand } = data;
+  const result = results[index];
+  const isSelected = selectedIP === result.ip;
+  const isExpanded = expandedIP === result.ip;
+  const isProbableCamera = result.probability >= 0.7;
 
   const getDeviceIcon = (deviceType: ScanResult["deviceType"]) => {
     switch (deviceType) {
@@ -114,258 +141,218 @@ export const ScanResults: React.FC<ScanResultsProps> = ({
     return "Baja";
   };
 
-  const sortedResults = [...results].sort((a, b) => {
-    // Primero por probabilidad de ser cámara
-    if (b.probability !== a.probability) {
-      return b.probability - a.probability;
-    }
-    // Luego por cantidad de puertos abiertos
-    return b.openPorts.length - a.openPorts.length;
-  });
-
-  if (results.length === 0) {
-    return (
-      <Fade in timeout={600}>
-        <Box
-          sx={{
-            p: 3,
-            textAlign: "center",
-            color: "text.secondary",
-          }}
-        >
-          <DeviceIcon sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
-          <Typography variant="body2">
-            No se han encontrado dispositivos aún
-          </Typography>
-          <Typography variant="caption">
-            Inicia un escaneo para buscar cámaras en tu red
-          </Typography>
-        </Box>
-      </Fade>
-    );
-  }
-
   return (
-    <List dense sx={{ p: 0 }}>
-      {sortedResults.map((result, index) => {
-        const isSelected = selectedIP === result.ip;
-        const isExpanded = expandedIP === result.ip;
-        const isProbableCamera = result.probability >= 0.7;
-
-        return (
-          <Fade
-            key={result.ip}
-            in
-            timeout={300 + index * 50}
-            style={{ transitionDelay: `${index * 50}ms` }}
+    <div style={style}>
+      <Fade
+        in
+        timeout={300 + index * 50}
+        style={{ transitionDelay: `${Math.min(index * 50, 500)}ms` }}
+      >
+        <React.Fragment>
+          <ListItem
+            disablePadding
+            sx={{
+              mb: 0.5,
+              backgroundColor: isSelected
+                ? alpha(colorTokens.primary[500], 0.08)
+                : "transparent",
+              borderRadius: borderTokens.radius.md,
+              border: isSelected
+                ? `1px solid ${alpha(colorTokens.primary[500], 0.3)}`
+                : "1px solid transparent",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              animation: result.status === "scanning" 
+                ? `${pulseAnimation} 2s ease-in-out infinite`
+                : `${slideIn} 0.4s ease-out`,
+              "&:hover": {
+                borderColor: alpha(colorTokens.primary[500], 0.2),
+                transform: "translateX(4px)",
+              },
+            }}
           >
-            <React.Fragment>
-              <ListItem
-                disablePadding
-                sx={{
-                  mb: 0.5,
-                  backgroundColor: isSelected
-                    ? alpha(colorTokens.primary[500], 0.08)
-                    : "transparent",
-                  borderRadius: borderTokens.radius.md,
-                  border: isSelected
-                    ? `1px solid ${alpha(colorTokens.primary[500], 0.3)}`
-                    : "1px solid transparent",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  animation: result.status === "scanning" 
-                    ? `${pulseAnimation} 2s ease-in-out infinite`
-                    : `${slideIn} 0.4s ease-out`,
-                  "&:hover": {
-                    borderColor: alpha(colorTokens.primary[500], 0.2),
-                    transform: "translateX(4px)",
-                  },
-                }}
-              >
-              <ListItemButton
-                onClick={() => {
-                  onSelectIP(result.ip);
-                  setExpandedIP(isExpanded ? null : result.ip);
-                }}
-                sx={{
-                  borderRadius: 1,
-                  py: 1,
-                  "&:hover": {
-                    backgroundColor: (theme) =>
-                      alpha(
-                        theme.palette.mode === "dark"
-                          ? colorTokens.neutral[100]
-                          : colorTokens.neutral[900],
-                        0.04
-                      ),
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  {isSelected ? (
-                    <SelectedIcon
-                      sx={{
-                        color: colorTokens.primary[500],
-                        fontSize: 20,
-                      }}
-                    />
-                  ) : (
-                    <UnselectedIcon
-                      sx={{
-                        color: "text.disabled",
-                        fontSize: 20,
-                      }}
-                    />
-                  )}
-                </ListItemIcon>
+            <ListItemButton
+              onClick={() => {
+                onSelectIP(result.ip);
+                handleToggleExpand(result.ip);
+              }}
+              sx={{
+                borderRadius: 1,
+                py: 1,
+                "&:hover": {
+                  backgroundColor: (theme) =>
+                    alpha(
+                      theme.palette.mode === "dark"
+                        ? colorTokens.neutral[100]
+                        : colorTokens.neutral[900],
+                      0.04
+                    ),
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                {isSelected ? (
+                  <SelectedIcon
+                    sx={{
+                      color: colorTokens.primary[500],
+                      fontSize: 20,
+                    }}
+                  />
+                ) : (
+                  <UnselectedIcon
+                    sx={{
+                      color: "text.disabled",
+                      fontSize: 20,
+                    }}
+                  />
+                )}
+              </ListItemIcon>
 
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <Tooltip 
-                    title={`Tipo: ${result.deviceType}`} 
-                    placement="top"
-                    arrow
+              <ListItemIcon sx={{ minWidth: 40 }}>
+                <Tooltip 
+                  title={`Tipo: ${result.deviceType}`} 
+                  placement="top"
+                  arrow
+                >
+                  <Box
+                    sx={{
+                      color: isProbableCamera
+                        ? colorTokens.status.connected
+                        : "text.secondary",
+                      display: "flex",
+                      alignItems: "center",
+                      transition: "transform 0.3s ease",
+                      "& svg": {
+                        fontSize: 24,
+                      },
+                    }}
                   >
-                    <Box
+                    {getDeviceIcon(result.deviceType)}
+                  </Box>
+                </Tooltip>
+              </ListItemIcon>
+
+              <ListItemText
+                primary={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography
+                      variant="body2"
                       sx={{
-                        color: isProbableCamera
-                          ? colorTokens.status.connected
-                          : "text.secondary",
-                        display: "flex",
-                        alignItems: "center",
-                        transition: "transform 0.3s ease",
-                        "& svg": {
-                          fontSize: 24,
-                        },
+                        fontFamily: "monospace",
+                        fontWeight: isSelected ? 600 : 400,
                       }}
                     >
-                      {getDeviceIcon(result.deviceType)}
-                    </Box>
-                  </Tooltip>
-                </ListItemIcon>
-
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {result.ip}
+                    </Typography>
+                    {result.hostname && (
                       <Typography
-                        variant="body2"
+                        variant="caption"
+                        color="text.secondary"
                         sx={{
-                          fontFamily: "monospace",
-                          fontWeight: isSelected ? 600 : 400,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: 120,
                         }}
                       >
-                        {result.ip}
+                        ({result.hostname})
                       </Typography>
-                      {result.hostname && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            maxWidth: 120,
-                          }}
-                        >
-                          ({result.hostname})
-                        </Typography>
-                      )}
-                    </Box>
-                  }
-                  secondary={
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-                      {/* Probabilidad de ser cámara */}
-                      {isProbableCamera && (
-                        <Chip
-                          label={`${Math.round(result.probability * 100)}% cámara`}
-                          size="small"
-                          sx={{
-                            height: 18,
-                            fontSize: "0.65rem",
-                            backgroundColor: alpha(
-                              getProbabilityColor(result.probability),
-                              0.15
-                            ),
-                            color: getProbabilityColor(result.probability),
-                            fontWeight: 500,
-                          }}
-                        />
-                      )}
+                    )}
+                  </Box>
+                }
+                secondary={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                    {/* Probabilidad de ser cámara */}
+                    {isProbableCamera && (
+                      <Chip
+                        label={`${Math.round(result.probability * 100)}% cámara`}
+                        size="small"
+                        sx={{
+                          height: 18,
+                          fontSize: "0.65rem",
+                          backgroundColor: alpha(
+                            getProbabilityColor(result.probability),
+                            0.15
+                          ),
+                          color: getProbabilityColor(result.probability),
+                          fontWeight: 500,
+                        }}
+                      />
+                    )}
 
-                      {/* Puertos abiertos */}
+                    {/* Puertos abiertos */}
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.7rem" }}
+                    >
+                      {result.openPorts.length} puerto(s)
+                    </Typography>
+
+                    {/* Fabricante si está disponible */}
+                    {result.manufacturer && (
                       <Typography
                         variant="caption"
                         color="text.secondary"
                         sx={{ fontSize: "0.7rem" }}
                       >
-                        {result.openPorts.length} puerto(s)
+                        • {result.manufacturer}
                       </Typography>
+                    )}
+                  </Box>
+                }
+              />
 
-                      {/* Fabricante si está disponible */}
-                      {result.manufacturer && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ fontSize: "0.7rem" }}
-                        >
-                          • {result.manufacturer}
-                        </Typography>
-                      )}
-                    </Box>
-                  }
-                />
-
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  {/* Estado del escaneo */}
-                  {result.status === "scanning" && (
-                    <Box sx={{ width: 20, height: 20 }}>
-                      <LinearProgress
-                        sx={{
-                          borderRadius: 10,
-                          height: 3,
-                        }}
-                      />
-                    </Box>
-                  )}
-
-                  {/* Botón de copiar IP */}
-                  <Tooltip title="Copiar IP">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(result.ip);
-                      }}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                {/* Estado del escaneo */}
+                {result.status === "scanning" && (
+                  <Box sx={{ width: 20, height: 20 }}>
+                    <LinearProgress
                       sx={{
-                        opacity: 0.7,
-                        "&:hover": { opacity: 1 },
+                        borderRadius: 10,
+                        height: 3,
                       }}
-                    >
-                      <CopyIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                    />
+                  </Box>
+                )}
 
-                  {/* Botón expandir/colapsar */}
-                  <IconButton size="small">
-                    {isExpanded ? <ExpandLess /> : <ExpandMore />}
-                  </IconButton>
-                </Box>
-              </ListItemButton>
-            </ListItem>
-
-              {/* Detalles expandibles */}
-              <Collapse in={isExpanded} timeout="auto">
-                <Box sx={{ pl: 7, pr: 2, pb: 2 }}>
-                  <Paper
-                    variant="outlined"
+                {/* Botón de copiar IP */}
+                <Tooltip title="Copiar IP">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleCopyIP(e, result.ip)}
                     sx={{
-                      p: 1.5,
-                      backgroundColor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "rgba(255, 255, 255, 0.02)"
-                          : "rgba(0, 0, 0, 0.01)",
-                      borderRadius: borderTokens.radius.md,
-                      animation: `${fadeInUp} 0.3s ease-out`,
+                      opacity: 0.7,
+                      "&:hover": { opacity: 1 },
                     }}
                   >
+                    <CopyIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+
+                {/* Botón expandir/colapsar */}
+                <IconButton size="small">
+                  {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                </IconButton>
+              </Box>
+            </ListItemButton>
+          </ListItem>
+
+          {/* Detalles expandibles - fuera de virtualización para simplicidad */}
+          {isExpanded && (
+            <Collapse in={isExpanded} timeout="auto">
+              <Box sx={{ pl: 7, pr: 2, pb: 2 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.02)"
+                        : "rgba(0, 0, 0, 0.01)",
+                    borderRadius: borderTokens.radius.md,
+                    animation: `${fadeInUp} 0.3s ease-out`,
+                  }}
+                >
                   <Box
                     sx={{
                       display: "grid",
@@ -469,10 +456,107 @@ export const ScanResults: React.FC<ScanResultsProps> = ({
                 </Paper>
               </Box>
             </Collapse>
-            </React.Fragment>
-          </Fade>
-        );
-      })}
-    </List>
+          )}
+        </React.Fragment>
+      </Fade>
+    </div>
   );
-};
+});
+
+ResultItem.displayName = 'ResultItem';
+
+export const ScanResults = memo<ScanResultsProps>(({
+  results,
+  onSelectIP,
+  selectedIP,
+}) => {
+  const [expandedIP, setExpandedIP] = useState<string | null>(null);
+
+  // Ordenar resultados con memoización
+  const sortedResults = useMemo(() => {
+    return [...results].sort((a, b) => {
+      // Primero por probabilidad de ser cámara
+      if (b.probability !== a.probability) {
+        return b.probability - a.probability;
+      }
+      // Luego por cantidad de puertos abiertos
+      return b.openPorts.length - a.openPorts.length;
+    });
+  }, [results]);
+
+  // Handlers memoizados
+  const handleCopyIP = useCallback((e: React.MouseEvent, ip: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(ip);
+  }, []);
+
+  const handleToggleExpand = useCallback((ip: string) => {
+    setExpandedIP((prev) => prev === ip ? null : ip);
+  }, []);
+
+  // Datos para el componente virtualizado
+  const itemData = useMemo(() => ({
+    results: sortedResults,
+    selectedIP,
+    expandedIP,
+    onSelectIP,
+    handleCopyIP,
+    handleToggleExpand,
+  }), [sortedResults, selectedIP, expandedIP, onSelectIP, handleCopyIP, handleToggleExpand]);
+
+  if (results.length === 0) {
+    return (
+      <Fade in timeout={600}>
+        <Box
+          sx={{
+            p: 3,
+            textAlign: "center",
+            color: "text.secondary",
+          }}
+        >
+          <DeviceIcon sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
+          <Typography variant="body2">
+            No se han encontrado dispositivos aún
+          </Typography>
+          <Typography variant="caption">
+            Inicia un escaneo para buscar cámaras en tu red
+          </Typography>
+        </Box>
+      </Fade>
+    );
+  }
+
+  // Usar lista virtualizada para rendimiento con muchos resultados
+  if (sortedResults.length > 20) {
+    return (
+      <Box sx={{ height: "100%", width: "100%" }}>
+        <List
+          height={400} // Altura del contenedor
+          itemCount={sortedResults.length}
+          itemSize={85} // Altura estimada de cada ítem
+          width="100%"
+          itemData={itemData}
+        >
+          {ResultItem}
+        </List>
+      </Box>
+    );
+  }
+
+  // Para listas pequeñas, renderizar normalmente
+  return (
+    <Box sx={{ p: 0 }}>
+      {sortedResults.map((_, index) => (
+        <ResultItem
+          key={sortedResults[index].ip}
+          index={index}
+          style={{}}
+          data={itemData}
+        />
+      ))}
+    </Box>
+  );
+});
+
+// Añadir displayName para debugging
+ScanResults.displayName = 'ScanResults';

@@ -25,6 +25,9 @@ import {
   Assignment as RegisterIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  NetworkCheck as NetworkIcon,
+  PortableWifiOff as PortIcon,
+  VpnKey as AccessIcon,
 } from "@mui/icons-material";
 import { useTheme } from "../../hooks/useTheme";
 import { colorTokens } from "../../design-system/tokens";
@@ -79,7 +82,30 @@ const navItems: NavItem[] = [
     path: "/scanner",
     icon: <ScannerIcon />,
     label: "Escáner",
-    tooltip: "Descubrimiento de Red",
+    tooltip: "Centro de Escaneo",
+    subItems: [
+      {
+        id: "scanner-network",
+        path: "/scanner/network",
+        icon: <NetworkIcon />,
+        label: "Escaneo de Red",
+        tooltip: "Descubrir dispositivos en la red",
+      },
+      {
+        id: "scanner-ports",
+        path: "/scanner/ports",
+        icon: <PortIcon />,
+        label: "Escaneo de Puertos",
+        tooltip: "Analizar puertos abiertos",
+      },
+      {
+        id: "scanner-access",
+        path: "/scanner/access",
+        icon: <AccessIcon />,
+        label: "Prueba de Acceso",
+        tooltip: "Verificar credenciales",
+      },
+    ],
   },
   {
     id: "analytics",
@@ -194,10 +220,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   <IconButton
                     onClick={() => {
+                      if (item.path) {
+                        handleNavigation(item.path);
+                      }
                       if (hasSubItems) {
                         toggleExpanded(item.id);
-                      } else if (item.path) {
-                        handleNavigation(item.path);
                       }
                     }}
                     sx={{

@@ -39,6 +39,12 @@ interface CameraStateV2 {
 
   // Error States
   errors: Map<string, string>;
+  connectionError: {
+    hasError: boolean;
+    errorType: 'connection' | 'server' | 'timeout' | 'unknown';
+    errorMessage: string;
+    errorDetails?: string;
+  } | null;
 
   // Actions - Data Management
   loadCameras: () => Promise<void>;
@@ -70,6 +76,10 @@ interface CameraStateV2 {
   setFilterLocation: (location: string | "all") => void;
   setSearchQuery: (query: string) => void;
   toggleShowInactive: () => void;
+  
+  // Actions - Error Management
+  setConnectionError: (error: any) => void;
+  clearConnectionError: () => void;
 
   // Computed Properties
   getFilteredCameras: () => CameraResponse[];
@@ -114,7 +124,7 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
     filterBrand: "all",
     filterLocation: "all",
     searchQuery: "",
-    showInactiveCameras: false,
+    showInactiveCameras: true,
 
     // Loading States
     isLoading: false,
@@ -124,10 +134,18 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
 
     // Error States
     errors: new Map(),
+    connectionError: null,
 
     // Load all cameras from backend
     loadCameras: async () => {
-      set({ isLoading: true });
+      // Si ya tenemos cámaras y está cargando, evitar carga duplicada
+      const state = get();
+      if (state.isLoading && state.cameras.size > 0) {
+        console.log('[STORE] Camera loading already in progress, skipping...');
+        return;
+      }
+      
+      set({ isLoading: true, connectionError: null });
       try {
         const cameras = await cameraServiceV2.listCameras(
           !get().showInactiveCameras
@@ -152,18 +170,40 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
           });
         });
         
+        console.log(`[STORE] Loaded ${cameras.length} cameras successfully`);
         set({
           cameras: camerasMap,
           cameraGridItems: gridItems,
           isLoading: false,
+          connectionError: null, // Limpiar error si la carga fue exitosa
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading cameras:', error);
-        notificationStore.addNotification({
-          type: 'error',
-          message: 'Error loading cameras',
-        });
-        set({ isLoading: false });
+        
+        // Detectar tipo de error
+        const errorMessage = error?.message || 'Error desconocido';
+        const isConnectionError = errorMessage.includes('Network Error') || 
+                                 errorMessage.includes('ERR_CONNECTION_REFUSED');
+        
+        // Establecer error de conexión si es apropiado
+        if (isConnectionError) {
+          set({
+            isLoading: false,
+            connectionError: {
+              hasError: true,
+              errorType: 'connection',
+              errorMessage: 'No se puede conectar con el servidor backend',
+              errorDetails: error?.toString(),
+            },
+          });
+        } else {
+          // Para otros errores, usar notificación normal
+          notificationStore.addNotification({
+            type: 'error',
+            message: 'Error al cargar las cámaras',
+          });
+          set({ isLoading: false });
+        }
       }
     },
 
@@ -590,6 +630,28 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
       showInactiveCameras: !state.showInactiveCameras 
     })),
 
+    // Error Management Actions
+    setConnectionError: (error: any) => {
+      const errorMessage = error?.message || 'Error desconocido';
+      const isConnectionError = errorMessage.includes('Network Error') || 
+                               errorMessage.includes('ERR_CONNECTION_REFUSED');
+      
+      if (isConnectionError) {
+        set({
+          connectionError: {
+            hasError: true,
+            errorType: 'connection',
+            errorMessage: 'No se puede conectar con el servidor backend',
+            errorDetails: error?.toString(),
+          },
+        });
+      }
+    },
+
+    clearConnectionError: () => {
+      set({ connectionError: null });
+    },
+
     // Computed Properties
     getFilteredCameras: () => {
       const { 
@@ -867,6 +929,3 @@ export const useCameraStoreV2 = create<CameraStateV2>()(
     },
   }))
 );
-
-// Auto-load cameras on store creation
-useCameraStoreV2.getState().loadCameras();

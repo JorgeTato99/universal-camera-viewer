@@ -3,7 +3,7 @@
  * Card individual para cada cámara con información completa
  */
 
-import React from "react";
+import React, { memo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -46,7 +46,8 @@ interface CameraCardProps {
   onCapture?: () => void;
 }
 
-export const CameraCard: React.FC<CameraCardProps> = ({
+// Componente optimizado con memo para evitar re-renders innecesarios
+export const CameraCard = memo<CameraCardProps>(({
   cameraId,
   name = `Cámara ${cameraId}`,
   status = "disconnected",
@@ -436,11 +437,11 @@ export const CameraCard: React.FC<CameraCardProps> = ({
             isConnected={isConnected}
             aspectRatio="16/9"
             height="100%"
-            onError={React.useCallback(
+            onError={useCallback(
               (error) => console.error(`Error en cámara ${cameraId}:`, error),
               [cameraId]
             )}
-            onMetricsUpdate={React.useCallback(
+            onMetricsUpdate={useCallback(
               isConnected ? (metrics) => {
                 // Solo logear cambios significativos (cada 10 frames)
                 if (metrics.fps && Math.floor(metrics.fps * 10) % 100 === 0) {
@@ -559,4 +560,7 @@ export const CameraCard: React.FC<CameraCardProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+// Añadir displayName para debugging
+CameraCard.displayName = 'CameraCard';

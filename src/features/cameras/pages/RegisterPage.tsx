@@ -1,9 +1,10 @@
 /**
  * 📝 Register Page - Universal Camera Viewer
  * Página de registro y gestión de cámaras
+ * Optimizada con memo, callbacks memoizados y renderizado eficiente
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import {
   Box,
   Typography,
@@ -22,6 +23,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Skeleton,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -38,7 +40,110 @@ import { useCameraStoreV2 } from "../../../stores/cameraStore.v2";
 import { useNotificationStore } from "../../../stores/notificationStore";
 import { colorTokens } from "../../../design-system/tokens";
 
-const RegisterPage: React.FC = () => {
+// Componente de fila de tabla memoizado para mejor rendimiento
+interface CameraRowProps {
+  camera: any;
+  onEdit: (cameraId: string) => void;
+  onDelete: (cameraId: string) => void;
+  onSettings: (cameraId: string) => void;
+}
+
+const CameraRow = memo<CameraRowProps>(({ camera, onEdit, onDelete, onSettings }) => {
+  return (
+    <TableRow hover>
+      <TableCell>
+        {camera.is_connected ? (
+          <Tooltip title="Conectada">
+            <ConnectedIcon
+              sx={{ color: colorTokens.status.connected }}
+            />
+          </Tooltip>
+        ) : (
+          <Tooltip title="Desconectada">
+            <DisconnectedIcon
+              sx={{ color: colorTokens.status.disconnected }}
+            />
+          </Tooltip>
+        )}
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" fontWeight={500}>
+          {camera.display_name || `Cámara ${camera.camera_id}`}
+        </Typography>
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" fontFamily="monospace">
+          {camera.ip_address}
+        </Typography>
+      </TableCell>
+      <TableCell>{camera.brand || "—"}</TableCell>
+      <TableCell>{camera.model || "—"}</TableCell>
+      <TableCell>
+        <Chip
+          label={camera.protocol?.toUpperCase() || "AUTO"}
+          size="small"
+          variant="outlined"
+        />
+      </TableCell>
+      <TableCell align="right">
+        <Tooltip title="Configurar">
+          <IconButton
+            size="small"
+            onClick={() => onSettings(camera.camera_id)}
+          >
+            <SettingsIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Editar">
+          <IconButton
+            size="small"
+            onClick={() => onEdit(camera.camera_id)}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Eliminar">
+          <IconButton
+            size="small"
+            onClick={() => onDelete(camera.camera_id)}
+            disabled={camera.is_connected}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </TableCell>
+    </TableRow>
+  );
+});
+
+CameraRow.displayName = 'CameraRow';
+
+// Componente de skeleton para carga
+const TableSkeleton = memo(() => (
+  <>
+    {[1, 2, 3, 4, 5].map((index) => (
+      <TableRow key={index}>
+        <TableCell><Skeleton variant="circular" width={24} height={24} /></TableCell>
+        <TableCell><Skeleton variant="text" width="80%" /></TableCell>
+        <TableCell><Skeleton variant="text" width="60%" /></TableCell>
+        <TableCell><Skeleton variant="text" width="50%" /></TableCell>
+        <TableCell><Skeleton variant="text" width="50%" /></TableCell>
+        <TableCell><Skeleton variant="rectangular" width={60} height={20} /></TableCell>
+        <TableCell align="right">
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+            <Skeleton variant="circular" width={32} height={32} />
+            <Skeleton variant="circular" width={32} height={32} />
+            <Skeleton variant="circular" width={32} height={32} />
+          </Box>
+        </TableCell>
+      </TableRow>
+    ))}
+  </>
+));
+
+TableSkeleton.displayName = 'TableSkeleton';
+
+const RegisterPage = memo(() => {
   const {
     cameras,
     isLoading,
@@ -56,30 +161,38 @@ const RegisterPage: React.FC = () => {
     loadCameras();
   }, [loadCameras]);
 
-  // Obtener todas las cámaras (conectadas y desconectadas)
-  const allCameras = Array.from(cameras.values());
-  const stats = getCameraStats();
+  // Obtener todas las cámaras con memoización
+  const allCameras = useMemo(() => Array.from(cameras.values()), [cameras]);
+  const stats = useMemo(() => getCameraStats(), [getCameraStats, cameras]);
 
-  const handleRefresh = async () => {
+  // Handlers optimizados con useCallback
+  const handleRefresh = useCallback(async () => {
     await loadCameras();
     addNotification({
       message: "Lista de cámaras actualizada",
       type: "info",
     });
-  };
+  }, [loadCameras, addNotification]);
 
-  const handleAddCamera = () => {
+  const handleAddCamera = useCallback(() => {
     setAddDialogOpen(true);
-  };
+  }, []);
 
-  const handleEditCamera = (cameraId: string) => {
+  const handleEditCamera = useCallback((cameraId: string) => {
     addNotification({
       message: "Función de edición en desarrollo",
       type: "info",
     });
-  };
+  }, [addNotification]);
 
-  const handleDeleteCamera = async () => {
+  const handleSettingsCamera = useCallback((cameraId: string) => {
+    addNotification({
+      message: "Función de configuración en desarrollo",
+      type: "info",
+    });
+  }, [addNotification]);
+
+  const handleDeleteCamera = useCallback(async () => {
     if (!selectedCamera) return;
 
     try {
@@ -96,26 +209,35 @@ const RegisterPage: React.FC = () => {
         type: "error",
       });
     }
-  };
+  }, [selectedCamera, deleteCamera, addNotification]);
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     addNotification({
       message: "Función de exportación en desarrollo",
       type: "info",
     });
-  };
+  }, [addNotification]);
 
-  const handleImport = () => {
+  const handleImport = useCallback(() => {
     addNotification({
       message: "Función de importación en desarrollo",
       type: "info",
     });
-  };
+  }, [addNotification]);
 
-  const openDeleteDialog = (cameraId: string) => {
+  const openDeleteDialog = useCallback((cameraId: string) => {
     setSelectedCamera(cameraId);
     setDeleteDialogOpen(true);
-  };
+  }, []);
+
+  const closeDeleteDialog = useCallback(() => {
+    setDeleteDialogOpen(false);
+    setSelectedCamera(null);
+  }, []);
+
+  const closeAddDialog = useCallback(() => {
+    setAddDialogOpen(false);
+  }, []);
 
   return (
     <Box
@@ -177,7 +299,7 @@ const RegisterPage: React.FC = () => {
         </Tooltip>
 
         <Tooltip title="Actualizar lista">
-          <IconButton onClick={handleRefresh}>
+          <IconButton onClick={handleRefresh} disabled={isLoading}>
             <RefreshIcon />
           </IconButton>
         </Tooltip>
@@ -193,6 +315,8 @@ const RegisterPage: React.FC = () => {
             theme.palette.mode === "dark"
               ? colorTokens.background.darkPaper
               : colorTokens.background.paper,
+          // Optimización: usar will-change para preparar animaciones
+          willChange: 'scroll-position',
         }}
       >
         <Table stickyHeader>
@@ -208,71 +332,19 @@ const RegisterPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {allCameras.map((camera) => (
-              <TableRow key={camera.camera_id} hover>
-                <TableCell>
-                  {camera.is_connected ? (
-                    <Tooltip title="Conectada">
-                      <ConnectedIcon
-                        sx={{ color: colorTokens.status.connected }}
-                      />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title="Desconectada">
-                      <DisconnectedIcon
-                        sx={{ color: colorTokens.status.disconnected }}
-                      />
-                    </Tooltip>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" fontWeight={500}>
-                    {camera.display_name || `Cámara ${camera.camera_id}`}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" fontFamily="monospace">
-                    {camera.ip_address}
-                  </Typography>
-                </TableCell>
-                <TableCell>{camera.brand || "—"}</TableCell>
-                <TableCell>{camera.model || "—"}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={camera.protocol?.toUpperCase() || "AUTO"}
-                    size="small"
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <Tooltip title="Configurar">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditCamera(camera.camera_id)}
-                    >
-                      <SettingsIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Editar">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditCamera(camera.camera_id)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Eliminar">
-                    <IconButton
-                      size="small"
-                      onClick={() => openDeleteDialog(camera.camera_id)}
-                      disabled={camera.is_connected}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
+            {isLoading ? (
+              <TableSkeleton />
+            ) : (
+              allCameras.map((camera) => (
+                <CameraRow
+                  key={camera.camera_id}
+                  camera={camera}
+                  onEdit={handleEditCamera}
+                  onDelete={openDeleteDialog}
+                  onSettings={handleSettingsCamera}
+                />
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -280,7 +352,7 @@ const RegisterPage: React.FC = () => {
       {/* Dialog de confirmación de eliminación */}
       <Dialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={closeDeleteDialog}
       >
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
@@ -290,7 +362,7 @@ const RegisterPage: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={closeDeleteDialog}>Cancelar</Button>
           <Button
             onClick={handleDeleteCamera}
             color="error"
@@ -304,7 +376,7 @@ const RegisterPage: React.FC = () => {
       {/* Dialog para agregar cámara (placeholder) */}
       <Dialog
         open={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
+        onClose={closeAddDialog}
         maxWidth="sm"
         fullWidth
       >
@@ -315,11 +387,14 @@ const RegisterPage: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>Cerrar</Button>
+          <Button onClick={closeAddDialog}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
-};
+});
+
+// Añadir displayName para debugging
+RegisterPage.displayName = 'RegisterPage';
 
 export default RegisterPage;

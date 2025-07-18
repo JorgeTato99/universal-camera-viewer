@@ -16,6 +16,8 @@ import { ManagementToolbar } from '../../components/management/ManagementToolbar
 import { CameraDataTable } from '../../components/management/CameraDataTable';
 import { ManagementStatusBar } from '../../components/management/ManagementStatusBar';
 import { CameraCreationWizard } from '../../components/management/CameraCreationWizard';
+import { ConnectionErrorState } from '../../../../components/feedback/ConnectionErrorState';
+import { useConnectionError } from '../../../../hooks/useConnectionError';
 
 export const CameraManagementPage: React.FC = () => {
   const theme = useTheme();
@@ -32,6 +34,8 @@ export const CameraManagementPage: React.FC = () => {
     setFilterBrand,
     setFilterLocation,
     getFilteredCameras,
+    connectionError,
+    clearConnectionError,
   } = useCameraStoreV2();
 
   // Estado local del componente
@@ -39,14 +43,27 @@ export const CameraManagementPage: React.FC = () => {
   const [showCreationWizard, setShowCreationWizard] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Hook para manejar errores de conexión con reintentos
+  const connectionErrorHandler = useConnectionError(
+    async () => {
+      await loadCameras();
+    },
+    {
+      maxRetries: 3,
+      baseRetryDelay: 2000,
+      enableAutoRetry: true,
+    }
+  );
+
   // Cargar cámaras al montar
   useEffect(() => {
     loadCameras();
   }, [loadCameras]);
 
   // Obtener cámaras filtradas y estadísticas
-  const filteredCameras = useMemo(() => getFilteredCameras(), [getFilteredCameras]);
-  const stats = useMemo(() => getCameraStats(), [getCameraStats]);
+  // No usar useMemo aquí porque necesitamos que se actualice cuando cambie el estado interno del store
+  const filteredCameras = getFilteredCameras();
+  const stats = getCameraStats();
 
   // Handlers
 
@@ -134,33 +151,50 @@ export const CameraManagementPage: React.FC = () => {
             overflow: 'auto',
           }}
         >
-          {/* Tabla de datos principal */}
-          <CameraDataTable
-            cameras={filteredCameras}
-            selectedCameras={selectedCameras}
-            onSelectCamera={handleSelectCamera}
-            onSelectAll={handleSelectAll}
-          />
-
-          {/* Empty State */}
-          {!isLoading && filteredCameras.length === 0 && (
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '60vh',
-                gap: 2,
+          {/* Mostrar error de conexión si existe */}
+          {connectionError?.hasError ? (
+            <ConnectionErrorState
+              errorType={connectionError.errorType}
+              customMessage={connectionError.errorMessage}
+              errorDetails={connectionError.errorDetails}
+              onRetry={() => {
+                clearConnectionError();
+                connectionErrorHandler.retry();
               }}
-            >
-              <Typography variant="h6" color="text.secondary">
-                No se encontraron cámaras
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Intenta ajustar los filtros o crear una nueva cámara
-              </Typography>
-            </Box>
+              isRetrying={connectionErrorHandler.isRetrying}
+              showDebugInfo={true}
+            />
+          ) : (
+            <>
+              {/* Tabla de datos principal */}
+              <CameraDataTable
+                cameras={filteredCameras}
+                selectedCameras={selectedCameras}
+                onSelectCamera={handleSelectCamera}
+                onSelectAll={handleSelectAll}
+              />
+
+              {/* Empty State */}
+              {!isLoading && filteredCameras.length === 0 && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '60vh',
+                    gap: 2,
+                  }}
+                >
+                  <Typography variant="h6" color="text.secondary">
+                    No se encontraron cámaras
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Intenta ajustar los filtros o crear una nueva cámara
+                  </Typography>
+                </Box>
+              )}
+            </>
           )}
         </Container>
       </Box>

@@ -1,12 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useEffect, memo } from "react";
 import { Box, Typography, Button } from "@mui/material";
 import AppProviders from "./app/providers/AppProviders";
 import AppRouter from "./app/router/AppRouter";
 import { useAppStore } from "./stores";
 import { MainLayout } from "./components/layout";
 
-// Main App Layout
-const AppLayout: React.FC = () => {
+// Main App Layout optimizado con memo
+const AppLayout = memo(() => {
   const { initialize, isInitializing, globalError } = useAppStore();
 
   useEffect(() => {
@@ -65,7 +65,10 @@ const AppLayout: React.FC = () => {
       <AppRouter />
     </MainLayout>
   );
-};
+});
+
+// Añadir displayName para debugging
+AppLayout.displayName = 'AppLayout';
 
 // Root App Component
 const App: React.FC = () => {

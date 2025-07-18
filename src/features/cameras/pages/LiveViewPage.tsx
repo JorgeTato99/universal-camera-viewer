@@ -1,15 +1,18 @@
 /**
  * 🎥 Live View Page - Universal Camera Viewer
  * Página de visualización en vivo de cámaras activas
+ * Optimizada para rendimiento con memoización y virtualización
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { Box, Typography } from "@mui/material";
 import { CameraToolbar, CameraGrid } from "../components";
 import { useCameraStoreV2 } from "../../../stores/cameraStore.v2";
 import { useNotificationStore } from "../../../stores/notificationStore";
+import { ConnectionErrorState } from "../../../components/feedback/ConnectionErrorState";
+import { useConnectionError } from "../../../hooks/useConnectionError";
 
-const LiveViewPage: React.FC = () => {
+const LiveViewPage = memo(() => {
   const { 
     cameras, 
     isLoading, 
@@ -20,9 +23,30 @@ const LiveViewPage: React.FC = () => {
     getCameraStats,
     gridColumns,
     setGridColumns,
+    connectionError,
+    clearConnectionError,
   } = useCameraStoreV2();
   const { addNotification } = useNotificationStore();
   const [isChangingLayout, setIsChangingLayout] = useState(false);
+
+  // Hook para manejar errores de conexión con reintentos
+  const connectionErrorHandler = useConnectionError(
+    async () => {
+      await loadCameras();
+    },
+    {
+      maxRetries: 3,
+      baseRetryDelay: 2000,
+      enableAutoRetry: true,
+      onMaxRetriesReached: () => {
+        addNotification({
+          type: 'error',
+          message: 'No se pudo conectar con el servidor después de varios intentos',
+          duration: 0,
+        });
+      },
+    }
+  );
 
   // Cargar cámaras desde el backend
   useEffect(() => {
@@ -94,11 +118,41 @@ const LiveViewPage: React.FC = () => {
     }
   }, [disconnectCamera, addNotification]);
 
-  const handleLayoutChange = useCallback((newColumns: 1 | 2 | 3 | 4) => {
+  const handleLayoutChange = useCallback((newColumns: 2 | 3 | 4 | 5) => {
     setIsChangingLayout(true);
     setGridColumns(newColumns);
     setTimeout(() => setIsChangingLayout(false), 300);
   }, [setGridColumns]);
+
+  const handleConnectAll = useCallback(async () => {
+    try {
+      // TODO: Implementar conectar todas las cámaras
+      addNotification({
+        message: "Conectando todas las cámaras...",
+        type: "info",
+      });
+    } catch (error) {
+      addNotification({
+        message: "Error al conectar las cámaras",
+        type: "error",
+      });
+    }
+  }, [addNotification]);
+
+  const handleDisconnectAll = useCallback(async () => {
+    try {
+      // TODO: Implementar desconectar todas las cámaras
+      addNotification({
+        message: "Desconectando todas las cámaras...",
+        type: "info",
+      });
+    } catch (error) {
+      addNotification({
+        message: "Error al desconectar las cámaras",
+        type: "error",
+      });
+    }
+  }, [addNotification]);
 
   return (
     <Box
@@ -112,38 +166,58 @@ const LiveViewPage: React.FC = () => {
         p: 2,
       }}
     >
-      {/* Header con título y estadísticas */}
-      <Box>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Vista en Vivo
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {connectedCameras.length} cámara{connectedCameras.length !== 1 ? 's' : ''} disponible{connectedCameras.length !== 1 ? 's' : ''} para visualización
-        </Typography>
-      </Box>
-
-      {/* Toolbar con controles específicos de vista en vivo */}
-      <CameraToolbar
-        totalCameras={connectedCameras.length}
-        connectedCameras={stats.connected}
-        onRefresh={handleRefresh}
-        onLayoutChange={handleLayoutChange}
-        gridColumns={gridColumns}
-        showOnlyConnected={false} // Temporalmente false hasta implementar conexión real
-      />
-
-      {/* Grid de cámaras en vivo */}
-      <Box sx={{ flex: 1, overflow: "auto" }}>
-        <CameraGrid
-          cameras={cameraData}
-          isLoading={isLoading || isChangingLayout}
-          gridColumns={gridColumns}
-          onCameraConnect={handleConnect}
-          onCameraDisconnect={handleDisconnect}
+      {/* Mostrar error de conexión si existe */}
+      {connectionError?.hasError ? (
+        <ConnectionErrorState
+          errorType={connectionError.errorType}
+          customMessage={connectionError.errorMessage}
+          errorDetails={connectionError.errorDetails}
+          onRetry={() => {
+            clearConnectionError();
+            connectionErrorHandler.retry();
+          }}
+          isRetrying={connectionErrorHandler.isRetrying}
+          showDebugInfo={true}
         />
-      </Box>
+      ) : (
+        <>
+          {/* Header con título y estadísticas */}
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Vista en Vivo
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {connectedCameras.length} cámara{connectedCameras.length !== 1 ? 's' : ''} disponible{connectedCameras.length !== 1 ? 's' : ''} para visualización
+            </Typography>
+          </Box>
+
+          {/* Toolbar con controles específicos de vista en vivo */}
+          <CameraToolbar
+            totalCameras={connectedCameras.length}
+            connectedCameras={stats.connected}
+            gridColumns={gridColumns as 2 | 3 | 4 | 5}
+            onGridColumnsChange={handleLayoutChange}
+            onConnectAll={handleConnectAll}
+            onDisconnectAll={handleDisconnectAll}
+          />
+
+          {/* Grid de cámaras en vivo */}
+          <Box sx={{ flex: 1, overflow: "auto" }}>
+            <CameraGrid
+              cameras={cameraData}
+              isLoading={isLoading || isChangingLayout}
+              gridColumns={gridColumns}
+              onCameraConnect={handleConnect}
+              onCameraDisconnect={handleDisconnect}
+            />
+          </Box>
+        </>
+      )}
     </Box>
   );
-};
+});
+
+// Añadir displayName para debugging
+LiveViewPage.displayName = 'LiveViewPage';
 
 export default LiveViewPage;

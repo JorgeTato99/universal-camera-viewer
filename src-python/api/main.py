@@ -21,7 +21,10 @@ from api.dependencies import cleanup_services, create_response
 from routers import cameras, scanner, config, streaming
 from routers.cameras_v2 import router as cameras_v2_router
 from routers.stream_profiles import router as stream_profiles_router
+from api.routers.publishing import router as publishing_router
+from api.routers.publishing_config import router as publishing_config_router
 from services.camera_manager_service import camera_manager_service
+from websocket.handlers.publishing_handler import get_publishing_ws_handler
 
 # Configurar logging
 logging.basicConfig(
@@ -48,13 +51,28 @@ async def lifespan(app: FastAPI):
     try:
         await camera_manager_service.initialize()
         logger.info("CameraManagerService inicializado correctamente")
+        
+        # Inicializar WebSocket handler para publicación
+        ws_handler = get_publishing_ws_handler()
+        await ws_handler.start()
+        logger.info("PublishingWebSocketHandler iniciado correctamente")
+        
     except Exception as e:
-        logger.error(f"Error inicializando CameraManagerService: {e}")
+        logger.error(f"Error inicializando servicios: {e}")
     
     yield
     
     # Shutdown
     logger.info("Cerrando aplicación...")
+    
+    # Detener WebSocket handler
+    try:
+        ws_handler = get_publishing_ws_handler()
+        await ws_handler.stop()
+        logger.info("PublishingWebSocketHandler detenido")
+    except Exception as e:
+        logger.error(f"Error deteniendo WebSocket handler: {e}")
+    
     await cleanup_services()
     logger.info("Aplicación cerrada correctamente")
 
@@ -247,6 +265,10 @@ app.include_router(config.router, prefix=settings.api_prefix)
 # API v2 routers
 app.include_router(cameras_v2_router, prefix="/api/v2")
 app.include_router(stream_profiles_router, prefix="/api/v2")
+
+# Publishing routers (para MediaMTX)
+app.include_router(publishing_router)
+app.include_router(publishing_config_router)
 
 # WebSocket routers (sin prefijo API)
 app.include_router(streaming.router, prefix="/ws")

@@ -1,20 +1,21 @@
 /**
  * 🎯 Cameras Page - Universal Camera Viewer
  * Página principal de gestión de cámaras con nuevo design system
+ * Optimizada con memo, callbacks memoizados y renderizado eficiente
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { Box, Typography } from "@mui/material";
 import { CameraToolbar, CameraGrid } from "./components";
 import { useCameraStoreV2 } from "../../stores/cameraStore.v2";
-import { cameraServiceV2 } from "../../services/python/cameraService.v2";
 import { streamingService } from "../../services/python/streamingService";
 import { useNotificationStore } from "../../stores/notificationStore";
-import { CameraResponse, ConnectionStatus } from "../../types/camera.types.v2";
+import { ConnectionErrorState } from "../../components/feedback/ConnectionErrorState";
+import { useConnectionError } from "../../hooks/useConnectionError";
 
 // Ya no necesitamos convertir, usamos directamente CameraResponse
 
-const CamerasPage: React.FC = () => {
+const CamerasPage = memo(() => {
   const { 
     cameras, 
     isLoading, 
@@ -25,9 +26,25 @@ const CamerasPage: React.FC = () => {
     getCameraStats,
     gridColumns,
     setGridColumns,
+    connectionError,
+    clearConnectionError,
+    connectAllCameras,
+    disconnectAllCameras,
   } = useCameraStoreV2();
   const { addNotification } = useNotificationStore();
   const [isChangingLayout, setIsChangingLayout] = useState(false);
+
+  // Hook para manejar errores de conexión
+  const connectionErrorHandler = useConnectionError(
+    async () => {
+      await loadCameras();
+    },
+    {
+      maxRetries: 3,
+      baseRetryDelay: 2000,
+      enableAutoRetry: true,
+    }
+  );
 
   // Cargar cámaras desde el backend
   useEffect(() => {
@@ -36,27 +53,26 @@ const CamerasPage: React.FC = () => {
 
   // Obtener cámaras filtradas del store
   const filteredCameras = getFilteredCameras();
-  console.log('Cámaras filtradas del store:', filteredCameras);
-  console.log('Total cámaras en store:', cameras.size);
   
-  // Transformar datos de cámaras para el componente
-  const cameraData = filteredCameras.map((camera) => ({
-    id: camera.camera_id,
-    name: camera.display_name || `Cámara ${camera.camera_id}`,
-    status: camera.is_connected ? 'connected' as const : 'disconnected' as const,
-    ip: camera.ip_address,
-    fps: camera.is_connected ? 30 : 0, // Mock FPS por ahora
-    latency: camera.is_connected ? 45 : 0, // Mock latency por ahora
-    connectedTime: camera.is_connected ? "02:30:15" : "00:00:00", // Mock por ahora
-    aspectRatio: "16:9" as const,
-  }));
-  console.log('Datos de cámaras transformados:', cameraData);
+  // Transformar datos de cámaras con memoización
+  const cameraData = useMemo(() => 
+    filteredCameras.map((camera) => ({
+      id: camera.camera_id,
+      name: camera.display_name || `Cámara ${camera.camera_id}`,
+      status: camera.is_connected ? 'connected' as const : 'disconnected' as const,
+      ip: camera.ip_address,
+      fps: camera.is_connected ? 30 : 0,
+      latency: camera.is_connected ? 45 : 0,
+      connectedTime: camera.is_connected ? "02:30:15" : "00:00:00",
+      aspectRatio: "16:9" as const,
+    })), [filteredCameras]);
 
   // Obtener estadísticas de cámaras
   const cameraStats = getCameraStats();
   const connectedCameras = cameraStats.connected;
 
-  const handleGridColumnsChange = (columns: 2 | 3) => {
+  // Handlers optimizados con useCallback
+  const handleGridColumnsChange = useCallback((columns: 2 | 3 | 4 | 5) => {
     setIsChangingLayout(true);
     setGridColumns(columns);
 
@@ -64,22 +80,22 @@ const CamerasPage: React.FC = () => {
     setTimeout(() => {
       setIsChangingLayout(false);
     }, 400); // Coincide con la duración de la transición del grid
-  };
+  }, [setGridColumns]);
 
-  const handleConnectAll = async () => {
+  const handleConnectAll = useCallback(async () => {
     await connectAllCameras();
-  };
+  }, [connectAllCameras]);
 
-  const handleDisconnectAll = async () => {
+  const handleDisconnectAll = useCallback(async () => {
     await disconnectAllCameras();
-  };
+  }, [disconnectAllCameras]);
 
-  // Handlers para acciones de cámaras individuales
-  const handleCameraConnect = async (cameraId: string) => {
+  // Handlers optimizados con useCallback para evitar re-renders
+  const handleCameraConnect = useCallback(async (cameraId: string) => {
     await connectCamera(cameraId);
-  };
+  }, [connectCamera]);
 
-  const handleCameraDisconnect = async (cameraId: string) => {
+  const handleCameraDisconnect = useCallback(async (cameraId: string) => {
     try {
       // Primero detener el streaming WebSocket si está activo
       if (streamingService.isConnected() && streamingService.cameraId === cameraId) {
@@ -92,14 +108,14 @@ const CamerasPage: React.FC = () => {
     } catch (error) {
       console.error('Error al desconectar cámara:', error);
     }
-  };
+  }, [disconnectCamera]);
 
-  const handleCameraSettings = (cameraId: string) => {
+  const handleCameraSettings = useCallback((cameraId: string) => {
     console.log(`Abrir configuración de cámara: ${cameraId}`);
     // TODO: Implementar modal de configuración
-  };
+  }, []);
 
-  const handleCameraCapture = async (cameraId: string) => {
+  const handleCameraCapture = useCallback(async (cameraId: string) => {
     try {
       // TODO: Implementar captura con API v2
       console.log('Captura de snapshot no implementada en v2');
@@ -115,7 +131,22 @@ const CamerasPage: React.FC = () => {
         message: 'Error al capturar imagen',
       });
     }
-  };
+  }, [addNotification]);
+
+  // Mostrar error de conexión si existe
+  if (connectionError && !connectionErrorHandler.isRetrying) {
+    return (
+      <Box sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}>
+        <ConnectionErrorState
+          errorType={connectionError.errorType}
+          customMessage={connectionError.errorMessage}
+          onRetry={connectionErrorHandler.retry}
+          isRetrying={connectionErrorHandler.isRetrying}
+          errorDetails={connectionError.errorDetails}
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -190,6 +221,9 @@ const CamerasPage: React.FC = () => {
       </Box>
     </Box>
   );
-};
+});
+
+// Añadir displayName para debugging
+CamerasPage.displayName = 'CamerasPage';
 
 export default CamerasPage;

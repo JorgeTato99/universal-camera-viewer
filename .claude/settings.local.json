@@ -24,7 +24,9 @@
       "Bash(then mv CAMERA_COMPATIBILITY.md camera-compatibility.md)",
       "Bash(else echo \"File not found\")",
       "Bash(fi)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:bluenviron.github.io)"
     ],
     "deny": []
   }

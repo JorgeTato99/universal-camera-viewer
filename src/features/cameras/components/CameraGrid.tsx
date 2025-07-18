@@ -3,7 +3,7 @@
  * Grilla responsiva para mostrar múltiples cámaras
  */
 
-import React from "react";
+import React, { memo, useMemo } from "react";
 import { Box, Typography } from "@mui/material";
 import { Videocam as VideocamIcon } from "@mui/icons-material";
 import { CameraCard } from "./CameraCard";
@@ -22,7 +22,7 @@ interface Camera {
 
 interface CameraGridProps {
   cameras: Camera[];
-  gridColumns: 2 | 3;
+  gridColumns: 2 | 3 | 4 | 5;
   isLoading?: boolean;
   onCameraConnect?: (cameraId: string) => void;
   onCameraDisconnect?: (cameraId: string) => void;
@@ -30,7 +30,8 @@ interface CameraGridProps {
   onCameraCapture?: (cameraId: string) => void;
 }
 
-export const CameraGrid: React.FC<CameraGridProps> = ({
+// Componente optimizado con memo para evitar re-renders innecesarios
+export const CameraGrid = memo<CameraGridProps>(({
   cameras,
   gridColumns,
   isLoading = false,
@@ -84,14 +85,25 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
     );
   }
 
-  // Configurar el número de columnas según la selección
-  const getGridColumns = () => {
-    return {
-      xs: "1fr", // 1 columna en móviles
-      sm: "repeat(2, 1fr)", // 2 columnas en tablets
-      md: `repeat(${gridColumns}, 1fr)`, // Columnas seleccionadas en desktop
+  // Configurar el número de columnas según la selección con memoización
+  const gridTemplateColumns = useMemo(() => {
+    // Ajustes responsivos mejorados para diferentes tamaños de pantalla
+    const responsiveColumns = {
+      xs: 1, // Móviles siempre 1 columna
+      sm: Math.min(2, gridColumns), // Tablets máximo 2 columnas
+      md: Math.min(3, gridColumns), // Pantallas medianas máximo 3
+      lg: Math.min(4, gridColumns), // Pantallas grandes máximo 4
+      xl: gridColumns, // Pantallas XL usan el valor completo
     };
-  };
+
+    return {
+      xs: "1fr",
+      sm: `repeat(${responsiveColumns.sm}, 1fr)`,
+      md: `repeat(${responsiveColumns.md}, 1fr)`,
+      lg: `repeat(${responsiveColumns.lg}, 1fr)`,
+      xl: `repeat(${responsiveColumns.xl}, 1fr)`,
+    };
+  }, [gridColumns]);
 
   return (
     <Box
@@ -105,7 +117,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: getGridColumns(),
+            gridTemplateColumns: gridTemplateColumns,
             gap: 0.5, // Reducido de 3 a 0.5 para espaciado mínimo
             width: "100%",
             // Transición suave para cambio de layout
@@ -160,7 +172,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: getGridColumns(),
+            gridTemplateColumns: gridTemplateColumns,
             gap: 0.5, // Reducido de 3 a 0.5 para espaciado mínimo
             width: "100%",
             // Transición suave para cambio de layout
@@ -261,4 +273,7 @@ export const CameraGrid: React.FC<CameraGridProps> = ({
       )}
     </Box>
   );
-};
+});
+
+// Añadir displayName para debugging
+CameraGrid.displayName = 'CameraGrid';

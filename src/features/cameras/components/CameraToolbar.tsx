@@ -24,8 +24,8 @@ import { colorTokens } from "../../../design-system/tokens";
 interface CameraToolbarProps {
   connectedCameras: number;
   totalCameras: number;
-  gridColumns: 2 | 3;
-  onGridColumnsChange: (columns: 2 | 3) => void;
+  gridColumns: 2 | 3 | 4 | 5;
+  onGridColumnsChange: (columns: 2 | 3 | 4 | 5) => void;
   onConnectAll: () => void;
   onDisconnectAll: () => void;
 }
@@ -39,7 +39,7 @@ export const CameraToolbar: React.FC<CameraToolbarProps> = ({
   onDisconnectAll,
 }) => {
   const handleGridChange = (event: SelectChangeEvent<number>) => {
-    onGridColumnsChange(event.target.value as 2 | 3);
+    onGridColumnsChange(event.target.value as 2 | 3 | 4 | 5);
   };
 
   return (
@@ -110,6 +110,28 @@ export const CameraToolbar: React.FC<CameraToolbarProps> = ({
                 }}
               >
                 3
+              </MenuItem>
+              <MenuItem
+                value={4}
+                sx={{
+                  transition: "background-color 0.2s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: (theme) => theme.palette.action.hover,
+                  },
+                }}
+              >
+                4
+              </MenuItem>
+              <MenuItem
+                value={5}
+                sx={{
+                  transition: "background-color 0.2s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: (theme) => theme.palette.action.hover,
+                  },
+                }}
+              >
+                5
               </MenuItem>
             </Select>
           </FormControl>

@@ -56,9 +56,22 @@ const StatusItem: React.FC<StatusItemProps> = ({
         px: 3,
         borderRight: 1,
         borderColor: 'divider',
+        position: 'relative',
         '&:last-child': {
           borderRight: 0,
         },
+        '&::before': showProgress ? {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          bgcolor: alpha(color || theme.palette.primary.main, 0.1),
+          transform: `scaleX(${percentage / 100})`,
+          transformOrigin: 'left',
+          transition: 'transform 0.3s ease',
+        } : {},
       }}
     >
       <Box
