@@ -13,6 +13,21 @@ import logging
 
 from api.dependencies import create_response
 from api.config import settings
+from api.schemas.requests.scanner_requests import (
+    ScanNetworkRequest,
+    QuickScanRequest,
+    ScanStatusRequest
+)
+from api.schemas.responses.scanner_responses import (
+    ScanStatus,
+    DetectedCamera,
+    ScanProgressResponse,
+    ScanResultsResponse,
+    QuickScanResponse,
+    ScanHistoryEntry,
+    ScanHistoryResponse,
+    ScanStatisticsResponse
+)
 from utils.exceptions import ServiceError, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -142,7 +157,7 @@ from models.scan_model import ScanMethod, ScanRange as ScanRangeModel
 
 
 # === Modelo local para compatibilidad ===
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 class ScanRange(BaseModel):
     """Rango de IPs para escanear (compatibilidad)."""
