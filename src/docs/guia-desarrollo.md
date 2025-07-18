@@ -44,14 +44,13 @@ cp .env.example .env
 
 ### Variables de Entorno
 
-```typescript
-// .env
-VITE_API_URL=http://localhost:8000
-VITE_WS_URL=ws://localhost:8000
-VITE_MEDIAMTX_URL=http://localhost:8554
-VITE_ENABLE_MOCK=false
-VITE_LOG_LEVEL=debug
-```
+**Variables requeridas:**
+
+- `VITE_API_URL`: URL del backend API
+- `VITE_WS_URL`: URL del WebSocket
+- `VITE_MEDIAMTX_URL`: URL del servidor MediaMTX
+- `VITE_ENABLE_MOCK`: Habilitar datos mock
+- `VITE_LOG_LEVEL`: Nivel de logging
 
 ## 📁 Estructura del Proyecto
 
@@ -77,196 +76,73 @@ graph TB
 
 #### Nombrado
 
-```typescript
-// Componentes: PascalCase
-export const CameraCard: React.FC<CameraCardProps> = () => { };
+**Convenciones establecidas:**
 
-// Funciones/Variables: camelCase
-const handleCameraConnect = () => { };
-const isConnected = true;
-
-// Constantes: UPPER_SNAKE_CASE
-const MAX_RETRY_ATTEMPTS = 3;
-const DEFAULT_TIMEOUT = 5000;
-
-// Types/Interfaces: PascalCase
-interface CameraConfig {
-  ip: string;
-  port: number;
-}
-
-// Enums: PascalCase con valores en UPPER_SNAKE_CASE
-enum ConnectionStatus {
-  CONNECTED = 'CONNECTED',
-  DISCONNECTED = 'DISCONNECTED'
-}
-```
+- **Componentes**: PascalCase (ej: `CameraCard`)
+- **Funciones/Variables**: camelCase (ej: `handleConnect`)
+- **Constantes**: UPPER_SNAKE_CASE (ej: `MAX_RETRIES`)
+- **Types/Interfaces**: PascalCase (ej: `CameraConfig`)
+- **Enums**: PascalCase con valores UPPER_SNAKE_CASE
 
 #### Estructura de Componente
 
-```typescript
-// components/CameraCard/CameraCard.tsx
-import React, { useState, useCallback, memo } from 'react';
-import { Box, Card, Typography } from '@mui/material';
-import { useCamera } from '@/hooks/useCamera';
-import type { Camera } from '@/types';
+**Orden recomendado:**
 
-interface CameraCardProps {
-  camera: Camera;
-  onSelect?: (camera: Camera) => void;
-  className?: string;
-}
+1. Imports (React, librerías, locales)
+2. Types/Interfaces
+3. Estado local
+4. Hooks personalizados
+5. Handlers/Callbacks
+6. Effects
+7. Render helpers
+8. Return del componente
 
-export const CameraCard: React.FC<CameraCardProps> = memo(({
-  camera,
-  onSelect,
-  className
-}) => {
-  // 1. Estado local
-  const [isHovered, setIsHovered] = useState(false);
-  
-  // 2. Hooks personalizados
-  const { connect, disconnect, isConnecting } = useCamera(camera.id);
-  
-  // 3. Handlers
-  const handleClick = useCallback(() => {
-    onSelect?.(camera);
-  }, [camera, onSelect]);
-  
-  // 4. Effects
-  useEffect(() => {
-    // Lógica de efectos
-  }, []);
-  
-  // 5. Render helpers
-  const renderStatus = () => {
-    if (isConnecting) return <LoadingSpinner />;
-    return <StatusBadge status={camera.status} />;
-  };
-  
-  // 6. Render principal
-  return (
-    <Card
-      className={className}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <Box p={2}>
-        <Typography variant="h6">{camera.name}</Typography>
-        {renderStatus()}
-      </Box>
-    </Card>
-  );
-});
+**Best practices:**
 
-CameraCard.displayName = 'CameraCard';
-```
+- Usar `memo` para optimización
+- Definir `displayName` para debugging
+- Props tipadas con interfaces
+- Destructuring en parámetros
 
 ### Hooks Personalizados
 
-```typescript
-// hooks/useCamera.ts
-export const useCamera = (cameraId: string) => {
-  const camera = useCameraStore(state => 
-    state.cameras.find(c => c.id === cameraId)
-  );
-  
-  const { connectCamera, disconnectCamera } = useCameraStore();
-  const [isConnecting, setIsConnecting] = useState(false);
-  
-  const connect = useCallback(async () => {
-    setIsConnecting(true);
-    try {
-      await connectCamera(cameraId);
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [cameraId, connectCamera]);
-  
-  const disconnect = useCallback(async () => {
-    await disconnectCamera(cameraId);
-  }, [cameraId, disconnectCamera]);
-  
-  return {
-    camera,
-    connect,
-    disconnect,
-    isConnecting
-  };
-};
-```
+**Patrón de hooks:**
+
+- Prefijo `use` obligatorio
+- Encapsular lógica reutilizable
+- Retornar objeto con valores y funciones
+- Manejar estados de carga internamente
+- Usar `useCallback` para funciones expuestas
 
 ## 🧪 Testing
 
 ### Estructura de Tests
 
-```typescript
-// components/CameraCard/__tests__/CameraCard.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react';
-import { CameraCard } from '../CameraCard';
-import { mockCamera } from '@/test-utils/mocks';
+**Organización de tests:**
 
-describe('CameraCard', () => {
-  const defaultProps = {
-    camera: mockCamera,
-    onSelect: jest.fn()
-  };
-  
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-  
-  it('should render camera name', () => {
-    render(<CameraCard {...defaultProps} />);
-    expect(screen.getByText(mockCamera.name)).toBeInTheDocument();
-  });
-  
-  it('should call onSelect when clicked', () => {
-    render(<CameraCard {...defaultProps} />);
-    fireEvent.click(screen.getByRole('button'));
-    expect(defaultProps.onSelect).toHaveBeenCalledWith(mockCamera);
-  });
-  
-  it('should show loading state when connecting', () => {
-    // Mock del hook
-    jest.mock('@/hooks/useCamera', () => ({
-      useCamera: () => ({ isConnecting: true })
-    }));
-    
-    render(<CameraCard {...defaultProps} />);
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-  });
-});
-```
+- Ubicación: `__tests__` junto al componente
+- Archivo: `ComponentName.test.tsx`
+- Usar `describe` para agrupar tests
+- `beforeEach` para limpiar mocks
+- Tests descriptivos con `it` o `test`
+
+**Qué testear:**
+
+- Renderizado correcto
+- Interacciones de usuario
+- Estados de carga/error
+- Props y callbacks
+- Casos edge
 
 ### Testing de Stores
 
-```typescript
-// stores/__tests__/cameraStore.test.ts
-import { renderHook, act } from '@testing-library/react-hooks';
-import { useCameraStore } from '../cameraStore';
+**Testing Zustand stores:**
 
-describe('cameraStore', () => {
-  beforeEach(() => {
-    useCameraStore.setState({ cameras: [] });
-  });
-  
-  it('should add camera', async () => {
-    const { result } = renderHook(() => useCameraStore());
-    
-    await act(async () => {
-      await result.current.addCamera({
-        name: 'Test Camera',
-        ip: '192.168.1.100'
-      });
-    });
-    
-    expect(result.current.cameras).toHaveLength(1);
-    expect(result.current.cameras[0].name).toBe('Test Camera');
-  });
-});
-```
+- Usar `renderHook` para probar hooks
+- `act` para acciones asíncronas
+- Resetear estado antes de cada test
+- Verificar cambios de estado
+- Testear acciones y selectores
 
 ## 🔧 Flujo de Desarrollo
 
@@ -294,180 +170,89 @@ gitGraph
 
 ### Convenciones de Commits
 
-```bash
-# Formato: <tipo>(<alcance>): <mensaje>
+**Formato:** `<tipo>(<alcance>): <mensaje>`
 
-# Tipos permitidos:
-feat: Nueva funcionalidad
-fix: Corrección de bug
-docs: Cambios en documentación
-style: Cambios de formato (no afectan funcionalidad)
-refactor: Refactorización de código
-test: Agregar o modificar tests
-chore: Cambios en build o herramientas
+**Tipos permitidos:**
 
-# Ejemplos:
-git commit -m "feat(cameras): agregar soporte para PTZ"
-git commit -m "fix(streaming): corregir memory leak en video player"
-git commit -m "docs(readme): actualizar instrucciones de instalación"
-```
+- `feat`: Nueva funcionalidad
+- `fix`: Corrección de bug
+- `docs`: Cambios en documentación
+- `style`: Cambios de formato
+- `refactor`: Refactorización
+- `test`: Tests
+- `chore`: Build/herramientas
+
+**Ejemplos:**
+
+- `feat(cameras): agregar soporte PTZ`
+- `fix(streaming): resolver memory leak`
+- `docs(readme): actualizar instalación`
 
 ### Pull Request Template
 
-```markdown
-## Descripción
-Breve descripción de los cambios realizados.
+**Secciones del PR:**
 
-## Tipo de cambio
-- [ ] Bug fix
-- [ ] Nueva funcionalidad
-- [ ] Breaking change
-- [ ] Documentación
-
-## Checklist
-- [ ] Mi código sigue las guías de estilo
-- [ ] He realizado auto-review
-- [ ] He agregado tests
-- [ ] Los tests existentes pasan
-- [ ] He actualizado la documentación
-
-## Screenshots (si aplica)
-```
+1. **Descripción**: Resumen de cambios
+2. **Tipo de cambio**: Bug fix, feature, etc.
+3. **Checklist**: Verificaciones necesarias
+4. **Screenshots**: Si hay cambios visuales
+5. **Breaking changes**: Si aplica
+6. **Issues relacionados**: Links a issues
 
 ## 🛠️ Scripts de Desarrollo
 
 ### Package.json Scripts
 
-```json
-{
-  "scripts": {
-    // Desarrollo
-    "dev": "vite",
-    "tauri-dev": "tauri dev",
-    
-    // Build
-    "build": "tsc && vite build",
-    "tauri-build": "tauri build",
-    
-    // Testing
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
-    
-    // Linting
-    "lint": "eslint src --ext ts,tsx",
-    "lint:fix": "eslint src --ext ts,tsx --fix",
-    
-    // Type checking
-    "type-check": "tsc --noEmit",
-    
-    // Formateo
-    "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",
-    
-    // Pre-commit
-    "pre-commit": "yarn lint && yarn type-check && yarn test"
-  }
-}
-```
+**Scripts principales:**
+
+- **Desarrollo**: `dev`, `tauri-dev`
+- **Build**: `build`, `tauri-build`
+- **Testing**: `test`, `test:ui`, `test:coverage`
+- **Linting**: `lint`, `lint:fix`
+- **Type checking**: `type-check`
+- **Formateo**: `format`
+- **Pre-commit**: Ejecuta linting, types y tests
 
 ### Makefile para Python
 
-```makefile
-# Desarrollo
-dev:
-	python run_python.py
+**Comandos disponibles:**
 
-# Calidad de código
-format:
-	black src-python
-	isort src-python
-
-lint:
-	flake8 src-python
-	pylint src-python
-
-type-check:
-	mypy src-python
-
-# Testing
-test:
-	pytest
-
-test-cov:
-	pytest --cov=src-python --cov-report=html
-
-# Todo junto
-check-all: format lint type-check test
-```
+- `make dev`: Ejecutar servidor de desarrollo
+- `make format`: Formatear con black/isort
+- `make lint`: Verificar con flake8/pylint
+- `make type-check`: Verificar tipos con mypy
+- `make test`: Ejecutar tests con pytest
+- `make test-cov`: Tests con cobertura
+- `make check-all`: Ejecutar todo
 
 ## 🔍 Debugging
 
 ### VS Code Launch Configuration
 
-```json
-// .vscode/launch.json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Debug Tauri",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "yarn",
-      "runtimeArgs": ["tauri-dev"],
-      "env": {
-        "RUST_BACKTRACE": "1"
-      }
-    },
-    {
-      "name": "Debug React",
-      "type": "chrome",
-      "request": "launch",
-      "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/src"
-    },
-    {
-      "name": "Debug Python",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/run_python.py",
-      "console": "integratedTerminal"
-    }
-  ]
-}
-```
+**Configuraciones de debug:**
+
+- **Debug Tauri**: Aplicación completa con Rust
+- **Debug React**: Frontend en Chrome
+- **Debug Python**: Backend FastAPI
+- **Compound**: Todos los servicios juntos
+
+**Tips de debugging:**
+
+- Usar breakpoints condicionales
+- Inspeccionar estado de Zustand
+- Network tab para WebSocket
+- React DevTools Profiler
 
 ### Chrome DevTools
 
-```typescript
-// Helpers para debugging
-export const debugLog = (...args: any[]) => {
-  if (import.meta.env.DEV) {
-    console.log('[DEBUG]', ...args);
-  }
-};
+**Herramientas útiles:**
 
-export const debugTable = (data: any) => {
-  if (import.meta.env.DEV) {
-    console.table(data);
-  }
-};
-
-// React DevTools Profiler
-export const withProfiler = <P extends object>(
-  Component: React.ComponentType<P>,
-  id: string
-) => {
-  if (import.meta.env.DEV) {
-    return (props: P) => (
-      <Profiler id={id} onRender={onRenderCallback}>
-        <Component {...props} />
-      </Profiler>
-    );
-  }
-  return Component;
-};
-```
+- **Console**: debugLog helpers condicionales
+- **Network**: Monitorear WebSocket frames
+- **Performance**: Profiling de renders
+- **Memory**: Detectar memory leaks
+- **React DevTools**: Inspeccionar componentes
+- **Redux DevTools**: Estado de Zustand
 
 ## 📦 Gestión de Dependencias
 
@@ -502,85 +287,46 @@ yarn upgrade --latest
 
 ### Validación de Entrada
 
-```typescript
-// utils/validation.ts
-export const validateIP = (ip: string): boolean => {
-  const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-  if (!ipRegex.test(ip)) return false;
-  
-  const parts = ip.split('.');
-  return parts.every(part => {
-    const num = parseInt(part, 10);
-    return num >= 0 && num <= 255;
-  });
-};
+**Validaciones implementadas:**
 
-export const sanitizeInput = (input: string): string => {
-  return input
-    .trim()
-    .replace(/[<>]/g, '') // Prevenir XSS básico
-    .slice(0, 255); // Limitar longitud
-};
-```
+- **IP Address**: Formato y rangos válidos
+- **Puertos**: Rango 1-65535
+- **URLs**: Protocolo y formato
+- **Input sanitization**: Prevenir XSS
+- **Length limits**: Máximos de caracteres
 
 ### Manejo de Credenciales
 
-```typescript
-// NUNCA hacer esto
-const password = "admin123"; // ❌
+**Mejores prácticas:**
 
-// Usar variables de entorno
-const apiKey = import.meta.env.VITE_API_KEY; // ✅
-
-// Encriptar credenciales sensibles
-import { encrypt, decrypt } from '@/utils/crypto';
-
-const storeCredentials = async (username: string, password: string) => {
-  const encrypted = await encrypt(password);
-  localStorage.setItem('creds', JSON.stringify({
-    username,
-    password: encrypted
-  }));
-};
-```
+- ❌ NUNCA hardcodear credenciales
+- ✅ Usar variables de entorno
+- ✅ Encriptar datos sensibles
+- ✅ HTTPS para transmisión
+- ✅ Tokens con expiración
+- ❌ No guardar passwords en localStorage
 
 ## 🚀 Performance
 
 ### Lazy Loading
 
-```typescript
-// Rutas con lazy loading
-const CamerasPage = lazy(() => import('@/features/cameras/pages/CamerasPage'));
-const ScannerPage = lazy(() => import('@/features/scanner/pages/ScannerPage'));
+**Estrategias de carga:**
 
-// Componentes pesados
-const HeavyChart = lazy(() => 
-  import('@/components/charts/HeavyChart')
-    .then(module => ({ default: module.HeavyChart }))
-);
-```
+- **Route-based splitting**: Páginas completas
+- **Component splitting**: Componentes pesados
+- **Library splitting**: Librerías grandes
+- **Suspense boundaries**: Fallbacks durante carga
+- **Prefetching**: Anticipar navegación
 
 ### Memoización
 
-```typescript
-// Memoizar componentes
-export const ExpensiveComponent = memo(({ data }) => {
-  // Render costoso
-}, (prevProps, nextProps) => {
-  // Comparación personalizada
-  return prevProps.data.id === nextProps.data.id;
-});
+**Técnicas de optimización:**
 
-// Memoizar valores calculados
-const expensiveValue = useMemo(() => {
-  return calculateExpensiveValue(data);
-}, [data]);
-
-// Memoizar callbacks
-const handleClick = useCallback((id: string) => {
-  doSomething(id);
-}, [dependency]);
-```
+- **React.memo**: Componentes puros
+- **useMemo**: Valores calculados costosos
+- **useCallback**: Funciones estables
+- **Custom comparison**: memo con comparador
+- **Selective updates**: Solo re-render necesarios
 
 ## 📋 Checklist de Desarrollo
 

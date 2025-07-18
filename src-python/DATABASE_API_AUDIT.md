@@ -14,7 +14,8 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 ## ✅ Tablas con Cobertura Completa
 
 ### 1. **cameras**
-- **APIs existentes**: 
+
+- **APIs existentes**:
   - `GET /cameras` - Listar cámaras
   - `POST /cameras` - Crear cámara
   - `GET /cameras/{id}` - Obtener cámara
@@ -24,6 +25,7 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 - **Estado**: ✅ Completo
 
 ### 2. **camera_credentials**
+
 - **APIs existentes**:
   - `GET /credentials` - Listar credenciales
   - `POST /credentials` - Crear credencial
@@ -34,6 +36,7 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 - **Estado**: ✅ Completo
 
 ### 3. **camera_protocols**
+
 - **APIs existentes**:
   - `GET /cameras/{id}/protocols` - Listar protocolos
   - `PUT /cameras/{id}/protocols/{type}` - Actualizar protocolo
@@ -42,6 +45,7 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 - **Estado**: ✅ Completo
 
 ### 4. **stream_profiles**
+
 - **APIs existentes**:
   - `GET /stream-profiles` - Listar perfiles
   - `POST /stream-profiles` - Crear perfil
@@ -52,6 +56,7 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 - **Estado**: ✅ Completo
 
 ### 5. **network_scans**
+
 - **APIs existentes**:
   - `POST /scanner/scan` - Iniciar escaneo
   - `GET /scanner/scan/{id}/progress` - Progreso de escaneo
@@ -61,6 +66,7 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 - **Estado**: ✅ Completo
 
 ### 6. **scan_results**
+
 - **APIs existentes**:
   - Cubierto por `GET /scanner/scan/{id}/results`
   - `POST /scanner/quick-scan` - Escaneo rápido
@@ -70,9 +76,11 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 ## ⚠️ Tablas con Cobertura Parcial
 
 ### 1. **camera_endpoints**
+
 - **APIs existentes**:
   - `GET /cameras/{id}/protocols/endpoints` - Obtener endpoints
 - **APIs faltantes**:
+
   ```
   POST /cameras/{id}/endpoints - Crear endpoint manual
   PUT /cameras/{id}/endpoints/{id} - Actualizar endpoint
@@ -81,9 +89,11 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 2. **connection_logs**
+
 - **APIs existentes**:
   - `GET /connections/{id}/history` - Historial básico
 - **APIs faltantes**:
+
   ```
   GET /connections/logs - Listar todos los logs con filtros
   GET /connections/logs/stats - Estadísticas agregadas
@@ -92,9 +102,11 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 3. **camera_events**
+
 - **APIs existentes**:
   - WebSocket `/events` - Stream de eventos en tiempo real
 - **APIs faltantes**:
+
   ```
   GET /events - Listar eventos históricos
   GET /events/{id} - Obtener detalle de evento
@@ -104,10 +116,12 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 4. **system_config**
+
 - **APIs existentes**:
   - `GET /config` - Obtener configuración (parcial)
   - `PUT /config` - Actualizar configuración (parcial)
 - **APIs faltantes**:
+
   ```
   GET /config/categories - Listar categorías
   GET /config/{category} - Obtener config por categoría
@@ -118,7 +132,9 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 ## ❌ Tablas sin APIs
 
 ### 1. **camera_capabilities**
+
 - **APIs faltantes**:
+
   ```
   GET /cameras/{id}/capabilities - Listar capacidades
   POST /cameras/{id}/capabilities/detect - Auto-detectar capacidades
@@ -127,7 +143,9 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 2. **camera_statistics**
+
 - **APIs faltantes**:
+
   ```
   GET /cameras/{id}/statistics - Estadísticas de cámara
   GET /statistics/summary - Resumen global
@@ -136,7 +154,9 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 3. **snapshots**
+
 - **APIs faltantes**:
+
   ```
   GET /snapshots - Listar snapshots
   POST /cameras/{id}/snapshots - Capturar snapshot
@@ -147,7 +167,9 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 4. **recordings**
+
 - **APIs faltantes**:
+
   ```
   GET /recordings - Listar grabaciones
   POST /cameras/{id}/recordings/start - Iniciar grabación
@@ -159,7 +181,9 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 5. **config_templates**
+
 - **APIs faltantes**:
+
   ```
   GET /templates - Listar plantillas
   POST /templates - Crear plantilla
@@ -170,7 +194,9 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
   ```
 
 ### 6. **Vistas (camera_overview, verified_endpoints)**
+
 - **APIs faltantes**:
+
   ```
   GET /cameras/overview - Vista general de cámaras
   GET /endpoints/verified - Endpoints verificados
@@ -179,6 +205,7 @@ Este documento analiza la cobertura de las APIs existentes contra las tablas de 
 ## 📝 APIs Adicionales Recomendadas
 
 ### 1. **Dashboard/Métricas**
+
 ```
 GET /dashboard/stats - Estadísticas generales del sistema
 GET /dashboard/health - Estado de salud del sistema
@@ -186,6 +213,7 @@ GET /dashboard/alerts - Alertas activas
 ```
 
 ### 2. **Búsqueda y Filtrado**
+
 ```
 POST /search/cameras - Búsqueda avanzada de cámaras
 POST /search/events - Búsqueda de eventos
@@ -193,6 +221,7 @@ POST /search/logs - Búsqueda en logs
 ```
 
 ### 3. **Importación/Exportación**
+
 ```
 GET /export/cameras - Exportar configuración de cámaras
 POST /import/cameras - Importar configuración de cámaras
@@ -201,6 +230,7 @@ POST /restore/database - Restaurar base de datos
 ```
 
 ### 4. **Mantenimiento**
+
 ```
 POST /maintenance/cleanup - Limpiar datos antiguos
 POST /maintenance/optimize - Optimizar base de datos
@@ -210,18 +240,21 @@ GET /maintenance/status - Estado de mantenimiento
 ## 🎯 Prioridad de Implementación
 
 ### Alta Prioridad (Funcionalidad Core)
+
 1. **camera_capabilities** - Necesario para gestión completa de cámaras
 2. **camera_statistics** - Importante para monitoreo
 3. **snapshots** - Funcionalidad básica esperada
 4. **camera_endpoints** (completar) - Gestión de URLs
 
 ### Media Prioridad (Mejora UX)
+
 5. **recordings** - Funcionalidad avanzada
 6. **connection_logs** (completar) - Debugging y análisis
 7. **camera_events** (completar) - Historial de eventos
 8. **config_templates** - Facilita configuración
 
 ### Baja Prioridad (Nice to Have)
+
 9. **system_config** (completar) - Ya funcional parcialmente
 10. APIs de dashboard y búsqueda
 11. APIs de importación/exportación

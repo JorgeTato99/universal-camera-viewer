@@ -8,7 +8,7 @@ El proyecto sigue una estructura modular y escalable, organizando el código por
 
 ## 📂 Estructura de Carpetas
 
-```
+```bash
 src/
 ├── 📱 app/                    # Configuración core de la aplicación
 │   ├── providers/            # Providers de contexto global
@@ -87,29 +87,26 @@ graph LR
 
 ### 🧩 `/components` - Componentes Reutilizables
 
-#### Organización por Categoría:
+#### Organización por Categoría
+
 - **`common/`**: Botones, inputs, cards genéricos
 - **`dialogs/`**: AboutDialog, LicenseDialog
 - **`feedback/`**: Estados de error y carga
 - **`layout/`**: MainLayout, Sidebar, TopBar
 - **`ui/`**: Componentes UI específicos
 
-#### Ejemplo de Componente:
-```typescript
-// components/layout/Sidebar.tsx
-export const Sidebar: React.FC<SidebarProps> = memo(({ 
-  collapsed, 
-  onToggle 
-}) => {
-  // Lógica del componente
-});
-```
+#### Patrón de Componente
+
+- Uso de React.FC con tipado fuerte
+- Memoización con React.memo
+- Props claramente definidas en interfaces
+- Separación de lógica y presentación
 
 ### ✨ `/features` - Módulos de Funcionalidad
 
 Cada feature es un módulo independiente con su propia estructura:
 
-```
+```bash
 features/cameras/
 ├── components/          # Componentes específicos
 ├── pages/              # Páginas/vistas
@@ -118,7 +115,7 @@ features/cameras/
 └── types.ts            # Tipos locales
 ```
 
-#### Features Principales:
+#### Features Principales
 
 1. **📷 Cameras**: Visualización y gestión de cámaras
 2. **🔍 Scanner**: Detección de dispositivos en red
@@ -127,19 +124,15 @@ features/cameras/
 
 ### 🗄️ `/stores` - Gestión de Estado
 
-Usando Zustand para estado global:
+**Arquitectura con Zustand:**
 
-```typescript
-// stores/cameraStore.ts
-interface CameraStore {
-  cameras: Camera[];
-  selectedCamera: Camera | null;
-  addCamera: (camera: Camera) => void;
-  removeCamera: (id: string) => void;
-}
-```
+- Stores tipados con interfaces
+- Acciones para modificar estado
+- Selectores para optimizar re-renders
+- Estado persistente opcional con middleware
 
-#### Stores Disponibles:
+#### Stores Disponibles
+
 - **`appStore`**: Estado general de la aplicación
 - **`cameraStore`**: Gestión de cámaras
 - **`streamingStore`**: Estado de streaming
@@ -168,38 +161,25 @@ graph TB
     C --> F
 ```
 
-#### Tipos de Servicios:
+#### Tipos de Servicios
+
 - **API Services**: Comunicación REST
 - **WebSocket Services**: Datos en tiempo real
 - **Tauri Services**: Operaciones nativas
 
 ### 🎨 `/design-system` - Sistema de Diseño
 
-Centraliza todos los aspectos visuales:
+**Componentes del sistema:**
 
-```typescript
-// design-system/tokens.ts
-export const colorTokens = {
-  primary: {
-    50: '#e3f2fd',
-    500: '#2196f3',
-    900: '#0d47a1'
-  }
-};
-
-// design-system/theme.ts
-export const lightTheme = createTheme({
-  palette: {
-    primary: {
-      main: colorTokens.primary[500]
-    }
-  }
-});
-```
+- **tokens.ts**: Design tokens (colores, espaciados, tipografía)
+- **theme.ts**: Temas claro/oscuro de Material-UI
+- **typography.ts**: Sistema tipográfico consistente
+- **breakpoints.ts**: Puntos de quiebre responsive
 
 ### 🔤 `/types` - TypeScript Types
 
 Organización de tipos:
+
 - **Globales**: En `types/` raíz
 - **Por Feature**: En `features/*/types.ts`
 - **Compartidos**: En `types/common.types.ts`
@@ -207,22 +187,20 @@ Organización de tipos:
 ## 📏 Convenciones de Nomenclatura
 
 ### Archivos y Carpetas
+
 - **Componentes**: PascalCase (`CameraCard.tsx`)
 - **Utilities**: camelCase (`formatDate.ts`)
 - **Types**: camelCase con `.types` (`camera.types.ts`)
 - **Carpetas**: kebab-case (`design-system`)
 
 ### Exports
-```typescript
-// Named exports para utilities
-export const formatDate = () => {};
 
-// Default export para componentes
-export default CameraCard;
+**Convenciones de exportación:**
 
-// Barrel exports en index.ts
-export { CameraCard } from './CameraCard';
-```
+- **Named exports**: Para utilidades y funciones
+- **Default export**: Para componentes principales
+- **Barrel exports**: En archivos index.ts para APIs limpias
+- **Re-exports**: Para simplificar rutas de importación
 
 ## 🔄 Flujo de Importación
 

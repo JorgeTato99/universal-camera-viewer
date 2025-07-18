@@ -419,6 +419,163 @@ class DatabaseCreator:
                 )
             """)
             
+            # ================== TABLAS DE MEDIAMTX ==================
+            
+            logger.info("Creando tablas de MediaMTX...")
+            
+            # Servidores MediaMTX
+            cursor.execute("""
+                CREATE TABLE mediamtx_servers (
+                    server_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    server_name TEXT NOT NULL UNIQUE,
+                    rtsp_url TEXT NOT NULL,
+                    rtsp_port INTEGER DEFAULT 8554,
+                    api_url TEXT,
+                    api_port INTEGER DEFAULT 9997,
+                    api_enabled BOOLEAN DEFAULT 1,
+                    username TEXT,
+                    password_encrypted TEXT,
+                    auth_enabled BOOLEAN DEFAULT 0,
+                    use_tcp BOOLEAN DEFAULT 1,
+                    max_reconnects INTEGER DEFAULT 3 CHECK (max_reconnects >= 0),
+                    reconnect_delay REAL DEFAULT 5.0 CHECK (reconnect_delay > 0),
+                    publish_path_template TEXT DEFAULT 'ucv_{camera_code}',
+                    is_active BOOLEAN DEFAULT 0,
+                    is_default BOOLEAN DEFAULT 0,
+                    health_check_interval INTEGER DEFAULT 30,
+                    last_health_check TIMESTAMP,
+                    last_health_status TEXT CHECK (last_health_status IN ('healthy', 'unhealthy', 'unknown')),
+                    metadata JSON,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_by TEXT,
+                    updated_by TEXT
+                )
+            """)
+            
+            # Publicaciones de cámaras
+            cursor.execute("""
+                CREATE TABLE camera_publications (
+                    publication_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    camera_id TEXT NOT NULL,
+                    server_id INTEGER NOT NULL,
+                    session_id TEXT NOT NULL UNIQUE,
+                    publish_path TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK (status IN ('idle', 'starting', 'publishing', 'stopping', 'stopped', 'error', 'reconnecting')),
+                    process_pid INTEGER,
+                    ffmpeg_command TEXT,
+                    start_time TIMESTAMP,
+                    stop_time TIMESTAMP,
+                    error_count INTEGER DEFAULT 0,
+                    last_error TEXT,
+                    last_error_time TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (camera_id) REFERENCES cameras (camera_id) ON DELETE CASCADE,
+                    FOREIGN KEY (server_id) REFERENCES mediamtx_servers (server_id) ON DELETE CASCADE,
+                    UNIQUE(camera_id, is_active)
+                )
+            """)
+            
+            # Historial de publicaciones
+            cursor.execute("""
+                CREATE TABLE publication_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    camera_id TEXT NOT NULL,
+                    server_id INTEGER NOT NULL,
+                    session_id TEXT NOT NULL,
+                    publish_path TEXT NOT NULL,
+                    start_time TIMESTAMP NOT NULL,
+                    end_time TIMESTAMP,
+                    duration_seconds INTEGER,
+                    total_frames INTEGER DEFAULT 0,
+                    average_fps REAL,
+                    average_bitrate_kbps REAL,
+                    total_data_mb REAL DEFAULT 0,
+                    max_viewers INTEGER DEFAULT 0,
+                    total_viewer_time_seconds INTEGER DEFAULT 0,
+                    error_count INTEGER DEFAULT 0,
+                    termination_reason TEXT CHECK (termination_reason IN ('completed', 'user_stopped', 'error', 'server_shutdown', 'camera_disconnected')),
+                    last_error TEXT,
+                    metadata JSON,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (camera_id) REFERENCES cameras (camera_id) ON DELETE CASCADE,
+                    FOREIGN KEY (server_id) REFERENCES mediamtx_servers (server_id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Métricas en tiempo real
+            cursor.execute("""
+                CREATE TABLE publication_metrics (
+                    metric_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    publication_id INTEGER NOT NULL,
+                    metric_time TIMESTAMP NOT NULL,
+                    fps REAL,
+                    bitrate_kbps REAL,
+                    frames INTEGER,
+                    speed REAL,
+                    quality_score REAL CHECK (quality_score >= 0 AND quality_score <= 100),
+                    size_kb INTEGER,
+                    time_seconds REAL,
+                    dropped_frames INTEGER DEFAULT 0,
+                    viewer_count INTEGER DEFAULT 0,
+                    cpu_usage_percent REAL,
+                    memory_usage_mb REAL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (publication_id) REFERENCES camera_publications (publication_id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Viewers/Consumidores
+            cursor.execute("""
+                CREATE TABLE publication_viewers (
+                    viewer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    publication_id INTEGER NOT NULL,
+                    viewer_ip TEXT NOT NULL,
+                    viewer_user_agent TEXT,
+                    protocol_used TEXT CHECK (protocol_used IN ('RTSP', 'RTMP', 'HLS', 'WebRTC', 'SRT')),
+                    start_time TIMESTAMP NOT NULL,
+                    end_time TIMESTAMP,
+                    duration_seconds INTEGER,
+                    bytes_received INTEGER DEFAULT 0,
+                    quality_changes INTEGER DEFAULT 0,
+                    buffer_events INTEGER DEFAULT 0,
+                    metadata JSON,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (publication_id) REFERENCES camera_publications (publication_id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Configuración de paths MediaMTX
+            cursor.execute("""
+                CREATE TABLE mediamtx_paths (
+                    path_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    server_id INTEGER NOT NULL,
+                    path_name TEXT NOT NULL,
+                    source_type TEXT CHECK (source_type IN ('publisher', 'redirect', 'rpiCamera', 'rtsp', 'rtmp', 'hls', 'udp', 'webrtc')),
+                    source_url TEXT,
+                    record_enabled BOOLEAN DEFAULT 0,
+                    record_path TEXT,
+                    record_format TEXT CHECK (record_format IN ('fmp4', 'mpegts')),
+                    record_segment_duration INTEGER DEFAULT 3600,
+                    playback_enabled BOOLEAN DEFAULT 1,
+                    authentication_required BOOLEAN DEFAULT 0,
+                    allowed_ips JSON,
+                    publish_user TEXT,
+                    publish_password_encrypted TEXT,
+                    read_user TEXT,
+                    read_password_encrypted TEXT,
+                    run_on_init TEXT,
+                    run_on_demand TEXT,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (server_id) REFERENCES mediamtx_servers (server_id) ON DELETE CASCADE,
+                    UNIQUE(server_id, path_name)
+                )
+            """)
+            
             # ================== TABLAS DE CONFIGURACIÓN ==================
             
             # Tabla de configuración global
@@ -521,6 +678,30 @@ class DatabaseCreator:
             cursor.execute("CREATE INDEX idx_recordings_camera ON recordings(camera_id)")
             cursor.execute("CREATE INDEX idx_recordings_time ON recordings(start_time)")
             
+            # Índices para MediaMTX
+            cursor.execute("CREATE INDEX idx_mediamtx_servers_active ON mediamtx_servers(is_active)")
+            cursor.execute("CREATE INDEX idx_mediamtx_servers_default ON mediamtx_servers(is_default)")
+            
+            cursor.execute("CREATE INDEX idx_camera_publications_camera ON camera_publications(camera_id)")
+            cursor.execute("CREATE INDEX idx_camera_publications_server ON camera_publications(server_id)")
+            cursor.execute("CREATE INDEX idx_camera_publications_session ON camera_publications(session_id)")
+            cursor.execute("CREATE INDEX idx_camera_publications_status ON camera_publications(status)")
+            cursor.execute("CREATE INDEX idx_camera_publications_active ON camera_publications(is_active)")
+            
+            cursor.execute("CREATE INDEX idx_publication_history_camera ON publication_history(camera_id)")
+            cursor.execute("CREATE INDEX idx_publication_history_server ON publication_history(server_id)")
+            cursor.execute("CREATE INDEX idx_publication_history_session ON publication_history(session_id)")
+            cursor.execute("CREATE INDEX idx_publication_history_time ON publication_history(start_time)")
+            
+            cursor.execute("CREATE INDEX idx_publication_metrics_publication ON publication_metrics(publication_id)")
+            cursor.execute("CREATE INDEX idx_publication_metrics_time ON publication_metrics(metric_time)")
+            
+            cursor.execute("CREATE INDEX idx_publication_viewers_publication ON publication_viewers(publication_id)")
+            cursor.execute("CREATE INDEX idx_publication_viewers_time ON publication_viewers(start_time)")
+            
+            cursor.execute("CREATE INDEX idx_mediamtx_paths_server ON mediamtx_paths(server_id)")
+            cursor.execute("CREATE INDEX idx_mediamtx_paths_name ON mediamtx_paths(path_name)")
+            
             # ================== TRIGGERS PARA INTEGRIDAD ==================
             
             logger.info("Creando triggers...")
@@ -529,7 +710,8 @@ class DatabaseCreator:
             tables_with_updated_at = [
                 'cameras', 'camera_credentials', 'camera_protocols', 
                 'camera_endpoints', 'stream_profiles', 'camera_statistics',
-                'system_config', 'config_templates'
+                'system_config', 'config_templates', 'mediamtx_servers',
+                'camera_publications', 'mediamtx_paths'
             ]
             
             for table in tables_with_updated_at:
@@ -574,6 +756,18 @@ class DatabaseCreator:
                     UPDATE camera_credentials 
                     SET is_default = 0 
                     WHERE camera_id = NEW.camera_id AND is_default = 1;
+                END
+            """)
+            
+            # Trigger para validar que solo hay un servidor MediaMTX por defecto
+            cursor.execute("""
+                CREATE TRIGGER enforce_single_default_mediamtx_server
+                BEFORE INSERT ON mediamtx_servers
+                WHEN NEW.is_default = 1
+                BEGIN
+                    UPDATE mediamtx_servers 
+                    SET is_default = 0 
+                    WHERE is_default = 1;
                 END
             """)
             
@@ -623,6 +817,49 @@ class DatabaseCreator:
                 WHERE e.is_verified = 1 AND e.is_active = 1
             """)
             
+            # Vista de publicaciones activas con información completa
+            cursor.execute("""
+                CREATE VIEW active_publications AS
+                SELECT 
+                    cp.publication_id,
+                    cp.camera_id,
+                    c.display_name as camera_name,
+                    c.ip_address as camera_ip,
+                    cp.server_id,
+                    ms.server_name,
+                    ms.rtsp_url,
+                    cp.publish_path,
+                    cp.status,
+                    cp.start_time,
+                    cp.error_count,
+                    cp.last_error
+                FROM camera_publications cp
+                JOIN cameras c ON cp.camera_id = c.camera_id
+                JOIN mediamtx_servers ms ON cp.server_id = ms.server_id
+                WHERE cp.is_active = 1
+            """)
+            
+            # Vista de estadísticas de publicación
+            cursor.execute("""
+                CREATE VIEW publication_statistics AS
+                SELECT 
+                    ph.camera_id,
+                    c.display_name as camera_name,
+                    COUNT(*) as total_sessions,
+                    SUM(ph.duration_seconds) as total_duration_seconds,
+                    AVG(ph.duration_seconds) as avg_duration_seconds,
+                    AVG(ph.average_fps) as avg_fps,
+                    AVG(ph.average_bitrate_kbps) as avg_bitrate_kbps,
+                    SUM(ph.total_frames) as total_frames_published,
+                    SUM(ph.total_data_mb) as total_data_mb,
+                    SUM(ph.error_count) as total_errors,
+                    MAX(ph.max_viewers) as max_concurrent_viewers,
+                    SUM(ph.total_viewer_time_seconds) as total_viewer_time
+                FROM publication_history ph
+                JOIN cameras c ON ph.camera_id = c.camera_id
+                GROUP BY ph.camera_id
+            """)
+            
             # ================== DATOS INICIALES ==================
             
             logger.info("Insertando datos iniciales...")
@@ -639,7 +876,12 @@ class DatabaseCreator:
                 ('storage', 'snapshot_retention_days', '30', 'integer', 1, 'Días de retención de snapshots'),
                 ('storage', 'max_snapshot_size_mb', '10', 'integer', 1, 'Tamaño máximo de snapshot en MB'),
                 ('security', 'encryption_algorithm', 'AES256', 'string', 0, 'Algoritmo de encriptación'),
-                ('security', 'session_timeout_minutes', '30', 'integer', 1, 'Timeout de sesión en minutos')
+                ('security', 'session_timeout_minutes', '30', 'integer', 1, 'Timeout de sesión en minutos'),
+                ('mediamtx', 'default_rtsp_port', '8554', 'integer', 1, 'Puerto RTSP por defecto para MediaMTX'),
+                ('mediamtx', 'default_api_port', '9997', 'integer', 1, 'Puerto API por defecto para MediaMTX'),
+                ('mediamtx', 'health_check_interval', '30', 'integer', 1, 'Intervalo de health check en segundos'),
+                ('mediamtx', 'max_reconnect_attempts', '3', 'integer', 1, 'Máximo de intentos de reconexión'),
+                ('mediamtx', 'reconnect_delay', '5', 'float', 1, 'Delay entre reconexiones en segundos')
             ]
             
             cursor.executemany("""
@@ -727,7 +969,9 @@ class DatabaseCreator:
                 'camera_endpoints', 'camera_capabilities', 'stream_profiles',
                 'camera_statistics', 'connection_logs', 'camera_events',
                 'network_scans', 'scan_results', 'snapshots', 'recordings',
-                'system_config', 'config_templates'
+                'system_config', 'config_templates', 'mediamtx_servers',
+                'camera_publications', 'publication_history', 'publication_metrics',
+                'publication_viewers', 'mediamtx_paths'
             ]
             
             missing = set(required_tables) - set(tables)

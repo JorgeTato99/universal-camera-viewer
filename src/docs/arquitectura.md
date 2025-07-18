@@ -53,42 +53,28 @@ graph TB
 ## 🎨 Patrones de Diseño
 
 ### 1. **Component-Based Architecture**
-```typescript
-// Componentes funcionales con hooks
-const CameraCard: React.FC<Props> = memo(({ camera }) => {
-  const { connect, disconnect } = useCamera(camera.id);
-  return <Card>...</Card>;
-});
-```
+
+- Componentes funcionales con hooks de React
+- Separación clara entre presentación y lógica
+- Uso de React.memo para optimización
 
 ### 2. **State Management con Zustand**
-```typescript
-// Store centralizado sin boilerplate
-const useCameraStore = create<CameraStore>((set, get) => ({
-  cameras: [],
-  addCamera: (camera) => set((state) => ({
-    cameras: [...state.cameras, camera]
-  }))
-}));
-```
+
+- Store centralizado sin boilerplate
+- Estado tipado con TypeScript
+- Acciones y selectores optimizados
 
 ### 3. **Service Layer Pattern**
-```typescript
-// Servicios para lógica de negocio
-class CameraService {
-  async scanNetwork(): Promise<Camera[]> {
-    // Lógica de escaneo
-  }
-}
-```
+
+- Servicios para encapsular lógica de negocio
+- Comunicación con backend centralizada
+- Manejo consistente de errores
 
 ### 4. **WebSocket para Real-Time**
-```typescript
-// Comunicación bidireccional
-ws.on('frame', (data) => {
-  updateVideoStream(data);
-});
-```
+
+- Comunicación bidireccional de baja latencia
+- Streaming de video en tiempo real
+- Eventos y actualizaciones instantáneas
 
 ## 🔄 Flujo de Datos
 
@@ -132,29 +118,34 @@ flowchart LR
 ## 🏗️ Decisiones Arquitectónicas
 
 ### 1. **React + TypeScript**
+
 - ✅ **Tipo seguro**: Detección de errores en tiempo de compilación
 - ✅ **IntelliSense**: Mejor experiencia de desarrollo
 - ✅ **Refactoring**: Más seguro y confiable
 
 ### 2. **Zustand sobre Redux**
+
 - ✅ **Simplicidad**: Menos boilerplate
 - ✅ **Performance**: Re-renders optimizados
 - ✅ **TypeScript**: Soporte nativo excelente
 - ✅ **Tamaño**: Solo 8KB vs 60KB de Redux
 
 ### 3. **Material-UI v6**
+
 - ✅ **Componentes robustos**: Ahorra tiempo de desarrollo
 - ✅ **Temas**: Sistema de diseño consistente
 - ✅ **Accesibilidad**: WCAG 2.1 compliant
 - ✅ **Tree-shaking**: Solo importa lo necesario
 
 ### 4. **Vite como bundler**
+
 - ✅ **HMR rápido**: Desarrollo más ágil
 - ✅ **Build optimizado**: Bundles más pequeños
 - ✅ **ESM nativo**: Mejor performance
 - ✅ **Plugin ecosystem**: Extensible
 
 ### 5. **WebSocket para streaming**
+
 - ✅ **Baja latencia**: Comunicación en tiempo real
 - ✅ **Bidireccional**: Comandos y datos
 - ✅ **Eficiente**: Menos overhead que polling
@@ -162,26 +153,31 @@ flowchart LR
 ## 🔌 Capas de la Aplicación
 
 ### 1. **Presentation Layer**
+
 - Componentes React puramente visuales
 - Sin lógica de negocio
 - Responsivos y accesibles
 
 ### 2. **Container Layer**
+
 - Componentes que conectan UI con estado
 - Manejo de efectos secundarios
 - Orquestación de componentes
 
 ### 3. **State Layer**
+
 - Stores de Zustand
 - Estado global de la aplicación
 - Acciones y selectores
 
 ### 4. **Service Layer**
+
 - Comunicación con backend
 - Transformación de datos
 - Manejo de errores
 
 ### 5. **Infrastructure Layer**
+
 - Configuración de WebSocket
 - Cliente HTTP
 - Utilidades comunes
@@ -240,27 +236,22 @@ graph TB
 ## 🔄 Patrones de Comunicación
 
 ### REST API
-```typescript
-// Para operaciones CRUD
-GET    /api/cameras
-POST   /api/cameras
-PUT    /api/cameras/:id
-DELETE /api/cameras/:id
-```
+
+- Operaciones CRUD estándar
+- Endpoints RESTful para gestión de cámaras
+- Autenticación basada en tokens
 
 ### WebSocket Events
-```typescript
-// Para datos en tiempo real
-ws.emit('camera:connect', { cameraId });
-ws.on('stream:frame', handleFrame);
-ws.on('metrics:update', updateMetrics);
-```
+
+- Streaming de video en tiempo real
+- Actualizaciones de estado instantáneas
+- Métricas y eventos del sistema
 
 ### Tauri IPC
-```typescript
-// Para operaciones nativas
-invoke('scan_network', { subnet: '192.168.1.0/24' });
-```
+
+- Comunicación con procesos nativos
+- Operaciones del sistema operativo
+- Acceso a recursos locales
 
 ---
 

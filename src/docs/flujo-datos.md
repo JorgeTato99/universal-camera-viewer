@@ -47,96 +47,65 @@ graph TB
 ## 📦 Stores Principales
 
 ### 1. **App Store** - Estado Global
-```typescript
-// stores/appStore.ts
-interface AppState {
-  // Estado
-  isLoading: boolean;
-  error: string | null;
-  theme: 'light' | 'dark';
-  sidebarCollapsed: boolean;
-  
-  // Acciones
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  toggleTheme: () => void;
-  toggleSidebar: () => void;
-}
 
-export const useAppStore = create<AppState>((set) => ({
-  isLoading: false,
-  error: null,
-  theme: 'light',
-  sidebarCollapsed: false,
-  
-  setLoading: (loading) => set({ isLoading: loading }),
-  setError: (error) => set({ error }),
-  toggleTheme: () => set((state) => ({ 
-    theme: state.theme === 'light' ? 'dark' : 'light' 
-  })),
-  toggleSidebar: () => set((state) => ({ 
-    sidebarCollapsed: !state.sidebarCollapsed 
-  }))
-}));
-```
+**Estado gestionado:**
+
+- Loading states globales
+- Manejo de errores centralizados
+- Tema de la aplicación (claro/oscuro)
+- Estado del sidebar (colapsado/expandido)
+
+**Acciones disponibles:**
+
+- setLoading, setError
+- toggleTheme, toggleSidebar
 
 ### 2. **Camera Store** - Gestión de Cámaras
-```typescript
-// stores/cameraStore.ts
-interface CameraState {
-  // Estado
-  cameras: Camera[];
-  selectedCamera: Camera | null;
-  connectionStatus: Record<string, ConnectionStatus>;
-  
-  // Acciones CRUD
-  fetchCameras: () => Promise<void>;
-  addCamera: (camera: CameraInput) => Promise<void>;
-  updateCamera: (id: string, data: Partial<Camera>) => Promise<void>;
-  deleteCamera: (id: string) => Promise<void>;
-  
-  // Acciones de conexión
-  connectCamera: (id: string) => Promise<void>;
-  disconnectCamera: (id: string) => Promise<void>;
-  
-  // Selección
-  selectCamera: (camera: Camera | null) => void;
-}
-```
+
+**Estado:**
+
+- Lista de cámaras registradas
+- Cámara seleccionada actual
+- Estados de conexión por cámara
+
+**Operaciones CRUD:**
+
+- fetchCameras, addCamera
+- updateCamera, deleteCamera
+
+**Control de conexión:**
+
+- connectCamera, disconnectCamera
+- Monitoreo de estado en tiempo real
 
 ### 3. **Streaming Store** - Video Streaming
-```typescript
-// stores/streamingStore.ts
-interface StreamingState {
-  // Estado
-  activeStreams: Map<string, StreamInfo>;
-  frameRates: Record<string, number>;
-  
-  // Acciones
-  startStream: (cameraId: string) => Promise<void>;
-  stopStream: (cameraId: string) => void;
-  updateFrame: (cameraId: string, frame: string) => void;
-  updateMetrics: (cameraId: string, metrics: StreamMetrics) => void;
-}
-```
+
+**Estado:**
+
+- Streams activos (Map para performance)
+- Frame rates por cámara
+- Métricas de streaming
+
+**Acciones:**
+
+- Control de streams (start/stop)
+- Actualización de frames
+- Métricas en tiempo real
 
 ### 4. **Scanner Store** - Escaneo de Red
-```typescript
-// stores/scannerStore.ts
-interface ScannerState {
-  // Estado
-  isScanning: boolean;
-  scanProgress: number;
-  discoveredDevices: ScanResult[];
-  scanHistory: ScanSession[];
-  
-  // Acciones
-  startScan: (config: ScanConfig) => Promise<void>;
-  stopScan: () => void;
-  clearResults: () => void;
-  saveScanSession: () => void;
-}
-```
+
+**Estado:**
+
+- Estado de escaneo activo
+- Progreso porcentual
+- Dispositivos descubiertos
+- Historial de sesiones
+
+**Acciones:**
+
+- Control de escaneo
+- Gestión de resultados
+- Persistencia de sesiones
 
 ## 🔄 Patrones de Comunicación
 
@@ -185,20 +154,13 @@ sequenceDiagram
 
 ### 3. **Event-Driven Updates**
 
-```typescript
-// Eventos del sistema
-ws.on('camera:status', (data) => {
-  useCameraStore.getState().updateConnectionStatus(data);
-});
+**Eventos del sistema:**
 
-ws.on('scan:progress', (data) => {
-  useScannerStore.getState().updateProgress(data);
-});
-
-ws.on('metrics:update', (data) => {
-  useStreamingStore.getState().updateMetrics(data);
-});
-```
+- `camera:status` - Actualizaciones de estado de conexión
+- `scan:progress` - Progreso del escaneo en tiempo real
+- `metrics:update` - Métricas de streaming y performance
+- `error:occurred` - Manejo centralizado de errores
+- `notification:new` - Sistema de notificaciones
 
 ## 🎯 Flujos de Usuario Principales
 
@@ -241,72 +203,36 @@ flowchart TD
 ## 🔧 Gestión de Estado Asíncrono
 
 ### 1. **Loading States**
-```typescript
-const useAsyncOperation = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  
-  const execute = useCallback(async (operation: () => Promise<void>) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await operation();
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-  
-  return { isLoading, error, execute };
-};
-```
+
+**Manejo de estados asíncronos:**
+
+- Hook reutilizable para operaciones asíncronas
+- Estados de carga, error y éxito
+- Cleanup automático en desmontaje
+- Integración con stores globales
 
 ### 2. **Optimistic Updates**
-```typescript
-// Actualización optimista en Camera Store
-const updateCamera = async (id: string, data: Partial<Camera>) => {
-  // 1. Actualizar UI inmediatamente
-  set((state) => ({
-    cameras: state.cameras.map(cam => 
-      cam.id === id ? { ...cam, ...data } : cam
-    )
-  }));
-  
-  try {
-    // 2. Sincronizar con backend
-    await cameraService.update(id, data);
-  } catch (error) {
-    // 3. Revertir si falla
-    await fetchCameras();
-    throw error;
-  }
-};
-```
+
+**Estrategia de actualización:**
+
+1. Actualizar UI inmediatamente para mejor UX
+2. Sincronizar con backend en segundo plano
+3. Revertir cambios si la operación falla
+4. Mostrar notificación de error al usuario
 
 ### 3. **Debouncing y Throttling**
-```typescript
-// Evitar actualizaciones excesivas
-const debouncedSearch = useMemo(
-  () => debounce((term: string) => {
-    searchStore.search(term);
-  }, 300),
-  []
-);
 
-// Limitar actualizaciones de frames
-const throttledFrameUpdate = useMemo(
-  () => throttle((frame: string) => {
-    streamStore.updateFrame(cameraId, frame);
-  }, 100),
-  [cameraId]
-);
-```
+**Optimizaciones de performance:**
+
+- **Debounce**: Búsquedas y filtros (300ms delay)
+- **Throttle**: Actualizaciones de frames (100ms máximo)
+- **Batch updates**: Agrupar múltiples cambios de estado
+- **Memoización**: Evitar cálculos innecesarios
 
 ## 🔌 Integración con Hooks
 
 ### 1. **useCamera Hook**
+
 ```typescript
 export const useCamera = (cameraId?: string) => {
   const camera = useCameraStore((state) => 
@@ -334,6 +260,7 @@ export const useCamera = (cameraId?: string) => {
 ```
 
 ### 2. **useStream Hook**
+
 ```typescript
 export const useStream = (cameraId: string) => {
   const stream = useStreamingStore((state) => 
@@ -361,77 +288,51 @@ export const useStream = (cameraId: string) => {
 ## 📊 Monitoreo y DevTools
 
 ### 1. **Zustand DevTools**
-```typescript
-// Integración con Redux DevTools
-export const useCameraStore = create<CameraState>()(
-  devtools(
-    (set, get) => ({
-      // ... store implementation
-    }),
-    { name: 'camera-store' }
-  )
-);
-```
+
+**Herramientas de desarrollo:**
+
+- Integración con Redux DevTools
+- Time-travel debugging
+- Inspección de estado en tiempo real
+- Tracking de acciones
 
 ### 2. **Performance Monitoring**
-```typescript
-// Monitor de re-renders
-if (process.env.NODE_ENV === 'development') {
-  import('react-render-tracker').then(({ recordRender }) => {
-    recordRender();
-  });
-}
-```
+
+**Métricas monitoreadas:**
+
+- Cantidad de re-renders
+- Tiempo de renderizado
+- Tamaño del estado
+- Memory leaks
 
 ### 3. **State Persistence**
-```typescript
-// Persistir configuración
-export const useSettingsStore = create<SettingsState>()(
-  persist(
-    (set) => ({
-      // ... store implementation
-    }),
-    {
-      name: 'settings-storage',
-      partialize: (state) => ({ 
-        theme: state.theme,
-        language: state.language 
-      })
-    }
-  )
-);
-```
+
+**Datos persistidos:**
+
+- Preferencias de usuario
+- Tema y lenguaje
+- Configuración de cámaras
+- Layouts guardados
 
 ## 🚨 Manejo de Errores
 
 ### 1. **Error Boundaries**
-```typescript
-// Captura errores en componentes
-class ErrorBoundary extends Component {
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    useAppStore.getState().setError(error.message);
-    console.error('Component error:', error, info);
-  }
-}
-```
+
+**Manejo de errores en componentes:**
+
+- Captura errores de renderizado
+- Fallback UI para errores críticos
+- Logging automático
+- Integración con estado global
 
 ### 2. **Error Recovery**
-```typescript
-// Reintentos automáticos
-const retryWithBackoff = async (
-  fn: () => Promise<any>,
-  maxRetries = 3
-) => {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (i === maxRetries - 1) throw error;
-      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-    }
-  }
-};
-```
+
+**Estrategias de recuperación:**
+
+- Reintentos automáticos con backoff exponencial
+- Fallback a valores por defecto
+- Notificaciones al usuario
+- Logs para debugging
 
 ## ✅ Best Practices
 
