@@ -22,8 +22,9 @@ const PortScanPage = React.lazy(
 const AccessTestPage = React.lazy(
   () => import("../../features/scanner/pages/access/AccessTestPage")
 );
-const AnalyticsPage = React.lazy(
-  () => import("../../features/analytics/AnalyticsPage")
+// Removed old AnalyticsPage - now using StatisticsPage
+const StatisticsPage = React.lazy(
+  () => import("../../features/statistics/pages/StatisticsPage")
 );
 const SettingsPage = React.lazy(
   () => import("../../features/settings/SettingsPage")
@@ -208,7 +209,9 @@ export const AppRouter = memo(() => {
           <Route path="/scanner/network" element={<NetworkScanPage />} />
           <Route path="/scanner/ports" element={<PortScanPage />} />
           <Route path="/scanner/access" element={<AccessTestPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
+          {/* Statistics routes with sub-pages */}
+          <Route path="/statistics" element={<StatisticsPage />} />
+          <Route path="/statistics/:subpage" element={<StatisticsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
 
           {/* Catch-all route for 404 */}

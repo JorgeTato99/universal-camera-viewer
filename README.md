@@ -8,7 +8,7 @@
 [![MediaMTX](https://img.shields.io/badge/MediaMTX-Compatible-orange)](https://github.com/bluenviron/mediamtx)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 
-**Gateway inteligente para descubrimiento y publicación de cámaras IP hacia servidores MediaMTX centralizados**
+## Gateway inteligente para descubrimiento y publicación de cámaras IP hacia servidores MediaMTX centralizados
 
 > Universal Camera Gateway actúa como puente entre cámaras IP locales y servidores de streaming centralizados, automatizando el descubrimiento, conexión y relay de streams RTSP.
 
@@ -23,7 +23,7 @@ Universal Camera Gateway (UCG) es una herramienta profesional diseñada para res
 
 ### 🏗️ Arquitectura del Sistema
 
-```
+```text
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
 │  Cámaras IP     │     │ Universal Camera │     │   MediaMTX      │
 │  (Red Local)    │────▶│     Gateway      │────▶│ (Local/Cloud)   │

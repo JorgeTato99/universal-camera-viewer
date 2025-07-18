@@ -17,7 +17,6 @@ import {
   FormControl,
   Button,
   Tooltip,
-  Paper,
   alpha,
   Fade,
   Zoom,
@@ -34,7 +33,7 @@ import {
   ArrowForward as ArrowIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
-import { colorTokens, borderTokens, spacingTokens } from "../../design-system/tokens";
+import { colorTokens, borderTokens } from "../../design-system/tokens";
 
 interface QuickSettingsMenuProps {
   anchorEl: HTMLElement | null;

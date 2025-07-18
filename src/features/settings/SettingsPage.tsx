@@ -18,6 +18,10 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Fade,
+  Slide,
+  Grow,
+  CircularProgress,
 } from "@mui/material";
 import {
   NetworkCheck as NetworkIcon,
@@ -27,10 +31,11 @@ import {
   Backup as BackupIcon,
 } from "@mui/icons-material";
 
-// Preparado para lazy loading de secciones de configuración
-// const NetworkSettings = lazy(() => import("./components/NetworkSettings"));
-// const CameraSettings = lazy(() => import("./components/CameraSettings"));
-// const UserPreferences = lazy(() => import("./components/UserPreferences"));
+// Lazy loading de componentes de configuración
+const NetworkSettings = lazy(() => import("./components/NetworkSettings"));
+const CameraSettings = lazy(() => import("./components/CameraSettings"));
+const UserPreferences = lazy(() => import("./components/UserPreferences"));
+// TODO: Implementar estos componentes cuando se necesiten
 // const ProtocolSettings = lazy(() => import("./components/ProtocolSettings"));
 // const BackupSettings = lazy(() => import("./components/BackupSettings"));
 
@@ -98,9 +103,11 @@ const TabPanel = memo<TabPanelProps>(({ children, value, index }) => {
       aria-labelledby={`settings-tab-${index}`}
     >
       {value === index && (
-        <Box sx={{ py: 3 }}>
-          {children}
-        </Box>
+        <Fade in timeout={600}>
+          <Box sx={{ py: 3 }}>
+            {children}
+          </Box>
+        </Fade>
       )}
     </div>
   );
@@ -109,51 +116,104 @@ const TabPanel = memo<TabPanelProps>(({ children, value, index }) => {
 TabPanel.displayName = 'TabPanel';
 
 /**
- * Componente de contenido de configuración placeholder
+ * Componente de carga para Suspense con animación mejorada
  */
-const SettingsContent = memo<{ tab: SettingsTab }>(({ tab }) => (
-  <Paper 
-    sx={{ 
-      p: 3,
-      // Optimización de animaciones
-      willChange: 'transform',
-      transition: 'all 0.2s ease',
-      '&:hover': {
-        transform: 'scale(1.01)',
-        boxShadow: 2,
-      }
-    }}
-  >
-    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-      <Box sx={{ mr: 2, color: 'primary.main' }}>
-        {tab.icon}
-      </Box>
-      <Typography variant="h6">
-        Configuración de {tab.label}
+const LoadingFallback = memo(() => (
+  <Fade in timeout={300}>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column',
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      minHeight: 400,
+      gap: 2
+    }}>
+      <CircularProgress size={40} thickness={4} />
+      <Typography variant="body2" color="text.secondary">
+        Cargando configuración...
       </Typography>
     </Box>
-    <Typography variant="body2" color="text.secondary" paragraph>
-      {tab.description}
-    </Typography>
-    
-    {/* Placeholder para futuras opciones */}
-    <List>
-      {[1, 2, 3].map((item) => (
-        <React.Fragment key={item}>
-          <ListItem>
-            <ListItemText
-              primary={<Skeleton width="60%" />}
-              secondary={<Skeleton width="80%" />}
-            />
-          </ListItem>
-          {item < 3 && <Divider />}
-        </React.Fragment>
-      ))}
-    </List>
-  </Paper>
+  </Fade>
 ));
 
-SettingsContent.displayName = 'SettingsContent';
+LoadingFallback.displayName = 'LoadingFallback';
+
+/**
+ * Componente de contenido de configuración placeholder para tabs sin implementar
+ */
+const PlaceholderContent = memo<{ tab: SettingsTab }>(({ tab }) => (
+  <Grow in timeout={800} style={{ transformOrigin: '0 0 0' }}>
+    <Paper 
+      sx={{ 
+        p: 3,
+        // Optimización de animaciones
+        willChange: 'transform',
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          transform: 'scale(1.01)',
+          boxShadow: 2,
+        }
+      }}
+    >
+      <Fade in timeout={600} style={{ transitionDelay: '100ms' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ mr: 2, color: 'primary.main' }}>
+            {tab.icon}
+          </Box>
+          <Typography variant="h6">
+            Configuración de {tab.label}
+          </Typography>
+        </Box>
+      </Fade>
+      <Fade in timeout={600} style={{ transitionDelay: '200ms' }}>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          {tab.description}
+        </Typography>
+      </Fade>
+      
+      {/* Placeholder para futuras opciones con animación */}
+      <List>
+        {[1, 2, 3].map((item, index) => (
+          <Slide
+            key={item}
+            direction="right"
+            in
+            timeout={500}
+            style={{ transitionDelay: `${300 + index * 100}ms` }}
+          >
+            <Box>
+              <ListItem>
+                <ListItemText
+                  primary={
+                    <Skeleton 
+                      width="60%" 
+                      animation="pulse"
+                      sx={{
+                        animationDelay: `${index * 0.2}s`
+                      }}
+                    />
+                  }
+                  secondary={
+                    <Skeleton 
+                      width="80%" 
+                      animation="pulse"
+                      sx={{
+                        animationDelay: `${index * 0.2 + 0.1}s`
+                      }}
+                    />
+                  }
+                />
+              </ListItem>
+              {item < 3 && <Divider />}
+            </Box>
+          </Slide>
+        ))}
+      </List>
+    </Paper>
+  </Grow>
+));
+
+PlaceholderContent.displayName = 'PlaceholderContent';
 
 /**
  * Página de Settings optimizada
@@ -169,14 +229,18 @@ const SettingsPage = memo(() => {
   }, []);
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ py: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Configuración
-        </Typography>
-        
-        <Paper sx={{ width: '100%', mt: 2 }}>
-          <Tabs
+    <Fade in timeout={600}>
+      <Container maxWidth="xl">
+        <Box sx={{ py: 3 }}>
+          <Fade in timeout={500} style={{ transitionDelay: '100ms' }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Configuración
+            </Typography>
+          </Fade>
+          
+          <Grow in timeout={800} style={{ transitionDelay: '200ms', transformOrigin: '0 0 0' }}>
+            <Paper sx={{ width: '100%', mt: 2 }}>
+              <Tabs
             value={activeTab}
             onChange={handleTabChange}
             aria-label="settings tabs"
@@ -203,18 +267,26 @@ const SettingsPage = memo(() => {
           </Tabs>
           
           <Box sx={{ p: 3 }}>
-            {/* Suspense para futuros componentes lazy loaded */}
-            <Suspense fallback={<Skeleton variant="rectangular" height={300} />}>
+            {/* Suspense para componentes lazy loaded */}
+            <Suspense fallback={<LoadingFallback />}>
               {SETTINGS_TABS.map((tab, index) => (
                 <TabPanel key={tab.id} value={activeTab} index={index}>
-                  <SettingsContent tab={tab} />
+                  {/* Renderizar componente real según el tab activo */}
+                  {tab.id === 'network' && <NetworkSettings />}
+                  {tab.id === 'cameras' && <CameraSettings />}
+                  {tab.id === 'user' && <UserPreferences />}
+                  {/* TODO: Implementar estos componentes cuando se completen en el backend */}
+                  {tab.id === 'protocols' && <PlaceholderContent tab={tab} />}
+                  {tab.id === 'backup' && <PlaceholderContent tab={tab} />}
                 </TabPanel>
               ))}
             </Suspense>
           </Box>
-        </Paper>
-      </Box>
-    </Container>
+            </Paper>
+          </Grow>
+        </Box>
+      </Container>
+    </Fade>
   );
 });
 

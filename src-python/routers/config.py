@@ -2,14 +2,34 @@
 Router para endpoints de configuración.
 """
 
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, status
+from typing import Dict, Any, Optional, List
+from fastapi import APIRouter, HTTPException, status, Query
 from pydantic import BaseModel, Field
 from datetime import datetime
 import logging
 
 from api.dependencies import create_response
 from api.config import settings
+from utils.exceptions import ServiceError, ValidationError
+from api.schemas.requests.config_requests import (
+    ConfigUpdateRequest,
+    BatchConfigUpdateRequest,
+    ConfigImportRequest,
+    ConfigValidateRequest
+)
+from api.schemas.responses.config_responses import (
+    ConfigValueResponse,
+    ConfigUpdateResponse,
+    BatchConfigUpdateResponse,
+    ConfigCategoryResponse,
+    ConfigExportResponse,
+    ConfigImportResponse,
+    ConfigResetResponse,
+    ConfigValidationResponse,
+    ConfigSchemaResponse,
+    ConfigDiffResponse
+)
+from api.validators import validate_config_key
 
 logger = logging.getLogger(__name__)
 
@@ -70,28 +90,7 @@ class AppConfig(BaseModel):
         }
 
 
-class ConfigUpdate(BaseModel):
-    """Actualización parcial de configuración."""
-    key: str = Field(..., description="Clave de configuración a actualizar")
-    value: Any = Field(..., description="Nuevo valor")
-    category: Optional[str] = Field(None, description="Categoría de la configuración")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "key": "theme",
-                "value": "dark",
-                "category": "ui"
-            }
-        }
-
-
-class ConfigCategory(BaseModel):
-    """Categoría de configuración."""
-    name: str
-    display_name: str
-    description: str
-    settings: Dict[str, Any]
+# Los modelos ahora están en los schemas
 
 
 # === Configuración mock ===
@@ -109,13 +108,27 @@ async def get_config():
     Returns:
         Configuración actual
     """
-    logger.info("Obteniendo configuración completa")
-    
-    # TODO: Integrar con ConfigService real
-    return MOCK_CONFIG
+    try:
+        logger.info("Obteniendo configuración completa")
+        
+        # TODO: Integrar con ConfigService real
+        return MOCK_CONFIG
+        
+    except ServiceError as e:
+        logger.error(f"Error de servicio obteniendo configuración: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de configuración temporalmente no disponible"
+        )
+    except Exception as e:
+        logger.error(f"Error inesperado obteniendo configuración: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
 
 
-@router.get("/categories")
+@router.get("/categories", response_model=List[ConfigCategoryResponse])
 async def get_config_categories():
     """
     Obtener configuración organizada por categorías.
@@ -124,7 +137,7 @@ async def get_config_categories():
         Configuración agrupada por categorías
     """
     categories = [
-        ConfigCategory(
+        ConfigCategoryResponse(
             name="general",
             display_name="General",
             description="Configuración general de la aplicación",
@@ -188,13 +201,10 @@ async def get_config_categories():
         )
     ]
     
-    return create_response(
-        success=True,
-        data=[cat.model_dump() for cat in categories]
-    )
+    return categories
 
 
-@router.get("/{key}")
+@router.get("/{key}", response_model=ConfigValueResponse)
 async def get_config_value(key: str):
     """
     Obtener valor específico de configuración.
@@ -205,26 +215,45 @@ async def get_config_value(key: str):
     Returns:
         Valor de la configuración
     """
-    if not hasattr(MOCK_CONFIG, key):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Configuración '{key}' no encontrada"
+    try:
+        # Validar clave
+        try:
+            key = validate_config_key(key)
+        except ValueError as e:
+            logger.warning(f"Clave de configuración inválida: {key}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+            
+        if not hasattr(MOCK_CONFIG, key):
+            logger.warning(f"Configuración no encontrada: {key}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Configuración '{key}' no encontrada"
+            )
+        
+        value = getattr(MOCK_CONFIG, key)
+        logger.debug(f"Obteniendo configuración {key}: {value}")
+        
+        return ConfigValueResponse(
+            key=key,
+            value=value,
+            type=type(value).__name__
         )
-    
-    value = getattr(MOCK_CONFIG, key)
-    
-    return create_response(
-        success=True,
-        data={
-            "key": key,
-            "value": value,
-            "type": type(value).__name__
-        }
-    )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado obteniendo configuración {key}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
 
 
-@router.put("/")
-async def update_config(update: ConfigUpdate):
+@router.put("/", response_model=ConfigUpdateResponse)
+async def update_config(update: ConfigUpdateRequest):
     """
     Actualizar un valor de configuración.
     
@@ -234,55 +263,83 @@ async def update_config(update: ConfigUpdate):
     Returns:
         Configuración actualizada
     """
-    logger.info(f"Actualizando configuración: {update.key} = {update.value}")
-    
-    # Validar que la clave existe
-    if not hasattr(MOCK_CONFIG, update.key):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Configuración '{update.key}' no encontrada"
+    try:
+        # La validación de la clave ya se hace en el schema
+            
+        logger.info(f"Actualizando configuración: {update.key} = {update.value}")
+        
+        # Validar que la clave existe
+        if not hasattr(MOCK_CONFIG, update.key):
+            logger.warning(f"Configuración no encontrada: {update.key}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Configuración '{update.key}' no encontrada"
+            )
+        
+        # Validar tipo
+        current_value = getattr(MOCK_CONFIG, update.key)
+        if type(update.value) != type(current_value):
+            logger.warning(
+                f"Tipo inválido para {update.key}: esperado {type(current_value).__name__}, "
+                f"recibido {type(update.value).__name__}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Tipo inválido. Se esperaba {type(current_value).__name__}, "
+                       f"se recibió {type(update.value).__name__}"
+            )
+        
+        # Validar valores según el tipo de campo
+        try:
+            # Crear instancia temporal para validar
+            temp_dict = MOCK_CONFIG.model_dump()
+            temp_dict[update.key] = update.value
+            AppConfig(**temp_dict)  # Esto validará usando los Field validators
+        except ValueError as e:
+            logger.warning(f"Valor inválido para {update.key}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Valor inválido para '{update.key}': {str(e)}"
+            )
+        
+        # Actualizar valor
+        setattr(MOCK_CONFIG, update.key, update.value)
+        logger.info(f"Configuración {update.key} actualizada exitosamente")
+        
+        return ConfigUpdateResponse(
+            key=update.key,
+            value=update.value,
+            previous_value=current_value,
+            message="Configuración actualizada exitosamente"
         )
-    
-    # Validar tipo
-    current_value = getattr(MOCK_CONFIG, update.key)
-    if type(update.value) != type(current_value):
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado actualizando configuración: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Tipo inválido. Se esperaba {type(current_value).__name__}, "
-                   f"se recibió {type(update.value).__name__}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
         )
-    
-    # Actualizar valor
-    setattr(MOCK_CONFIG, update.key, update.value)
-    
-    return create_response(
-        success=True,
-        data={
-            "key": update.key,
-            "value": update.value,
-            "previous_value": current_value,
-            "message": "Configuración actualizada exitosamente"
-        }
-    )
 
 
-@router.put("/batch")
-async def update_config_batch(updates: Dict[str, Any]):
+@router.put("/batch", response_model=BatchConfigUpdateResponse)
+async def update_config_batch(request: BatchConfigUpdateRequest):
     """
     Actualizar múltiples valores de configuración.
     
     Args:
-        updates: Diccionario con claves y valores a actualizar
+        request: Request con diccionario de actualizaciones
         
     Returns:
         Resultado de las actualizaciones
     """
-    logger.info(f"Actualizando {len(updates)} configuraciones")
+    logger.info(f"Actualizando {len(request.updates)} configuraciones")
     
     results = []
     errors = []
     
-    for key, value in updates.items():
+    for key, value in request.updates.items():
         try:
             if not hasattr(MOCK_CONFIG, key):
                 errors.append({
@@ -312,17 +369,14 @@ async def update_config_batch(updates: Dict[str, Any]):
                 "error": str(e)
             })
     
-    return create_response(
-        success=len(errors) == 0,
-        data={
-            "updated": results,
-            "errors": errors,
-            "message": f"{len(results)} configuraciones actualizadas, {len(errors)} errores"
-        }
+    return BatchConfigUpdateResponse(
+        updated=results,
+        errors=errors,
+        message=f"{len(results)} configuraciones actualizadas, {len(errors)} errores"
     )
 
 
-@router.post("/reset")
+@router.post("/reset", response_model=ConfigResetResponse)
 async def reset_config():
     """
     Restablecer configuración a valores por defecto.
@@ -335,16 +389,13 @@ async def reset_config():
     global MOCK_CONFIG
     MOCK_CONFIG = AppConfig()
     
-    return create_response(
-        success=True,
-        data={
-            "message": "Configuración restablecida a valores por defecto",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
-        }
+    return ConfigResetResponse(
+        message="Configuración restablecida a valores por defecto",
+        timestamp=datetime.utcnow().isoformat() + "Z"
     )
 
 
-@router.post("/export")
+@router.post("/export", response_model=ConfigExportResponse)
 async def export_config():
     """
     Exportar configuración actual.
@@ -360,48 +411,271 @@ async def export_config():
         "config": MOCK_CONFIG.model_dump()
     }
     
-    return create_response(
-        success=True,
-        data=export_data
+    return ConfigExportResponse(
+        version=settings.app_version,
+        exported_at=datetime.utcnow().isoformat() + "Z",
+        config=MOCK_CONFIG.model_dump()
     )
 
 
-@router.post("/import")
-async def import_config(import_data: Dict[str, Any]):
+@router.get("/category/{category}", response_model=Dict[str, Any])
+async def get_config_by_category(category: str):
     """
-    Importar configuración desde archivo.
+    Obtener configuración de una categoría específica.
     
     Args:
-        import_data: Datos de configuración a importar
+        category: Nombre de la categoría (general, streaming, ui, network, storage, advanced)
         
     Returns:
-        Estado de la importación
+        Configuración de la categoría
     """
-    logger.info("Importando configuración")
-    
     try:
-        # Validar estructura
-        if "config" not in import_data:
-            raise ValueError("Formato de importación inválido")
+        valid_categories = ["general", "streaming", "ui", "network", "storage", "advanced"]
         
-        # Crear nueva configuración desde datos importados
-        new_config = AppConfig(**import_data["config"])
+        if category not in valid_categories:
+            logger.warning(f"Categoría inválida: {category}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Categoría '{category}' no encontrada. Categorías válidas: {', '.join(valid_categories)}"
+            )
         
-        # Actualizar configuración global
-        global MOCK_CONFIG
-        MOCK_CONFIG = new_config
+        logger.info(f"Obteniendo configuración de categoría: {category}")
+        
+        # Mapear campos por categoría
+        category_fields = {
+            "general": ["app_name", "theme", "language"],
+            "streaming": ["default_quality", "default_fps", "buffer_size", "auto_reconnect", "reconnect_interval"],
+            "ui": ["grid_columns", "show_fps_overlay", "show_timestamp", "fullscreen_on_double_click"],
+            "network": ["scan_timeout", "concurrent_connections"],
+            "storage": ["save_snapshots", "snapshot_format", "snapshot_quality", "max_snapshots"],
+            "advanced": ["debug_mode", "log_level"]
+        }
+        
+        settings = {}
+        for field in category_fields[category]:
+            settings[field] = getattr(MOCK_CONFIG, field)
         
         return create_response(
             success=True,
             data={
-                "message": "Configuración importada exitosamente",
-                "imported_from_version": import_data.get("version", "unknown"),
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "category": category,
+                "settings": settings
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obteniendo configuración de categoría {category}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
+
+
+@router.post("/validate", response_model=ConfigValidationResponse)
+async def validate_config_value(request: ConfigValidateRequest):
+    """
+    Validar un valor de configuración sin aplicarlo.
+    
+    Args:
+        request: Request con clave y valor a validar
+        
+    Returns:
+        Resultado de la validación
+    """
+    try:
+        if not hasattr(MOCK_CONFIG, request.key):
+            logger.warning(f"Clave de configuración no encontrada: {request.key}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Configuración '{request.key}' no encontrada"
+            )
+        
+        current_value = getattr(MOCK_CONFIG, request.key)
+        
+        # Validar tipo
+        if type(request.value) != type(current_value):
+            return ConfigValidationResponse(
+                key=request.key,
+                value=request.value,
+                valid=False,
+                current_value=current_value,
+                error=f"Tipo inválido. Se esperaba {type(current_value).__name__}, se recibió {type(request.value).__name__}"
+            )
+        
+        # Validar usando el modelo
+        try:
+            temp_dict = MOCK_CONFIG.model_dump()
+            temp_dict[request.key] = request.value
+            AppConfig(**temp_dict)
+            
+            return ConfigValidationResponse(
+                key=request.key,
+                value=request.value,
+                valid=True,
+                current_value=current_value,
+                error=None
+            )
+            
+        except ValueError as e:
+            return ConfigValidationResponse(
+                key=request.key,
+                value=request.value,
+                valid=False,
+                current_value=current_value,
+                error=str(e)
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error validando configuración {request.key}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
+
+
+@router.get("/schema", response_model=ConfigSchemaResponse)
+async def get_config_schema():
+    """
+    Obtener el esquema de configuración con tipos y validaciones.
+    
+    Returns:
+        Esquema JSON de la configuración
+    """
+    try:
+        logger.info("Obteniendo esquema de configuración")
+        
+        # Obtener esquema JSON del modelo Pydantic
+        schema = AppConfig.model_json_schema()
+        
+        # Agregar información adicional
+        enhanced_schema = {
+            "schema": schema,
+            "categories": {
+                "general": ["app_name", "theme", "language"],
+                "streaming": ["default_quality", "default_fps", "buffer_size", "auto_reconnect", "reconnect_interval"],
+                "ui": ["grid_columns", "show_fps_overlay", "show_timestamp", "fullscreen_on_double_click"],
+                "network": ["scan_timeout", "concurrent_connections"],
+                "storage": ["save_snapshots", "snapshot_format", "snapshot_quality", "max_snapshots"],
+                "advanced": ["debug_mode", "log_level"]
+            }
+        }
+        
+        return ConfigSchemaResponse(
+            schema=schema,
+            categories={
+                "general": ["app_name", "theme", "language"],
+                "streaming": ["default_quality", "default_fps", "buffer_size", "auto_reconnect", "reconnect_interval"],
+                "ui": ["grid_columns", "show_fps_overlay", "show_timestamp", "fullscreen_on_double_click"],
+                "network": ["scan_timeout", "concurrent_connections"],
+                "storage": ["save_snapshots", "snapshot_format", "snapshot_quality", "max_snapshots"],
+                "advanced": ["debug_mode", "log_level"]
             }
         )
         
     except Exception as e:
+        logger.error(f"Error obteniendo esquema de configuración: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
+
+
+@router.get("/diff", response_model=ConfigDiffResponse)
+async def get_config_diff():
+    """
+    Obtener diferencias entre configuración actual y valores por defecto.
+    
+    Returns:
+        Lista de configuraciones modificadas
+    """
+    try:
+        logger.info("Calculando diferencias de configuración")
+        
+        # Crear configuración por defecto
+        default_config = AppConfig()
+        current_dict = MOCK_CONFIG.model_dump()
+        default_dict = default_config.model_dump()
+        
+        # Encontrar diferencias
+        differences = []
+        for key, current_value in current_dict.items():
+            default_value = default_dict.get(key)
+            if current_value != default_value:
+                differences.append({
+                    "key": key,
+                    "current_value": current_value,
+                    "default_value": default_value,
+                    "type": type(current_value).__name__
+                })
+        
+        return ConfigDiffResponse(
+            total_settings=len(current_dict),
+            modified_count=len(differences),
+            differences=differences
+        )
+        
+    except Exception as e:
+        logger.error(f"Error calculando diferencias de configuración: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
+
+
+@router.post("/import", response_model=ConfigImportResponse)
+async def import_config(request: ConfigImportRequest):
+    """
+    Importar configuración desde archivo.
+    
+    Args:
+        request: Request con datos de configuración a importar
+        
+    Returns:
+        Estado de la importación
+    """
+    try:
+        logger.info("Importando configuración")
+        
+        # La validación de estructura ya se hace en el schema
+        
+        # Crear nueva configuración desde datos importados
+        new_config = AppConfig(**request.config)
+        
+        # Actualizar configuración global
+        global MOCK_CONFIG
+        
+        # Guardar configuración anterior para rollback
+        previous_config = MOCK_CONFIG.model_dump()
+        
+        MOCK_CONFIG = new_config
+        
+        imported_version = request.version or "unknown"
+        logger.info(f"Configuración importada exitosamente desde versión {imported_version}")
+        
+        return ConfigImportResponse(
+            message="Configuración importada exitosamente",
+            imported_from_version=imported_version,
+            imported_at=request.exported_at or "unknown",
+            timestamp=datetime.utcnow().isoformat() + "Z",
+            changes_count=len([k for k, v in new_config.model_dump().items() 
+                             if previous_config.get(k) != v])
+        )
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.warning(f"Error de validación al importar configuración: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error al importar configuración: {str(e)}"
+            detail=f"Error de validación: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Error inesperado importando configuración: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
         )

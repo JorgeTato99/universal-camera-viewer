@@ -13,6 +13,7 @@ import logging
 
 from api.dependencies import create_response
 from api.config import settings
+from utils.exceptions import ServiceError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -169,12 +170,39 @@ async def start_scan(
     Returns:
         ID del escaneo iniciado
     """
-    logger.info("Iniciando nuevo escaneo de red")
-    
     try:
+        # Validar rangos
+        if not request.ranges:
+            logger.warning("No se proporcionaron rangos para escanear")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debe proporcionar al menos un rango de IPs para escanear"
+            )
+        
+        # Calcular total de IPs
+        total_ips = calculate_total_ips(request.ranges)
+        if total_ips > 10000:
+            logger.warning(f"Demasiadas IPs para escanear: {total_ips}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Demasiadas IPs para escanear ({total_ips}). Máximo permitido: 10,000"
+            )
+        
+        logger.info(f"Iniciando escaneo de {total_ips} IPs")
+        
         # Configurar rangos de escaneo
         scan_ranges = []
         for range_obj in request.ranges:
+            # Validar que start_ip <= end_ip
+            start = ipaddress.ip_address(range_obj.start_ip)
+            end = ipaddress.ip_address(range_obj.end_ip)
+            if start > end:
+                logger.warning(f"Rango inválido: {start} > {end}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"IP inicial ({start}) debe ser menor o igual a IP final ({end})"
+                )
+            
             # Determinar puertos a escanear
             if range_obj.port:
                 ports = [range_obj.port]
@@ -203,18 +231,36 @@ async def start_scan(
             include_offline=False
         )
         
-        logger.info(f"Escaneo iniciado con ID: {scan_id}")
+        logger.info(f"Escaneo iniciado con ID: {scan_id}, escaneando {total_ips} IPs")
         
         return create_response(
             success=True,
-            data={"scan_id": scan_id}
+            data={
+                "scan_id": scan_id,
+                "total_ips": total_ips,
+                "estimated_time": total_ips * request.timeout / request.max_threads
+            }
         )
         
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"Error de validación iniciando escaneo: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except ServiceError as e:
+        logger.error(f"Error de servicio iniciando escaneo: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de escaneo temporalmente no disponible"
+        )
     except Exception as e:
-        logger.error(f"Error iniciando escaneo: {e}")
+        logger.error(f"Error inesperado iniciando escaneo: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error iniciando escaneo: {str(e)}"
+            detail="Error interno del servidor"
         )
 
 
@@ -622,25 +668,171 @@ async def detect_protocols(request: DetectProtocolsRequest):
 @router.get("/recommended-config")
 async def get_recommended_config():
     """
-    Obtener configuración recomendada de escaneo.
+    Obtener configuración recomendada de escaneo basada en la red actual.
     
     Returns:
         Configuración de escaneo sugerida
     """
-    # Detectar red local actual (mock)
-    config = ScanRequest(
-        ranges=[
-            ScanRange(
-                start_ip="192.168.1.1",
-                end_ip="192.168.1.254"
-            )
-        ],
-        protocols=["ONVIF", "RTSP"],
-        timeout=3,
-        max_threads=10
-    )
+    try:
+        import socket
+        import netifaces
+        
+        # Intentar detectar la red local actual
+        ranges = []
+        
+        try:
+            # Obtener interfaces de red
+            for interface in netifaces.interfaces():
+                addrs = netifaces.ifaddresses(interface)
+                if netifaces.AF_INET in addrs:
+                    for addr_info in addrs[netifaces.AF_INET]:
+                        ip = addr_info.get('addr', '')
+                        netmask = addr_info.get('netmask', '')
+                        
+                        # Ignorar loopback
+                        if ip.startswith('127.'):
+                            continue
+                        
+                        # Calcular rango de red
+                        try:
+                            network = ipaddress.ip_network(f"{ip}/{netmask}", strict=False)
+                            # Solo redes privadas
+                            if network.is_private:
+                                ranges.append(ScanRange(
+                                    start_ip=str(network.network_address + 1),
+                                    end_ip=str(network.broadcast_address - 1)
+                                ))
+                        except:
+                            pass
+        except:
+            # Si falla la detección, usar rangos comunes
+            logger.warning("No se pudo detectar la red local, usando rangos por defecto")
+        
+        # Si no se detectaron rangos, usar los más comunes
+        if not ranges:
+            ranges = [
+                ScanRange(start_ip="192.168.1.1", end_ip="192.168.1.254"),
+                ScanRange(start_ip="192.168.0.1", end_ip="192.168.0.254")
+            ]
+        
+        config = ScanRequest(
+            ranges=ranges,
+            protocols=["ONVIF", "RTSP", "HTTP"],
+            timeout=3,
+            max_threads=20
+        )
+        
+        return create_response(
+            success=True,
+            data=config.dict()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo configuración recomendada: {e}", exc_info=True)
+        # Devolver configuración por defecto
+        config = ScanRequest(
+            ranges=[
+                ScanRange(start_ip="192.168.1.1", end_ip="192.168.1.254")
+            ],
+            protocols=["ONVIF", "RTSP"],
+            timeout=3,
+            max_threads=10
+        )
+        
+        return create_response(
+            success=True,
+            data=config.dict()
+        )
+
+
+@router.get("/active-scans")
+async def get_active_scans():
+    """
+    Obtener lista de escaneos activos.
     
-    return create_response(
-        success=True,
-        data=config.dict()
-    )
+    Returns:
+        Lista de escaneos en progreso
+    """
+    try:
+        active_scans = []
+        
+        # Obtener escaneos activos del servicio
+        for scan_id, scan_model in scan_service.active_scans.items():
+            progress = scan_model.progress
+            active_scans.append({
+                "scan_id": scan_id,
+                "status": scan_model.status.value,
+                "progress": progress.overall_progress_percentage,
+                "total_ips": progress.total_ips,
+                "scanned_ips": progress.scanned_ips,
+                "found_cameras": progress.cameras_found,
+                "started_at": scan_model.started_at.isoformat() + "Z" if scan_model.started_at else None
+            })
+        
+        return create_response(
+            success=True,
+            data={
+                "total": len(active_scans),
+                "scans": active_scans
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo escaneos activos: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
+
+
+@router.delete("/scan/{scan_id}")
+async def delete_scan_results(scan_id: str):
+    """
+    Eliminar resultados de un escaneo completado.
+    
+    Args:
+        scan_id: ID del escaneo
+        
+    Returns:
+        Confirmación de eliminación
+    """
+    try:
+        # Verificar que el escaneo existe
+        scan_status = await scan_service.get_scan_status(scan_id)
+        
+        if not scan_status:
+            logger.warning(f"Escaneo no encontrado para eliminar: {scan_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Escaneo {scan_id} no encontrado"
+            )
+        
+        # Verificar que no esté activo
+        if scan_status["status"] in ["scanning", "preparing", "processing"]:
+            logger.warning(f"Intento de eliminar escaneo activo: {scan_id}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="No se puede eliminar un escaneo en progreso"
+            )
+        
+        # Eliminar de la memoria
+        if scan_id in scan_service.scan_results:
+            del scan_service.scan_results[scan_id]
+            logger.info(f"Resultados del escaneo {scan_id} eliminados")
+        
+        return create_response(
+            success=True,
+            data={
+                "scan_id": scan_id,
+                "message": "Resultados del escaneo eliminados exitosamente"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error eliminando resultados del escaneo {scan_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )

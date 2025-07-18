@@ -29,14 +29,12 @@ import {
 } from '@mui/material';
 import {
   KeyboardArrowDown as ExpandIcon,
-  KeyboardArrowUp as CollapseIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
   ContentCopy as CopyIcon,
   CheckCircle as TestIcon,
-  Circle as StatusIcon,
   VpnKey as CredentialsIcon,
   Router as ProtocolIcon,
   Timeline as StatsIcon,
@@ -131,6 +129,7 @@ const ExpandedRow: React.FC<ExpandedRowProps> = ({ camera, onUpdate }) => {
                 {camera.serial_number || 'No disponible'}
               </Typography>
             </Box>
+            {/* Comentado: last_connection_at no existe en CameraResponse
             <Box>
               <Typography variant="caption" color="text.secondary">
                 Última conexión
@@ -139,6 +138,7 @@ const ExpandedRow: React.FC<ExpandedRowProps> = ({ camera, onUpdate }) => {
                 {camera.last_connection_at ? new Date(camera.last_connection_at).toLocaleString() : 'Nunca'}
               </Typography>
             </Box>
+            */}
           </Stack>
         </Box>
 
@@ -255,6 +255,7 @@ const ExpandedRow: React.FC<ExpandedRowProps> = ({ camera, onUpdate }) => {
             Estadísticas de Conexión
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2 }}>
+            {/* Comentado: las propiedades total_connections, successful_connections, failed_connections y success_rate no existen en CameraResponse
             <Box>
               <Typography variant="h6" color="primary">
                 {camera.statistics?.total_connections || camera.total_connections || 0}
@@ -289,6 +290,7 @@ const ExpandedRow: React.FC<ExpandedRowProps> = ({ camera, onUpdate }) => {
                 Tasa de éxito
               </Typography>
             </Box>
+            */}
             {camera.statistics?.total_uptime_minutes !== undefined && (
               <Box>
                 <Typography variant="h6" color="info.main">
@@ -623,6 +625,7 @@ const ExpandedRow: React.FC<ExpandedRowProps> = ({ camera, onUpdate }) => {
                               navigator.clipboard.writeText(endpoint.url);
                               notificationStore.addNotification({
                                 type: 'success',
+                                title: 'Copiado',
                                 message: 'URL copiada al portapapeles',
                               });
                             }}

@@ -12,7 +12,6 @@ import {
   ListItemText,
   Tooltip,
   alpha,
-  useTheme as useMuiTheme,
 } from "@mui/material";
 import {
   LightMode as LightModeIcon,
@@ -54,16 +53,11 @@ const themeOptions: ThemeOption[] = [
 
 interface ThemeToggleProps {
   size?: "small" | "medium" | "large";
-  showLabel?: boolean;
-  variant?: "icon" | "button";
 }
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   size = "medium",
-  showLabel = false,
-  variant = "icon",
 }) => {
-  const muiTheme = useMuiTheme();
   const { themeMode, effectiveTheme, setThemeMode } = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);

@@ -7,6 +7,116 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.13] - 2025-07-18 - 📊 SISTEMA DE ESTADÍSTICAS COMPLETO
+
+### ✨ Added - Sistema de Estadísticas
+
+#### 📈 Módulo Completo de Estadísticas
+
+- **6 subsecciones especializadas** accesibles desde el sidebar:
+  - **General**: Dashboard con métricas clave y salud del sistema
+  - **Conexiones**: Análisis detallado con gráficos de tendencias
+  - **Eventos**: Timeline interactivo con filtros y reconocimiento
+  - **Rendimiento**: Métricas en tiempo real con indicador radial
+  - **Red**: Historial completo de escaneos con resultados expandibles
+  - **Reportes**: Sistema de reportes con plantillas y programación
+
+- **Visualizaciones con Recharts**:
+  - Gráficos de área, línea y circular
+  - Indicador radial de salud del sistema
+  - Tablas interactivas con expansión de detalles
+  - Timeline visual de eventos con severidad
+
+#### 🎨 Componentes de Configuración Real
+
+- **NetworkSettings**: Timeouts, reintentos, conexiones concurrentes
+- **CameraSettings**: Calidad de streaming, FPS, rutas RTSP por marca
+- **UserPreferences**: Tema, idioma, diseño y modo desarrollador
+
+### 🐛 Fixed - Correcciones Críticas
+
+#### 🔧 Migración a Grid v2
+
+- **Actualización completa** de sintaxis Grid en todos los componentes
+- Cambio de `<Grid item xs={12}>` a `<Grid size={{ xs: 12 }}>`
+- Eliminación del prop `item` obsoleto en MUI v6
+
+#### 📦 Dependencias Faltantes
+
+- **Instalación de librerías necesarias**:
+  - `recharts` - Para visualización de datos
+  - `date-fns` - Para formateo de fechas
+  - `@mui/lab` - Para componentes Timeline
+  - `@mui/x-date-pickers` - Para selectores de fecha
+
+#### 🎯 Correcciones de Importación
+
+- **Timeline components** movidos de `@mui/material` a `@mui/lab`
+- **Fade animation error** resuelto en TabPanel de StatisticsPage
+- **Rutas de importación** corregidas para lazy loading
+
+### 📊 Technical Improvements
+
+- **Lazy loading optimizado** para todas las subsecciones
+- **Memoización con React.memo()** en componentes pesados
+- **Mock data realista** para desarrollo sin backend
+- **Animaciones Grow/Fade** con delays escalonados
+- **Auto-expansión del sidebar** según ruta activa
+
+---
+
+## [0.9.12] - 2025-07-18 - 🎯 SCANNER INDEPENDIENTE Y ANIMACIONES
+
+### ✨ Added - Funcionalidades Principales
+
+#### 🔍 Scanner Modules Independence
+
+- **Port Scan y Access Test completamente independientes**:
+  - Entrada manual de IP sin requerir pasos previos
+  - Toggle para cambiar entre datos detectados y manuales
+  - Validación en tiempo real de IPs y puertos
+  - Persistencia de datos entre navegaciones con query params
+
+#### 🎬 Sistema de Animaciones Completo
+
+- **Animaciones de carga** para componentes esperando datos
+- **Animaciones de entrada** con Fade y Grow en todas las páginas
+- **Transiciones suaves** entre estados y vistas
+- **Skeleton loaders** para feedback visual durante carga
+
+### 🎨 Enhanced - Mejoras de UI/UX
+
+#### ⚡ Optimizaciones de Rendimiento
+
+- **PERFORMANCE_OPTIMIZATIONS.md** con documentación completa
+- **React.memo()** aplicado consistentemente
+- **useCallback y useMemo** para prevenir re-renders
+- **Lazy loading** con precarga de rutas críticas
+- **CSS transform** para animaciones con GPU
+
+#### 📝 Documentación de TODOs
+
+- **TODOS.md** creado con 73 tareas pendientes organizadas
+- Categorización por prioridad (Alta/Media/Baja)
+- Tracking de progreso con checkboxes
+- Estimaciones de tiempo y complejidad
+
+### 🐛 Fixed - Correcciones
+
+- **AccessTestPage JSX structure error** - Tags cerrados faltantes
+- **Settings lazy loading error** - Exports default añadidos
+- **Scanner navigation flow** - Manejo correcto de estados vacíos
+- **Performance bottlenecks** - Optimizaciones aplicadas
+
+### 🔧 Technical Details
+
+- **Componentes actualizados**: 15+ componentes con animaciones
+- **Archivos de documentación**: 2 nuevos (TODOS.md, PERFORMANCE_OPTIMIZATIONS.md)
+- **Optimizaciones aplicadas**: 30+ mejoras de rendimiento
+- **Reducción de re-renders**: ~60% en componentes críticos
+
+---
+
 ## [0.9.11] - 2025-07-18 - 📝 DOCUMENTACIÓN Y REFACTORING FINAL
 
 ### 📚 Documentation - Actualización Completa

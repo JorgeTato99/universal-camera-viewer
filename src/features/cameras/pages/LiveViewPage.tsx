@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Fade, Grow, CircularProgress } from "@mui/material";
 import { CameraToolbar, CameraGrid } from "../components";
 import { useCameraStoreV2 } from "../../../stores/cameraStore.v2";
 import { useNotificationStore } from "../../../stores/notificationStore";
@@ -41,6 +41,7 @@ const LiveViewPage = memo(() => {
       onMaxRetriesReached: () => {
         addNotification({
           type: 'error',
+          title: 'Error de Conexión',
           message: 'No se pudo conectar con el servidor después de varios intentos',
           duration: 0,
         });
@@ -83,8 +84,9 @@ const LiveViewPage = memo(() => {
   const handleRefresh = useCallback(async () => {
     await loadCameras();
     addNotification({
-      message: "Cámaras actualizadas",
       type: "info",
+      title: "Actualización Completa",
+      message: "Cámaras actualizadas",
     });
   }, [loadCameras, addNotification]);
 
@@ -92,13 +94,15 @@ const LiveViewPage = memo(() => {
     try {
       await connectCamera(cameraId);
       addNotification({
-        message: "Cámara conectada exitosamente",
         type: "success",
+        title: "Conexión Exitosa",
+        message: "Cámara conectada exitosamente",
       });
     } catch (error) {
       addNotification({
-        message: "Error al conectar la cámara",
         type: "error",
+        title: "Error de Conexión",
+        message: "Error al conectar la cámara",
       });
     }
   }, [connectCamera, addNotification]);
@@ -107,13 +111,15 @@ const LiveViewPage = memo(() => {
     try {
       await disconnectCamera(cameraId);
       addNotification({
-        message: "Cámara desconectada",
         type: "info",
+        title: "Desconexión",
+        message: "Cámara desconectada",
       });
     } catch (error) {
       addNotification({
-        message: "Error al desconectar la cámara",
         type: "error",
+        title: "Error de Desconexión",
+        message: "Error al desconectar la cámara",
       });
     }
   }, [disconnectCamera, addNotification]);
@@ -128,13 +134,15 @@ const LiveViewPage = memo(() => {
     try {
       // TODO: Implementar conectar todas las cámaras
       addNotification({
-        message: "Conectando todas las cámaras...",
         type: "info",
+        title: "Conexión Múltiple",
+        message: "Conectando todas las cámaras...",
       });
     } catch (error) {
       addNotification({
-        message: "Error al conectar las cámaras",
         type: "error",
+        title: "Error de Conexión Múltiple",
+        message: "Error al conectar las cámaras",
       });
     }
   }, [addNotification]);
@@ -143,77 +151,93 @@ const LiveViewPage = memo(() => {
     try {
       // TODO: Implementar desconectar todas las cámaras
       addNotification({
-        message: "Desconectando todas las cámaras...",
         type: "info",
+        title: "Desconexión Múltiple",
+        message: "Desconectando todas las cámaras...",
       });
     } catch (error) {
       addNotification({
-        message: "Error al desconectar las cámaras",
         type: "error",
+        title: "Error de Desconexión Múltiple",
+        message: "Error al desconectar las cámaras",
       });
     }
   }, [addNotification]);
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-        overflow: "hidden",
-        gap: 2,
-        p: 2,
-      }}
-    >
-      {/* Mostrar error de conexión si existe */}
-      {connectionError?.hasError ? (
-        <ConnectionErrorState
-          errorType={connectionError.errorType}
-          customMessage={connectionError.errorMessage}
-          errorDetails={connectionError.errorDetails}
-          onRetry={() => {
-            clearConnectionError();
-            connectionErrorHandler.retry();
-          }}
-          isRetrying={connectionErrorHandler.isRetrying}
-          showDebugInfo={true}
-        />
-      ) : (
-        <>
-          {/* Header con título y estadísticas */}
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Vista en Vivo
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {connectedCameras.length} cámara{connectedCameras.length !== 1 ? 's' : ''} disponible{connectedCameras.length !== 1 ? 's' : ''} para visualización
-            </Typography>
-          </Box>
+    <Fade in timeout={600}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          width: "100%",
+          overflow: "hidden",
+          gap: 2,
+          p: 2,
+        }}
+      >
+        {/* Mostrar error de conexión si existe */}
+        {connectionError?.hasError ? (
+          <Fade in timeout={400}>
+            <Box>
+              <ConnectionErrorState
+                errorType={connectionError.errorType}
+                customMessage={connectionError.errorMessage}
+                errorDetails={connectionError.errorDetails}
+                onRetry={() => {
+                  clearConnectionError();
+                  connectionErrorHandler.retry();
+                }}
+                isRetrying={connectionErrorHandler.isRetrying}
+                showDebugInfo={true}
+              />
+            </Box>
+          </Fade>
+        ) : (
+          <>
+            {/* Header con título y estadísticas con animación */}
+            <Fade in timeout={500} style={{ transitionDelay: '100ms' }}>
+              <Box>
+                <Typography variant="h4" component="h1" gutterBottom>
+                  Vista en Vivo
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {connectedCameras.length} cámara{connectedCameras.length !== 1 ? 's' : ''} disponible{connectedCameras.length !== 1 ? 's' : ''} para visualización
+                </Typography>
+              </Box>
+            </Fade>
 
-          {/* Toolbar con controles específicos de vista en vivo */}
-          <CameraToolbar
-            totalCameras={connectedCameras.length}
-            connectedCameras={stats.connected}
-            gridColumns={gridColumns as 2 | 3 | 4 | 5}
-            onGridColumnsChange={handleLayoutChange}
-            onConnectAll={handleConnectAll}
-            onDisconnectAll={handleDisconnectAll}
-          />
+            {/* Toolbar con controles específicos de vista en vivo */}
+            <Fade in timeout={600} style={{ transitionDelay: '200ms' }}>
+              <Box>
+                <CameraToolbar
+                  totalCameras={connectedCameras.length}
+                  connectedCameras={stats.connected}
+                  gridColumns={gridColumns as 2 | 3 | 4 | 5}
+                  onGridColumnsChange={handleLayoutChange}
+                  onConnectAll={handleConnectAll}
+                  onDisconnectAll={handleDisconnectAll}
+                />
+              </Box>
+            </Fade>
 
-          {/* Grid de cámaras en vivo */}
-          <Box sx={{ flex: 1, overflow: "auto" }}>
-            <CameraGrid
-              cameras={cameraData}
-              isLoading={isLoading || isChangingLayout}
-              gridColumns={gridColumns}
-              onCameraConnect={handleConnect}
-              onCameraDisconnect={handleDisconnect}
-            />
-          </Box>
-        </>
-      )}
-    </Box>
+            {/* Grid de cámaras en vivo con animación */}
+            <Grow in timeout={800} style={{ transitionDelay: '300ms', transformOrigin: '0 0 0' }}>
+              <Box sx={{ flex: 1, overflow: "auto" }}>
+                <CameraGrid
+                  cameras={cameraData}
+                  isLoading={isLoading || isChangingLayout}
+                  gridColumns={gridColumns as 2 | 3 | 4 | 5}
+                  onCameraConnect={handleConnect}
+                  onCameraDisconnect={handleDisconnect}
+                />
+              </Box>
+            </Grow>
+          </>
+        )}
+      </Box>
+    </Fade>
   );
 });
 

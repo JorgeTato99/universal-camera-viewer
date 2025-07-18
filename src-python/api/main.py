@@ -18,7 +18,7 @@ from api.middleware import setup_middleware
 from api.dependencies import cleanup_services, create_response
 
 # Importar routers
-from routers import cameras, scanner, config, streaming
+from routers import scanner, config, streaming
 from routers.cameras_v2 import router as cameras_v2_router
 from routers.stream_profiles import router as stream_profiles_router
 from api.routers.publishing import router as publishing_router
@@ -258,7 +258,6 @@ async def internal_error_handler(request: Request, exc):
 
 # === Incluir routers ===
 
-app.include_router(cameras.router, prefix=settings.api_prefix)
 app.include_router(scanner.router, prefix=settings.api_prefix)
 app.include_router(config.router, prefix=settings.api_prefix)
 

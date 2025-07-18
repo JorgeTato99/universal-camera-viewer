@@ -28,7 +28,12 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:bluenviron.github.io)",
       "Bash(npx tsc:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(yarn add:*)",
+      "Bash(rg:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

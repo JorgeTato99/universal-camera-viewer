@@ -37,6 +37,7 @@ import {
 import { CameraResponse, ConnectionStatus } from '../../../../types/camera.types.v2';
 import { useNavigate } from 'react-router-dom';
 import { useCameraStoreV2 } from '../../../../stores/cameraStore.v2';
+import { VideoStream } from '../VideoStream';
 
 interface CameraGridViewProps {
   cameras: CameraResponse[];
@@ -185,16 +186,12 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera, isSelected, onSelect })
           position: 'relative',
         }}
       >
-        {camera.is_connected && camera.last_snapshot ? (
-          <Box
-            component="img"
-            src={camera.last_snapshot}
-            alt={camera.display_name}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
+        {camera.is_connected ? (
+          <VideoStream
+            cameraId={camera.camera_id}
+            isConnected={camera.is_connected}
+            aspectRatio="16/9"
+            height="100%"
           />
         ) : (
           <VideocamIcon sx={{ fontSize: 60, color: 'grey.700' }} />

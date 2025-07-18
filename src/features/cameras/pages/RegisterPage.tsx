@@ -169,6 +169,7 @@ const RegisterPage = memo(() => {
   const handleRefresh = useCallback(async () => {
     await loadCameras();
     addNotification({
+      title: "Actualización",
       message: "Lista de cámaras actualizada",
       type: "info",
     });
@@ -180,6 +181,7 @@ const RegisterPage = memo(() => {
 
   const handleEditCamera = useCallback((cameraId: string) => {
     addNotification({
+      title: "En desarrollo",
       message: "Función de edición en desarrollo",
       type: "info",
     });
@@ -187,6 +189,7 @@ const RegisterPage = memo(() => {
 
   const handleSettingsCamera = useCallback((cameraId: string) => {
     addNotification({
+      title: "En desarrollo",
       message: "Función de configuración en desarrollo",
       type: "info",
     });
@@ -198,6 +201,7 @@ const RegisterPage = memo(() => {
     try {
       await deleteCamera(selectedCamera);
       addNotification({
+        title: "Éxito",
         message: "Cámara eliminada exitosamente",
         type: "success",
       });
@@ -205,6 +209,7 @@ const RegisterPage = memo(() => {
       setSelectedCamera(null);
     } catch (error) {
       addNotification({
+        title: "Error",
         message: "Error al eliminar la cámara",
         type: "error",
       });
@@ -213,6 +218,7 @@ const RegisterPage = memo(() => {
 
   const handleExport = useCallback(() => {
     addNotification({
+      title: "En desarrollo",
       message: "Función de exportación en desarrollo",
       type: "info",
     });
@@ -220,6 +226,7 @@ const RegisterPage = memo(() => {
 
   const handleImport = useCallback(() => {
     addNotification({
+      title: "En desarrollo",
       message: "Función de importación en desarrollo",
       type: "info",
     });
@@ -257,7 +264,7 @@ const RegisterPage = memo(() => {
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Gestiona todas las cámaras del sistema. Total: {stats.total} | 
-          Conectadas: {stats.connected} | Desconectadas: {stats.disconnected}
+          Conectadas: {stats.connected} | Desconectadas: {stats.total - stats.connected}
         </Typography>
       </Box>
 

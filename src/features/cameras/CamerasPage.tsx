@@ -4,8 +4,8 @@
  * Optimizada con memo, callbacks memoizados y renderizado eficiente
  */
 
-import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { Box, Typography } from "@mui/material";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { Box, Typography, Fade, Skeleton } from "@mui/material";
 import { CameraToolbar, CameraGrid } from "./components";
 import { useCameraStoreV2 } from "../../stores/cameraStore.v2";
 import { streamingService } from "../../services/python/streamingService";
@@ -27,7 +27,6 @@ const CamerasPage = memo(() => {
     gridColumns,
     setGridColumns,
     connectionError,
-    clearConnectionError,
     connectAllCameras,
     disconnectAllCameras,
   } = useCameraStoreV2();
@@ -98,9 +97,12 @@ const CamerasPage = memo(() => {
   const handleCameraDisconnect = useCallback(async (cameraId: string) => {
     try {
       // Primero detener el streaming WebSocket si está activo
-      if (streamingService.isConnected() && streamingService.cameraId === cameraId) {
-        await streamingService.stopStream();
-        streamingService.disconnect();
+      try {
+        await streamingService.stopStream(cameraId);
+        streamingService.disconnect(cameraId);
+      } catch (error) {
+        // Si falla al detener el stream, continuamos con la desconexión
+        console.warn('Error al detener streaming:', error);
       }
       
       // Luego desconectar en el backend
@@ -115,7 +117,7 @@ const CamerasPage = memo(() => {
     // TODO: Implementar modal de configuración
   }, []);
 
-  const handleCameraCapture = useCallback(async (cameraId: string) => {
+  const handleCameraCapture = useCallback(async (_cameraId: string) => {
     try {
       // TODO: Implementar captura con API v2
       console.log('Captura de snapshot no implementada en v2');
@@ -149,31 +151,37 @@ const CamerasPage = memo(() => {
   }
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Toolbar superior */}
-      <CameraToolbar
-        connectedCameras={connectedCameras}
-        totalCameras={cameras.size}
-        gridColumns={gridColumns}
-        onGridColumnsChange={handleGridColumnsChange}
-        onConnectAll={handleConnectAll}
-        onDisconnectAll={handleDisconnectAll}
-      />
+    <Fade in timeout={600}>
+      <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        {/* Toolbar superior con animación */}
+        <Fade in timeout={400} style={{ transitionDelay: '100ms' }}>
+          <Box>
+            <CameraToolbar
+              connectedCameras={connectedCameras}
+              totalCameras={cameras.size}
+              gridColumns={gridColumns as 2 | 3 | 4 | 5}
+              onGridColumnsChange={handleGridColumnsChange}
+              onConnectAll={handleConnectAll}
+              onDisconnectAll={handleDisconnectAll}
+            />
+          </Box>
+        </Fade>
 
-      {/* Grid de cámaras */}
-      <Box
-        sx={{
-          flex: 1,
-          overflow: "auto",
-          // Eliminar padding extra y optimizar espacio
-          p: 0,
-          m: 0,
-          position: "relative",
-        }}
-      >
-        {/* Indicador de reorganización */}
-        {isChangingLayout && (
+        {/* Grid de cámaras con animación */}
+        <Fade in timeout={600} style={{ transitionDelay: '200ms' }}>
           <Box
+            sx={{
+              flex: 1,
+              overflow: "auto",
+              // Eliminar padding extra y optimizar espacio
+              p: 0,
+              m: 0,
+              position: "relative",
+            }}
+          >
+            {/* Indicador de reorganización */}
+            {isChangingLayout && (
+              <Box
             sx={{
               position: "absolute",
               top: 8,
@@ -209,17 +217,19 @@ const CamerasPage = memo(() => {
           </Box>
         )}
 
-        <CameraGrid
-          cameras={cameraData}
-          gridColumns={gridColumns}
-          isLoading={isLoading}
-          onCameraConnect={handleCameraConnect}
-          onCameraDisconnect={handleCameraDisconnect}
-          onCameraSettings={handleCameraSettings}
-          onCameraCapture={handleCameraCapture}
-        />
+            <CameraGrid
+              cameras={cameraData}
+              gridColumns={gridColumns as 2 | 3 | 4 | 5}
+              isLoading={isLoading}
+              onCameraConnect={handleCameraConnect}
+              onCameraDisconnect={handleCameraDisconnect}
+              onCameraSettings={handleCameraSettings}
+              onCameraCapture={handleCameraCapture}
+            />
+          </Box>
+        </Fade>
       </Box>
-    </Box>
+    </Fade>
   );
 });
 

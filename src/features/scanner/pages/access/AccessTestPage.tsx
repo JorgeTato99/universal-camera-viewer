@@ -25,6 +25,8 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import {
   VpnKey as AccessIcon,
@@ -34,6 +36,7 @@ import {
   Cancel as ErrorIcon,
   AddCircle as AddIcon,
   Home as HomeIcon,
+  Router as RouterIcon,
 } from "@mui/icons-material";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { colorTokens, spacingTokens, borderTokens } from "../../../../design-system/tokens";
@@ -72,13 +75,55 @@ const AccessTestPage = memo(() => {
   const [testComplete, setTestComplete] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [successfulAccess, setSuccessfulAccess] = useState<TestResult | null>(null);
+  const [manualIP, setManualIP] = useState("");
+  const [ipError, setIpError] = useState("");
+  const [manualPorts, setManualPorts] = useState("");
+  const [portsError, setPortsError] = useState("");
+  const [useManualData, setUseManualData] = useState(!targetIP || targetPorts.length === 0);
+
+  // Validar formato de IP
+  const validateIP = useCallback((ip: string): boolean => {
+    if (!ip) return false;
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (!ipRegex.test(ip)) return false;
+    
+    const octets = ip.split('.');
+    return octets.every(octet => {
+      const num = parseInt(octet, 10);
+      return num >= 0 && num <= 255;
+    });
+  }, []);
+
+  // Validar formato de puertos
+  const validatePorts = useCallback((ports: string): number[] => {
+    if (!ports.trim()) return [];
+    
+    const portList = ports.split(',').map(p => p.trim());
+    const validPorts: number[] = [];
+    
+    for (const port of portList) {
+      const num = parseInt(port, 10);
+      if (!isNaN(num) && num > 0 && num <= 65535) {
+        validPorts.push(num);
+      }
+    }
+    
+    return validPorts;
+  }, []);
+
+  // IP y puertos finales a usar
+  const finalIP = useManualData ? manualIP : targetIP;
+  const finalPorts = useMemo(() => {
+    if (useManualData) {
+      return validatePorts(manualPorts);
+    }
+    return targetPorts;
+  }, [useManualData, manualPorts, targetPorts, validatePorts]);
 
   // Verificar si tenemos datos válidos
   const hasValidData = useMemo(() => {
-    if (!targetIP) return false;
-    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-    return ipRegex.test(targetIP) && targetPorts.length > 0;
-  }, [targetIP, targetPorts]);
+    return validateIP(finalIP) && finalPorts.length > 0;
+  }, [finalIP, finalPorts, validateIP]);
 
   // Handlers
   const handleComplete = useCallback(() => {
@@ -99,46 +144,66 @@ const AccessTestPage = memo(() => {
   }, []);
 
   const handleBack = useCallback(() => {
-    navigate(`/scanner/ports?ip=${targetIP}`);
-  }, [navigate, targetIP]);
+    navigate(`/scanner/ports?ip=${finalIP}`);
+  }, [navigate, finalIP]);
 
   const handleAddCamera = useCallback(() => {
     if (successfulAccess) {
       // Navegar a registro de cámaras con los datos
       const params = new URLSearchParams({
-        ip: targetIP,
+        ip: finalIP,
         port: successfulAccess.port.toString(),
         protocol: successfulAccess.protocol,
         username: successfulAccess.username,
       });
       navigate(`/cameras/register?${params.toString()}`);
     }
-  }, [successfulAccess, targetIP, navigate]);
+  }, [successfulAccess, finalIP, navigate]);
 
   const handleNewScan = useCallback(() => {
     navigate("/scanner/network");
   }, [navigate]);
 
-  // Si no hay datos válidos, mostrar mensaje
-  if (!hasValidData) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="warning" sx={{ maxWidth: 600, mx: "auto" }}>
-          <AlertTitle>Datos insuficientes</AlertTitle>
-          Debes completar el escaneo de red y puertos antes de probar el acceso.
-          <Box sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              startIcon={<BackIcon />}
-              onClick={() => navigate("/scanner/network")}
-            >
-              Volver al escaneo de red
-            </Button>
-          </Box>
-        </Alert>
-      </Container>
-    );
-  }
+  // Manejar cambio de IP manual
+  const handleIPChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setManualIP(value);
+    if (value && !validateIP(value)) {
+      setIpError("Formato de IP inválido (ej: 192.168.1.100)");
+    } else {
+      setIpError("");
+    }
+  }, [validateIP]);
+
+  // Manejar cambio de puertos manuales
+  const handlePortsChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setManualPorts(value);
+    
+    if (value) {
+      const validPorts = validatePorts(value);
+      if (validPorts.length === 0) {
+        setPortsError("Ingresa puertos válidos separados por comas (ej: 80, 554, 8000)");
+      } else {
+        setPortsError("");
+      }
+    } else {
+      setPortsError("");
+    }
+  }, [validatePorts]);
+
+  // Alternar entre datos manuales y automáticos
+  const handleToggleManualData = useCallback(() => {
+    setUseManualData(!useManualData);
+    setManualIP("");
+    setManualPorts("");
+    setIpError("");
+    setPortsError("");
+    setTestComplete(false);
+    setTestResults([]);
+    setSuccessfulAccess(null);
+  }, [useManualData]);
+
 
   return (
     <Container maxWidth="xl" sx={{ py: 3, height: "100%", display: "flex", flexDirection: "column" }}>
@@ -174,7 +239,7 @@ const AccessTestPage = memo(() => {
         <Link
           component="button"
           variant="body2"
-          onClick={() => navigate(`/scanner/ports?ip=${targetIP}`)}
+          onClick={() => navigate(`/scanner/ports?ip=${finalIP}`)}
           sx={{ 
             textDecoration: "none",
             color: "text.secondary",
@@ -196,81 +261,181 @@ const AccessTestPage = memo(() => {
             <Typography variant="h4" component="h1">
               Prueba de Acceso
             </Typography>
-            <Chip 
-              label={`IP: ${targetIP}`}
-              color="primary"
-              variant="outlined"
-              sx={{ ml: 2 }}
-            />
+            {hasValidData && (
+              <Chip 
+                label={`IP: ${finalIP}`}
+                color="primary"
+                variant="outlined"
+                sx={{ ml: 2 }}
+              />
+            )}
           </Box>
           <Typography variant="body1" color="text.secondary">
-            Verifica las credenciales y la conexión con la cámara detectada
+            Verifica las credenciales y la conexión con la cámara
           </Typography>
         </Box>
       </Fade>
 
       {/* Contenido principal */}
-      <Box sx={{ flex: 1, display: "grid", gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" }, gap: 2 }}>
-        {/* Panel principal */}
-        <Paper
-          sx={{
-            p: 3,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            borderRadius: borderTokens.radius.lg,
-          }}
-        >
-          <AccessTestPanel
-            selectedIP={targetIP}
-            onComplete={handleComplete}
-            onBack={handleBack}
-            onTestResult={handleAddResult}
-          />
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+        {/* Opción de entrada manual de datos */}
+        {(!targetIP || !targetPorts.length || useManualData) && (
+          <Fade in timeout={600}>
+            <Paper
+              sx={{
+                p: 3,
+                borderRadius: borderTokens.radius.lg,
+                backgroundColor: theme.palette.mode === "dark"
+                  ? colorTokens.background.darkElevated
+                  : colorTokens.background.lightElevated,
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Configuración de prueba
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                {targetIP || targetPorts.length > 0
+                  ? "Se detectaron datos del escaneo previo, pero puedes ingresar datos diferentes si lo deseas."
+                  : "No se detectaron datos del escaneo previo. Ingresa manualmente la IP y puertos a probar."
+                }
+              </Typography>
+              
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <TextField
+                  label="Dirección IP"
+                  value={manualIP}
+                  onChange={handleIPChange}
+                  error={!!ipError}
+                  helperText={ipError || "Ejemplo: 192.168.1.100"}
+                  placeholder="192.168.1.100"
+                  sx={{ maxWidth: 300 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <RouterIcon sx={{ fontSize: 20 }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                
+                <TextField
+                  label="Puertos a probar"
+                  value={manualPorts}
+                  onChange={handlePortsChange}
+                  error={!!portsError}
+                  helperText={portsError || "Ingresa puertos separados por comas"}
+                  placeholder="80, 554, 8000, 2020"
+                  sx={{ maxWidth: 400 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <AccessIcon sx={{ fontSize: 20 }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                
+                {(targetIP || targetPorts.length > 0) && (
+                  <Button
+                    variant="outlined"
+                    onClick={handleToggleManualData}
+                    sx={{ alignSelf: "flex-start" }}
+                  >
+                    {useManualData ? "Usar datos detectados" : "Usar otros datos"}
+                  </Button>
+                )}
+              </Box>
+              
+              {(targetIP || targetPorts.length > 0) && !useManualData && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Usando datos detectados: <strong>{targetIP}</strong> - Puertos: <strong>{targetPorts.join(', ')}</strong>
+                </Alert>
+              )}
+            </Paper>
+          </Fade>
+        )}
 
-          {/* Acciones */}
-          <Box 
-            sx={{ 
-              mt: 3, 
-              pt: 2, 
-              borderTop: `1px solid ${theme.palette.divider}`,
+        <Box sx={{ flex: 1, display: "grid", gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" }, gap: 2 }}>
+          {/* Panel principal */}
+          <Paper
+            sx={{
+              p: 3,
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center"
+              flexDirection: "column",
+              overflow: "hidden",
+              borderRadius: borderTokens.radius.lg,
             }}
           >
-            <Button
-              startIcon={<BackIcon />}
-              onClick={handleBack}
-              sx={{ textTransform: "none" }}
+            {hasValidData ? (
+              <AccessTestPanel
+                selectedIP={finalIP}
+                onComplete={handleComplete}
+                onBack={handleBack}
+                onTestResult={handleAddResult}
+              />
+            ) : (
+              <Box sx={{ 
+                display: "flex", 
+                flexDirection: "column", 
+                alignItems: "center", 
+                justifyContent: "center",
+                height: "100%",
+                textAlign: "center",
+                p: 4
+              }}>
+                <AccessIcon sx={{ fontSize: 64, color: "text.secondary", mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Ingresa los datos necesarios para comenzar
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Necesitas especificar una dirección IP válida y al menos un puerto para probar el acceso.
+                </Typography>
+              </Box>
+            )}
+
+            {/* Acciones */}
+            <Box 
+              sx={{ 
+                mt: 3, 
+                pt: 2, 
+                borderTop: `1px solid ${theme.palette.divider}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}
             >
-              Volver al escaneo de puertos
-            </Button>
+              <Button
+                startIcon={<BackIcon />}
+                onClick={handleBack}
+                sx={{ textTransform: "none" }}
+              >
+                Volver al escaneo de puertos
+              </Button>
 
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <Button
-                startIcon={<HomeIcon />}
-                onClick={handleNewScan}
-                sx={{ textTransform: "none" }}
-              >
-                Nuevo escaneo
-              </Button>
-              
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAddCamera}
-                disabled={!successfulAccess}
-                sx={{ textTransform: "none" }}
-              >
-                Agregar cámara
-              </Button>
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <Button
+                  startIcon={<HomeIcon />}
+                  onClick={handleNewScan}
+                  sx={{ textTransform: "none" }}
+                >
+                  Nuevo escaneo
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddCamera}
+                  disabled={!successfulAccess}
+                  sx={{ textTransform: "none" }}
+                >
+                  Agregar cámara
+                </Button>
+              </Box>
             </Box>
-          </Box>
-        </Paper>
+          </Paper>
 
-        {/* Panel lateral - Resultados */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {/* Panel lateral - Resultados */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {/* Resumen de puertos a probar */}
           <Card sx={{ borderRadius: borderTokens.radius.lg }}>
             <CardContent>
@@ -278,7 +443,7 @@ const AccessTestPage = memo(() => {
                 Puertos a probar
               </Typography>
               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1 }}>
-                {targetPorts.map((port) => (
+                {finalPorts.map((port) => (
                   <Chip
                     key={port}
                     label={`Puerto ${port}`}
@@ -346,6 +511,7 @@ const AccessTestPage = memo(() => {
               Puedes agregar esta cámara a tu sistema.
             </Alert>
           )}
+          </Box>
         </Box>
       </Box>
     </Container>

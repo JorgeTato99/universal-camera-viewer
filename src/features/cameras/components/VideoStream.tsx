@@ -41,9 +41,9 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
   onMetricsUpdate,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageRef = useRef<HTMLImageElement>();
+  const imageRef = useRef<HTMLImageElement>(new Image());
   const blobUrlRef = useRef<string | null>(null);
-  const animationIdRef = useRef<number>();
+  const animationIdRef = useRef<number>(0);
   const isLoadingRef = useRef(true);
   const [isFirstFrame, setIsFirstFrame] = React.useState(true);
   
@@ -199,7 +199,6 @@ export const VideoStream: React.FC<VideoStreamProps> = React.memo(({
       }
       if (imageRef.current) {
         imageRef.current.src = '';
-        imageRef.current = undefined;
       }
       isLoadingRef.current = true;
       setIsFirstFrame(true);

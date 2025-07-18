@@ -3,8 +3,8 @@
  * Grilla responsiva para mostrar múltiples cámaras
  */
 
-import React, { memo, useMemo } from "react";
-import { Box, Typography } from "@mui/material";
+import { memo, useMemo } from "react";
+import { Box, Typography, Fade, Grow, CircularProgress } from "@mui/material";
 import { Videocam as VideocamIcon } from "@mui/icons-material";
 import { CameraCard } from "./CameraCard";
 import { colorTokens } from "../../../design-system/tokens";
@@ -40,48 +40,56 @@ export const CameraGrid = memo<CameraGridProps>(({
   onCameraSettings,
   onCameraCapture,
 }) => {
-  // Si no hay cámaras, mostrar estado vacío
+  // Si no hay cámaras, mostrar estado vacío con animación
   if (cameras.length === 0 && !isLoading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
-          textAlign: "center",
-          p: 4,
-        }}
-      >
-        <VideocamIcon
+      <Fade in timeout={800}>
+        <Box
           sx={{
-            fontSize: 80,
-            color: (theme) => theme.palette.text.disabled,
-            mb: 2,
-          }}
-        />
-        <Typography
-          variant="h5"
-          sx={{
-            mb: 1,
-            color: (theme) => theme.palette.text.secondary,
-            fontWeight: 500,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "400px",
+            textAlign: "center",
+            p: 4,
           }}
         >
-          No hay cámaras configuradas
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: (theme) => theme.palette.text.secondary,
-            maxWidth: "400px",
-          }}
-        >
-          Agrega cámaras para comenzar a monitorear tus espacios. Puedes
-          configurar cámaras IP, USB o de red.
-        </Typography>
-      </Box>
+          <Grow in timeout={600} style={{ transitionDelay: '200ms' }}>
+            <VideocamIcon
+              sx={{
+                fontSize: 80,
+                color: (theme) => theme.palette.text.disabled,
+                mb: 2,
+              }}
+            />
+          </Grow>
+          <Fade in timeout={600} style={{ transitionDelay: '400ms' }}>
+            <Typography
+              variant="h5"
+              sx={{
+                mb: 1,
+                color: (theme) => theme.palette.text.secondary,
+                fontWeight: 500,
+              }}
+            >
+              No hay cámaras configuradas
+            </Typography>
+          </Fade>
+          <Fade in timeout={600} style={{ transitionDelay: '600ms' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: (theme) => theme.palette.text.secondary,
+                maxWidth: "400px",
+              }}
+            >
+              Agrega cámaras para comenzar a monitorear tus espacios. Puedes
+              configurar cámaras IP, USB o de red.
+            </Typography>
+          </Fade>
+        </Box>
+      </Fade>
     );
   }
 
@@ -113,60 +121,87 @@ export const CameraGrid = memo<CameraGridProps>(({
       }}
     >
       {isLoading ? (
-        // Estado de carga
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: gridTemplateColumns,
-            gap: 0.5, // Reducido de 3 a 0.5 para espaciado mínimo
-            width: "100%",
-            // Transición suave para cambio de layout
-            transition:
-              "grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
-        >
-          {/* Mostrar skeletons de carga */}
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Box
-              key={`skeleton-${index}`}
-              sx={{
-                height: "300px",
-                backgroundColor: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? colorTokens.background.darkElevated
-                    : colorTokens.background.lightElevated,
-                borderRadius: "4px",
-                border: (theme) => `1px solid ${theme.palette.divider}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                animation: "pulse 1.5s ease-in-out infinite",
-                // Animación de entrada para skeletons
-                opacity: 0,
-                animationDelay: `${index * 0.1}s`,
-                animationFillMode: "forwards",
-                "@keyframes pulse": {
-                  "0%": {
-                    opacity: 0,
-                  },
-                  "50%": {
-                    opacity: 0.5,
-                  },
-                  "100%": {
-                    opacity: 1,
-                  },
-                },
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ color: (theme) => theme.palette.text.disabled }}
+        // Estado de carga mejorado
+        <Fade in timeout={300}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: gridTemplateColumns,
+              gap: 0.5,
+              width: "100%",
+              transition: "grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            {/* Mostrar skeletons de carga con animación mejorada */}
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Grow
+                key={`skeleton-${index}`}
+                in
+                timeout={600}
+                style={{ 
+                  transitionDelay: `${index * 100}ms`,
+                  transformOrigin: '0 0 0' 
+                }}
               >
-                Cargando...
-              </Typography>
-            </Box>
-          ))}
-        </Box>
+                <Box
+                  sx={{
+                    height: "300px",
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? colorTokens.background.darkElevated
+                        : colorTokens.background.lightElevated,
+                    borderRadius: "4px",
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 2,
+                    position: "relative",
+                    overflow: "hidden",
+                    "&::after": {
+                      content: '""',
+                      position: "absolute",
+                      top: 0,
+                      left: "-100%",
+                      width: "100%",
+                      height: "100%",
+                      background: (theme) =>
+                        `linear-gradient(90deg, transparent, ${
+                          theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.05)"
+                            : "rgba(0, 0, 0, 0.03)"
+                        }, transparent)`,
+                      animation: "shimmer 2s infinite",
+                    },
+                    "@keyframes shimmer": {
+                      "0%": { left: "-100%" },
+                      "100%": { left: "100%" },
+                    },
+                  }}
+                >
+                  <CircularProgress
+                    size={24}
+                    thickness={2}
+                    sx={{
+                      color: (theme) => theme.palette.text.disabled,
+                      opacity: 0.6,
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{ 
+                      color: (theme) => theme.palette.text.disabled,
+                      opacity: 0.8,
+                    }}
+                  >
+                    Cargando cámara...
+                  </Typography>
+                </Box>
+              </Grow>
+            ))}
+          </Box>
+        </Fade>
       ) : (
         // Grilla de cámaras
         <Box
@@ -195,44 +230,39 @@ export const CameraGrid = memo<CameraGridProps>(({
           }}
         >
           {cameras.map((camera, index) => (
-            <Box
+            <Grow
               key={camera.id}
-              sx={{
-                // Animación de entrada escalonada
-                animation: "slideInUp 0.5s ease-out",
-                animationDelay: `${index * 0.1}s`,
-                animationFillMode: "both",
-                // Asegurar que el wrapper ocupe toda la altura disponible
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                "@keyframes slideInUp": {
-                  "0%": {
-                    opacity: 0,
-                    transform: "translateY(20px)",
-                  },
-                  "100%": {
-                    opacity: 1,
-                    transform: "translateY(0)",
-                  },
-                },
+              in
+              timeout={800}
+              style={{ 
+                transitionDelay: `${Math.min(index * 50, 300)}ms`,
+                transformOrigin: 'center center'
               }}
             >
-              <CameraCard
-                cameraId={camera.id}
-                name={camera.name}
-                status={camera.status}
-                aspectRatio={camera.aspectRatio}
-                ip={camera.ip}
-                fps={camera.fps}
-                latency={camera.latency}
-                connectedTime={camera.connectedTime}
-                onConnect={() => onCameraConnect?.(camera.id)}
-                onDisconnect={() => onCameraDisconnect?.(camera.id)}
-                onSettings={() => onCameraSettings?.(camera.id)}
-                onCapture={() => onCameraCapture?.(camera.id)}
-              />
-            </Box>
+              <Box
+                sx={{
+                  // Asegurar que el wrapper ocupe toda la altura disponible
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <CameraCard
+                  cameraId={camera.id}
+                  name={camera.name}
+                  status={camera.status}
+                  aspectRatio={camera.aspectRatio}
+                  ip={camera.ip}
+                  fps={camera.fps}
+                  latency={camera.latency}
+                  connectedTime={camera.connectedTime}
+                  onConnect={() => onCameraConnect?.(camera.id)}
+                  onDisconnect={() => onCameraDisconnect?.(camera.id)}
+                  onSettings={() => onCameraSettings?.(camera.id)}
+                  onCapture={() => onCameraCapture?.(camera.id)}
+                />
+              </Box>
+            </Grow>
           ))}
         </Box>
       )}

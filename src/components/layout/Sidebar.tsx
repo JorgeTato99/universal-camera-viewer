@@ -26,6 +26,11 @@ import {
   NetworkCheck as NetworkIcon,
   PortableWifiOff as PortIcon,
   VpnKey as AccessIcon,
+  Dashboard as DashboardIcon,
+  Timeline as TimelineIcon,
+  Event as EventIcon,
+  Speed as PerformanceIcon,
+  Description as ReportIcon,
 } from "@mui/icons-material";
 import { useTheme } from "../../hooks/useTheme";
 import { colorTokens } from "../../design-system/tokens";
@@ -106,11 +111,55 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    id: "analytics",
-    path: "/analytics",
+    id: "statistics",
+    path: "/statistics",
     icon: <AnalyticsIcon />,
     label: "Estadísticas",
     tooltip: "Métricas y Análisis",
+    subItems: [
+      {
+        id: "statistics-overview",
+        path: "/statistics/overview",
+        icon: <DashboardIcon />,
+        label: "General",
+        tooltip: "Resumen general del sistema",
+      },
+      {
+        id: "statistics-connections",
+        path: "/statistics/connections",
+        icon: <TimelineIcon />,
+        label: "Conexiones",
+        tooltip: "Análisis de conexiones",
+      },
+      {
+        id: "statistics-events",
+        path: "/statistics/events",
+        icon: <EventIcon />,
+        label: "Eventos",
+        tooltip: "Línea de tiempo de eventos",
+      },
+      {
+        id: "statistics-performance",
+        path: "/statistics/performance",
+        icon: <PerformanceIcon />,
+        label: "Rendimiento",
+        tooltip: "Métricas de rendimiento",
+      },
+      {
+        id: "statistics-network",
+        path: "/statistics/network",
+        icon: <NetworkIcon />,
+        label: "Red",
+        tooltip: "Historial de escaneos de red",
+      },
+      {
+        id: "statistics-reports",
+        path: "/statistics/reports",
+        icon: <ReportIcon />,
+        label: "Reportes",
+        tooltip: "Reportes detallados",
+      },
+    ],
   },
   {
     id: "settings",
@@ -129,7 +178,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { effectiveTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  const [expandedItems, setExpandedItems] = useState<string[]>(["cameras"]);
+  const [expandedItems, setExpandedItems] = useState<string[]>(() => {
+    // Auto-expandir el item activo
+    const path = location.pathname;
+    if (path.startsWith("/cameras")) return ["cameras"];
+    if (path.startsWith("/scanner")) return ["scanner"];
+    if (path.startsWith("/statistics")) return ["statistics"];
+    return ["cameras"];
+  });
 
   const handleNavigation = (path: string) => {
     navigate(path);

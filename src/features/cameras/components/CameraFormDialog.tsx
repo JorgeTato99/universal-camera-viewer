@@ -24,24 +24,17 @@ import {
   IconButton,
   InputAdornment,
   Alert,
-  Chip,
-  FormControlLabel,
-  Switch,
   Tabs,
   Tab,
 } from '@mui/material';
 import {
   ExpandMore,
   Camera as CameraIcon,
-  Add,
-  Delete,
-  TestConnection,
   Visibility,
   VisibilityOff,
 } from '@mui/icons-material';
 import {
   CameraFormData,
-  CreateCameraRequest,
   ProtocolType,
   AuthType,
   DEFAULT_CAMERA_FORM,
@@ -113,7 +106,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
       setFormData({
         ...DEFAULT_CAMERA_FORM,
         ...initialData,
-      });
+      } as CameraFormData);
       setTestResult(null);
       setErrors({});
       setActiveTab(0);
@@ -165,6 +158,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
     if (!validateForm()) {
       notificationStore.addNotification({
         type: 'error',
+        title: 'Validation Error',
         message: 'Please fill in all required fields',
       });
       return;
@@ -193,6 +187,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
       if (result.discovered_endpoints && result.discovered_endpoints.length > 0) {
         notificationStore.addNotification({
           type: 'success',
+          title: 'Endpoints Found',
           message: `Found ${result.discovered_endpoints.length} endpoints`,
         });
       }
@@ -218,6 +213,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
     } catch (error) {
       notificationStore.addNotification({
         type: 'error',
+        title: 'Operation Failed',
         message: `Error ${mode === 'create' ? 'creating' : 'updating'} camera: ${error}`,
       });
     }
@@ -436,7 +432,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               <Box display="flex" justifyContent="center" mt={2}>
                 <Button
                   variant="outlined"
-                  startIcon={<TestConnection />}
+                  startIcon={<CameraIcon />}
                   onClick={handleTestConnection}
                   disabled={testing}
                 >

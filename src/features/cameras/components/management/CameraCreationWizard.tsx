@@ -26,7 +26,6 @@ import {
   IconButton,
   InputAdornment,
   useTheme,
-  alpha,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -83,7 +82,6 @@ export const CameraCreationWizard: React.FC<CameraCreationWizardProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const theme = useTheme();
   const { createCamera } = useCameraStoreV2();
   
   const [activeStep, setActiveStep] = useState(0);

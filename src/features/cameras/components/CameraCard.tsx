@@ -11,12 +11,9 @@ import {
   CardContent,
   Chip,
   Button,
-  IconButton,
-  Divider,
   Tooltip,
 } from "@mui/material";
 import {
-  Videocam as VideocamIcon,
   Settings as SettingsIcon,
   CameraAlt as CameraAltIcon,
   PowerSettingsNew as ConnectIcon,
@@ -27,7 +24,7 @@ import {
   Speed as SpeedIcon,
   HealthAndSafety as HealthIcon,
 } from "@mui/icons-material";
-import { cardStyles, statusStyles } from "../../../design-system/components";
+import { cardStyles } from "../../../design-system/components";
 import { colorTokens } from "../../../design-system/tokens";
 import { VideoStream } from "./VideoStream";
 
@@ -51,11 +48,7 @@ export const CameraCard = memo<CameraCardProps>(({
   cameraId,
   name = `Cámara ${cameraId}`,
   status = "disconnected",
-  aspectRatio = "16:9",
   ip = "192.168.1.100",
-  fps = 30,
-  latency = 45,
-  connectedTime = "02:30:15",
   onConnect,
   onDisconnect,
   onSettings,
@@ -70,6 +63,10 @@ export const CameraCard = memo<CameraCardProps>(({
     avgFps: 0,
     avgLatency: 0,
     healthScore: 0,
+    rtt: 0,
+    avgRtt: 0,
+    minRtt: 0,
+    maxRtt: 0,
   });
   
   // Estado para el tiempo conectado
@@ -91,6 +88,10 @@ export const CameraCard = memo<CameraCardProps>(({
         avgFps: 0,
         avgLatency: 0,
         healthScore: 0,
+        rtt: 0,
+        avgRtt: 0,
+        minRtt: 0,
+        maxRtt: 0,
       });
       setConnectionTime(null);
       setDisplayTime("--:--:--");
@@ -438,17 +439,19 @@ export const CameraCard = memo<CameraCardProps>(({
             aspectRatio="16/9"
             height="100%"
             onError={useCallback(
-              (error) => console.error(`Error en cámara ${cameraId}:`, error),
+              (error: any) => console.error(`Error en cámara ${cameraId}:`, error),
               [cameraId]
             )}
             onMetricsUpdate={useCallback(
-              isConnected ? (metrics) => {
-                // Solo logear cambios significativos (cada 10 frames)
-                if (metrics.fps && Math.floor(metrics.fps * 10) % 100 === 0) {
-                  console.log(`[CameraCard ${cameraId}] Métricas actualizadas:`, metrics);
+              (metrics: any) => {
+                if (isConnected) {
+                  // Solo logear cambios significativos (cada 10 frames)
+                  if (metrics.fps && Math.floor(metrics.fps * 10) % 100 === 0) {
+                    console.log(`[CameraCard ${cameraId}] Métricas actualizadas:`, metrics);
+                  }
+                  setStreamMetrics(metrics);
                 }
-                setStreamMetrics(metrics);
-              } : undefined,
+              },
               [isConnected, cameraId]
             )}
           />

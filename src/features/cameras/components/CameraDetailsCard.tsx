@@ -26,7 +26,6 @@ import {
   TextField,
   Collapse,
   Alert,
-  Tooltip,
   Tab,
   Tabs,
   LinearProgress,
@@ -38,12 +37,9 @@ import {
   Settings,
   LocationOn,
   Info,
-  Link,
   Speed,
   Storage,
   Edit,
-  Save,
-  Cancel,
   ExpandMore,
   ExpandLess,
   CheckCircle,
@@ -111,10 +107,7 @@ export const CameraDetailsCard: React.FC<CameraDetailsCardProps> = ({
   const saving = isSaving.get(camera.camera_id) || false;
   const connected = isConnected(camera);
   const hasAuth = hasCredentials(camera);
-  const primaryProtocol = getPrimaryProtocol(camera);
-  const rtspEndpoint = getVerifiedEndpoint(camera, 'rtsp_main');
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
@@ -440,7 +433,7 @@ export const CameraDetailsCard: React.FC<CameraDetailsCardProps> = ({
           <Button
             onClick={handleConnect}
             disabled={connecting || !hasAuth}
-            startIcon={connecting && <LinearProgress size={20} />}
+            startIcon={connecting ? <LinearProgress sx={{ width: 20 }} /> : null}
             color={connected ? 'error' : 'primary'}
           >
             {connecting ? 'Processing...' : connected ? 'Disconnect' : 'Connect'}

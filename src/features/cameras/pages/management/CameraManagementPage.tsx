@@ -10,6 +10,9 @@ import {
   Typography,
   useTheme,
   useMediaQuery,
+  Fade,
+  Grow,
+  Slide,
 } from '@mui/material';
 import { useCameraStoreV2 } from '../../../../stores/cameraStore.v2';
 import { ManagementToolbar } from '../../components/management/ManagementToolbar';
@@ -99,124 +102,154 @@ export const CameraManagementPage: React.FC = () => {
   }, [selectedCameras]);
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        bgcolor: 'background.default',
-      }}
-    >
-      {/* Header */}
+    <Fade in timeout={600}>
       <Box
         sx={{
-          p: 2,
-          borderBottom: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          bgcolor: 'background.default',
         }}
       >
-        <Container maxWidth={false}>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="h4" component="h1">
-              Registro de Cámaras
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Gestión completa de cámaras: configuración, credenciales y protocolos
-            </Typography>
-          </Box>
-
-          {/* Toolbar */}
-          <ManagementToolbar
-            onRefresh={handleRefresh}
-            isRefreshing={isRefreshing}
-            onCreateNew={() => setShowCreationWizard(true)}
-            selectedCount={selectedCameras.size}
-            onBulkAction={handleBulkAction}
-            onSearch={setSearchQuery}
-            onFilterStatus={setFilterStatus}
-            onFilterBrand={setFilterBrand}
-            onFilterLocation={setFilterLocation}
-          />
-        </Container>
-      </Box>
-
-      {/* Main Content */}
-      <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        <Container 
-          maxWidth={false} 
-          sx={{ 
-            height: '100%', 
-            py: 2,
-            overflow: 'auto',
-          }}
-        >
-          {/* Mostrar error de conexión si existe */}
-          {connectionError?.hasError ? (
-            <ConnectionErrorState
-              errorType={connectionError.errorType}
-              customMessage={connectionError.errorMessage}
-              errorDetails={connectionError.errorDetails}
-              onRetry={() => {
-                clearConnectionError();
-                connectionErrorHandler.retry();
-              }}
-              isRetrying={connectionErrorHandler.isRetrying}
-              showDebugInfo={true}
-            />
-          ) : (
-            <>
-              {/* Tabla de datos principal */}
-              <CameraDataTable
-                cameras={filteredCameras}
-                selectedCameras={selectedCameras}
-                onSelectCamera={handleSelectCamera}
-                onSelectAll={handleSelectAll}
-              />
-
-              {/* Empty State */}
-              {!isLoading && filteredCameras.length === 0 && (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '60vh',
-                    gap: 2,
-                  }}
-                >
-                  <Typography variant="h6" color="text.secondary">
-                    No se encontraron cámaras
+        {/* Header con animación */}
+        <Slide direction="down" in timeout={500}>
+          <Box
+            sx={{
+              p: 2,
+              borderBottom: 1,
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+            }}
+          >
+            <Container maxWidth={false}>
+              <Fade in timeout={600} style={{ transitionDelay: '100ms' }}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="h4" component="h1">
+                    Registro de Cámaras
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Intenta ajustar los filtros o crear una nueva cámara
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Gestión completa de cámaras: configuración, credenciales y protocolos
                   </Typography>
                 </Box>
+              </Fade>
+
+              {/* Toolbar con animación */}
+              <Fade in timeout={700} style={{ transitionDelay: '200ms' }}>
+                <Box>
+                  <ManagementToolbar
+                    onRefresh={handleRefresh}
+                    isRefreshing={isRefreshing}
+                    onCreateNew={() => setShowCreationWizard(true)}
+                    selectedCount={selectedCameras.size}
+                    onBulkAction={handleBulkAction}
+                    onSearch={setSearchQuery}
+                    onFilterStatus={setFilterStatus}
+                    onFilterBrand={setFilterBrand}
+                    onFilterLocation={setFilterLocation}
+                  />
+                </Box>
+              </Fade>
+            </Container>
+          </Box>
+        </Slide>
+
+        {/* Main Content con animación */}
+        <Grow in timeout={800} style={{ transitionDelay: '300ms', transformOrigin: '0 0 0' }}>
+          <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            <Container 
+              maxWidth={false} 
+              sx={{ 
+                height: '100%', 
+                py: 2,
+                overflow: 'auto',
+              }}
+            >
+              {/* Mostrar error de conexión si existe */}
+              {connectionError?.hasError ? (
+                <Fade in timeout={400}>
+                  <Box>
+                    <ConnectionErrorState
+                      errorType={connectionError.errorType}
+                      customMessage={connectionError.errorMessage}
+                      errorDetails={connectionError.errorDetails}
+                      onRetry={() => {
+                        clearConnectionError();
+                        connectionErrorHandler.retry();
+                      }}
+                      isRetrying={connectionErrorHandler.isRetrying}
+                      showDebugInfo={true}
+                    />
+                  </Box>
+                </Fade>
+              ) : (
+                <>
+                  {/* Tabla de datos principal con animación */}
+                  <Fade in timeout={600} style={{ transitionDelay: '400ms' }}>
+                    <Box>
+                      <CameraDataTable
+                        cameras={filteredCameras}
+                        selectedCameras={selectedCameras}
+                        onSelectCamera={handleSelectCamera}
+                        onSelectAll={handleSelectAll}
+                      />
+                    </Box>
+                  </Fade>
+
+                  {/* Empty State con animación */}
+                  {!isLoading && filteredCameras.length === 0 && (
+                    <Fade in timeout={800}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '60vh',
+                          gap: 2,
+                        }}
+                      >
+                        <Grow in timeout={600} style={{ transitionDelay: '200ms' }}>
+                          <Typography variant="h6" color="text.secondary">
+                            No se encontraron cámaras
+                          </Typography>
+                        </Grow>
+                        <Fade in timeout={600} style={{ transitionDelay: '400ms' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Intenta ajustar los filtros o crear una nueva cámara
+                          </Typography>
+                        </Fade>
+                      </Box>
+                    </Fade>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </Container>
+            </Container>
+          </Box>
+        </Grow>
+
+        {/* Status Bar con animación */}
+        <Slide direction="up" in timeout={600} style={{ transitionDelay: '500ms' }}>
+          <Box>
+            <ManagementStatusBar
+              totalCameras={stats.total}
+              connectedCameras={stats.connected}
+              activeCameras={stats.active}
+              alerts={0} // TODO: Implementar sistema de alertas
+            />
+          </Box>
+        </Slide>
+
+        {/* Creation Wizard */}
+        <CameraCreationWizard
+          open={showCreationWizard}
+          onClose={() => setShowCreationWizard(false)}
+          onSuccess={() => {
+            setShowCreationWizard(false);
+            loadCameras();
+          }}
+        />
       </Box>
-
-      {/* Status Bar */}
-      <ManagementStatusBar
-        totalCameras={stats.total}
-        connectedCameras={stats.connected}
-        activeCameras={stats.active}
-        alerts={0} // TODO: Implementar sistema de alertas
-      />
-
-      {/* Creation Wizard */}
-      <CameraCreationWizard
-        open={showCreationWizard}
-        onClose={() => setShowCreationWizard(false)}
-        onSuccess={() => {
-          setShowCreationWizard(false);
-          loadCameras();
-        }}
-      />
-    </Box>
+    </Fade>
   );
 };
 

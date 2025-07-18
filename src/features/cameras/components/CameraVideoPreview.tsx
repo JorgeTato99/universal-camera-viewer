@@ -21,12 +21,8 @@ interface CameraVideoPreviewProps {
 export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
   cameraId,
   isConnected,
-  aspectRatio = "16:9",
-  height = "100%",
-  onError,
   onMetricsUpdate,
 }) => {
-  const [showVideo, setShowVideo] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentFrame, setCurrentFrame] = useState<string | null>(null);
   const imgRef1 = useRef<HTMLImageElement>(null);
@@ -37,7 +33,6 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
   useEffect(() => {
     if (isConnected) {
       setIsLoading(true);
-      setShowVideo(true);
       
       // Suscribirse a los frames del WebSocket
       const handleFrame = (frameData: any) => {
@@ -86,7 +81,6 @@ export const CameraVideoPreview: React.FC<CameraVideoPreviewProps> = ({
         unsubscribe();
       };
     } else {
-      setShowVideo(false);
       setIsLoading(false);
       setCurrentFrame(null);
       // Notificar que el streaming se detuvo
