@@ -172,13 +172,13 @@ class ConfigValidationResponse(BaseModel):
 class ConfigSchemaResponse(BaseModel):
     """Respuesta con esquema de configuración."""
     
-    schema: Dict[str, Any] = Field(..., description="JSON Schema de configuración")
+    config_schema: Dict[str, Any] = Field(..., description="JSON Schema de configuración")
     categories: Dict[str, List[str]] = Field(..., description="Campos por categoría")
     
     class Config:
         json_schema_extra = {
             "example": {
-                "schema": {
+                "config_schema": {
                     "title": "AppConfig",
                     "type": "object",
                     "properties": {

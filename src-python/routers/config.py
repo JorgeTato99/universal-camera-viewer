@@ -565,7 +565,7 @@ async def get_config_schema():
         }
         
         return ConfigSchemaResponse(
-            schema=schema,
+            config_schema=schema,
             categories={
                 "general": ["app_name", "theme", "language"],
                 "streaming": ["default_quality", "default_fps", "buffer_size", "auto_reconnect", "reconnect_interval"],

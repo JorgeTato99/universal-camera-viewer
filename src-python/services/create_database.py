@@ -148,6 +148,11 @@ class DatabaseCreator:
             """)
             
             # Tabla de endpoints/URLs descubiertas
+            # APIs PARCIALMENTE IMPLEMENTADAS - Falta:
+            # - POST /cameras/{id}/endpoints - Crear endpoint manual
+            # - PUT /cameras/{id}/endpoints/{id} - Actualizar endpoint
+            # - DELETE /cameras/{id}/endpoints/{id} - Eliminar endpoint
+            # - POST /cameras/{id}/endpoints/{id}/verify - Verificar endpoint
             cursor.execute("""
                 CREATE TABLE camera_endpoints (
                     endpoint_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -173,6 +178,11 @@ class DatabaseCreator:
             """)
             
             # Tabla de capacidades - Features soportadas
+            # APIs FALTANTES:
+            # - GET /cameras/{id}/capabilities - Listar capacidades
+            # - POST /cameras/{id}/capabilities/detect - Auto-detectar capacidades
+            # - PUT /cameras/{id}/capabilities/{type} - Actualizar capacidad
+            # - GET /capabilities/types - Listar tipos de capacidades
             cursor.execute("""
                 CREATE TABLE camera_capabilities (
                     capability_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,6 +226,11 @@ class DatabaseCreator:
             # ================== TABLAS DE OPERACIÓN ==================
             
             # Tabla de estadísticas - Métricas agregadas
+            # APIs FALTANTES:
+            # - GET /cameras/{id}/statistics - Estadísticas de cámara
+            # - GET /statistics/summary - Resumen global
+            # - POST /statistics/reset - Reiniciar estadísticas
+            # - GET /statistics/export - Exportar estadísticas
             cursor.execute("""
                 CREATE TABLE camera_statistics (
                     stat_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -240,6 +255,11 @@ class DatabaseCreator:
             """)
             
             # Tabla de logs de conexión - Historial detallado
+            # APIs PARCIALMENTE IMPLEMENTADAS - Falta:
+            # - GET /connections/logs - Listar todos los logs con filtros
+            # - GET /connections/logs/stats - Estadísticas agregadas
+            # - DELETE /connections/logs - Limpiar logs antiguos
+            # - GET /connections/logs/export - Exportar logs
             cursor.execute("""
                 CREATE TABLE connection_logs (
                     log_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -267,6 +287,12 @@ class DatabaseCreator:
             """)
             
             # Tabla de eventos - Registro de eventos importantes
+            # APIs PARCIALMENTE IMPLEMENTADAS (solo WebSocket) - Falta:
+            # - GET /events - Listar eventos históricos
+            # - GET /events/{id} - Obtener detalle de evento
+            # - PUT /events/{id}/acknowledge - Reconocer evento
+            # - DELETE /events - Limpiar eventos antiguos
+            # - GET /events/stats - Estadísticas de eventos
             cursor.execute("""
                 CREATE TABLE camera_events (
                     event_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -333,6 +359,13 @@ class DatabaseCreator:
             # ================== TABLAS DE ALMACENAMIENTO ==================
             
             # Tabla de snapshots
+            # APIs FALTANTES:
+            # - GET /snapshots - Listar snapshots
+            # - POST /cameras/{id}/snapshots - Capturar snapshot
+            # - GET /snapshots/{id} - Obtener snapshot
+            # - DELETE /snapshots/{id} - Eliminar snapshot
+            # - GET /snapshots/{id}/download - Descargar snapshot
+            # - POST /snapshots/cleanup - Limpiar snapshots antiguos
             cursor.execute("""
                 CREATE TABLE snapshots (
                     snapshot_id TEXT PRIMARY KEY,   -- UUID
@@ -354,6 +387,14 @@ class DatabaseCreator:
             """)
             
             # Tabla de grabaciones
+            # APIs FALTANTES:
+            # - GET /recordings - Listar grabaciones
+            # - POST /cameras/{id}/recordings/start - Iniciar grabación
+            # - POST /cameras/{id}/recordings/stop - Detener grabación
+            # - GET /recordings/{id} - Obtener info de grabación
+            # - DELETE /recordings/{id} - Eliminar grabación
+            # - GET /recordings/{id}/download - Descargar grabación
+            # - GET /recordings/{id}/stream - Stream de grabación
             cursor.execute("""
                 CREATE TABLE recordings (
                     recording_id TEXT PRIMARY KEY,  -- UUID
@@ -401,6 +442,13 @@ class DatabaseCreator:
             """)
             
             # Tabla de plantillas de configuración
+            # APIs FALTANTES:
+            # - GET /templates - Listar plantillas
+            # - POST /templates - Crear plantilla
+            # - GET /templates/{id} - Obtener plantilla
+            # - PUT /templates/{id} - Actualizar plantilla
+            # - DELETE /templates/{id} - Eliminar plantilla
+            # - POST /templates/{id}/apply - Aplicar plantilla a cámara
             cursor.execute("""
                 CREATE TABLE config_templates (
                     template_id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -127,73 +127,52 @@ async def list_stream_profiles(
     
     Args:
         camera_id: ID único de la cámara (UUID)
-        stream_type: Filtrar por tipo de stream (main, sub, third, mobile)
         is_active: Si solo mostrar perfiles activos
         
     Returns:
-        StreamProfileListResponse: Lista de perfiles con información completa
+        ProfileListResponse: Lista de perfiles con información completa
         
     Raises:
         HTTPException 404: Si la cámara no existe
         HTTPException 500: Error interno del servidor
     """
     try:
-        # Validar formato UUID
-        if not camera_id or len(camera_id) != 36:
-            logger.warning(f"ID de cámara inválido: {camera_id}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="ID de cámara debe ser un UUID válido"
-            )
-        
         logger.info(f"Listando perfiles de streaming para cámara: {camera_id}")
         
-        profiles = await camera_manager_service.get_stream_profiles(camera_id)
-        
-        # Filtrar por tipo si se especifica
-        if stream_type:
-            profiles = [p for p in profiles if p.get('stream_type') == stream_type.value]
+        # TODO: Obtener perfiles reales de la cámara
+        # Por ahora devolver perfiles de ejemplo basados en la cámara
+        profiles = [
+            StreamProfileInfo(
+                profile_id=f"{camera_id}_high",
+                name="Alta Calidad",
+                description="Stream principal HD",
+                quality="high",
+                is_default=True,
+                is_system=False,
+                created_at=datetime.utcnow(),
+                updated_at=None
+            ),
+            StreamProfileInfo(
+                profile_id=f"{camera_id}_low",
+                name="Baja Calidad",
+                description="Stream secundario para bajo ancho de banda",
+                quality="low",
+                is_default=False,
+                is_system=False,
+                created_at=datetime.utcnow(),
+                updated_at=None
+            )
+        ]
         
         # Filtrar por estado si se especifica
-        if is_active:
-            profiles = [p for p in profiles if p.get('is_active', True)]
+        if not is_active:
+            profiles = []  # No hay perfiles inactivos en el ejemplo
         
-        # Construir respuesta
-        profile_responses = []
-        for profile in profiles:
-            try:
-                profile_responses.append(StreamProfileDetailResponse(
-                    profile_id=profile['profile_id'],
-                    profile_name=profile['profile_name'],
-                    profile_token=profile.get('profile_token'),
-                    stream_type=profile['stream_type'],
-                    encoding=profile['encoding'],
-                    resolution=profile['resolution'],
-                    framerate=profile['framerate'],
-                    bitrate=profile['bitrate'],
-                    quality=profile['quality'],
-                    gop_interval=profile.get('gop_interval'),
-                    channel=profile.get('channel', 1),
-                    subtype=profile.get('subtype', 0),
-                    is_default=profile['is_default'],
-                    is_active=profile['is_active'],
-                    endpoint_id=profile.get('endpoint_id'),
-                    created_at=profile['created_at'],
-                    updated_at=profile['updated_at']
-                ))
-            except Exception as e:
-                logger.warning(f"Error procesando perfil {profile.get('profile_id')}: {e}")
+        logger.info(f"Devolviendo {len(profiles)} perfiles para cámara {camera_id}")
         
-        response_data = StreamProfileListResponse(
-            total=len(profile_responses),
-            profiles=profile_responses
-        )
-        
-        logger.info(f"Devolviendo {len(profile_responses)} perfiles para cámara {camera_id}")
-        
-        return create_response(
-            success=True,
-            data=response_data.dict()
+        return ProfileListResponse(
+            total=len(profiles),
+            profiles=profiles
         )
         
     except CameraNotFoundError:
