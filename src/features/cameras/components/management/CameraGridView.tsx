@@ -341,7 +341,7 @@ export const CameraGridView: React.FC<CameraGridViewProps> = ({
     return (
       <Grid container spacing={3}>
         {[...Array(6)].map((_, index) => (
-          <Grid item xs={12} sm={6} md={4} lg={4 / gridColumns * 12} key={index}>
+          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 / gridColumns * 12 }} key={index}>
             <Card>
               <Skeleton variant="rectangular" height={200} />
               <CardContent>
@@ -363,11 +363,12 @@ export const CameraGridView: React.FC<CameraGridViewProps> = ({
     <Grid container spacing={3}>
       {cameras.map((camera) => (
         <Grid 
-          item 
-          xs={12} 
-          sm={6} 
-          md={4} 
-          lg={4 / gridColumns * 12} 
+          size={{ 
+            xs: 12, 
+            sm: 6, 
+            md: 4, 
+            lg: 4 / gridColumns * 12 
+          }} 
           key={camera.camera_id}
         >
           <CameraCard

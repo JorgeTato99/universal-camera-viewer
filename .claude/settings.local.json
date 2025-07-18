@@ -26,7 +26,9 @@
       "Bash(fi)",
       "Bash(dir:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:bluenviron.github.io)"
+      "WebFetch(domain:bluenviron.github.io)",
+      "Bash(npx tsc:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": []
   }

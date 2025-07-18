@@ -4,7 +4,7 @@
  * Sigue los principios de Material Design 3 y la arquitectura MVP
  */
 
-import React, { memo } from 'react';
+import { memo } from 'react';
 import {
   Box,
   Typography,

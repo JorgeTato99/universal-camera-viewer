@@ -10,7 +10,6 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  LinearProgress,
   useTheme as useMuiTheme,
   alpha,
 } from "@mui/material";
@@ -24,7 +23,6 @@ import {
 import { useTheme } from "../../hooks/useTheme";
 import { colorTokens } from "../../design-system/tokens";
 import { useCameraStoreV2 } from "../../stores/cameraStore.v2";
-import { useNotificationStore } from "../../stores/notificationStore";
 import { APP_CONFIG, getAppVersion } from "../../config/appConfig";
 
 interface BottomMenuProps {
@@ -39,7 +37,7 @@ export const BottomMenu: React.FC<BottomMenuProps> = ({
   const { getCameraStats } = useCameraStoreV2();
   
   const stats = getCameraStats();
-  const [backendConnected, setBackendConnected] = React.useState(true);
+  const [backendConnected] = React.useState(true);
   const [showClock, setShowClock] = React.useState(true);
 
   // Obtener hora actual

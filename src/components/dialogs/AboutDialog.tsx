@@ -20,7 +20,6 @@ import {
   Tooltip,
   keyframes,
   Skeleton,
-  Grow,
   Tabs,
   Tab,
   Button,
@@ -33,7 +32,6 @@ import {
   Close as CloseIcon,
   GitHub as GitHubIcon,
   Language as WebIcon,
-  Email as EmailIcon,
   Security as SecurityIcon,
   Speed as PerformanceIcon,
   Videocam as CameraIcon,
@@ -48,10 +46,9 @@ import {
 import {
   colorTokens,
   borderTokens,
-  spacingTokens,
 } from "../../design-system/tokens";
 import { LicenseDialog } from "./LicenseDialog";
-import { APP_CONFIG, getAppVersion } from "../../config/appConfig";
+import { APP_CONFIG } from "../../config/appConfig";
 
 interface AboutDialogProps {
   open: boolean;
@@ -85,27 +82,7 @@ const fadeInUp = keyframes`
   }
 `;
 
-const slideInRight = keyframes`
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-`;
 
-const rippleEffect = keyframes`
-  0% {
-    transform: scale(0);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(4);
-    opacity: 0;
-  }
-`;
 
 const shimmer = keyframes`
   0% {
@@ -154,7 +131,6 @@ function TabPanel(props: TabPanelProps) {
 export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
   const theme = useTheme();
   const [contentLoaded, setContentLoaded] = React.useState(false);
-  const [rippleActive, setRippleActive] = React.useState(false);
   const [currentTab, setCurrentTab] = useState(0);
   const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -173,7 +149,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
     }
   }, [open]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
   };
 
@@ -480,7 +456,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
                 color: colorTokens.status.connecting,
                 text: "Alto rendimiento: 15+ FPS, <300MB RAM",
               },
-            ].map((feature, index) => (
+            ].map((feature) => (
               <Box
                 sx={{
                   display: "flex",

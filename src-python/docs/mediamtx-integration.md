@@ -1,5 +1,12 @@
 # Plan de Integración con MediaMTX
 
+## Estado: ✅ Funcional (Requiere FFmpeg)
+
+> **Importante**: La integración está completa pero requiere tener FFmpeg instalado en el sistema.
+> - Windows: Descargar de https://ffmpeg.org/download.html y agregar al PATH
+> - Linux: `sudo apt install ffmpeg`
+> - macOS: `brew install ffmpeg`
+
 ## Objetivo
 
 Universal Camera Viewer es una herramienta de exploración y gateway de emisión. La meta principal es emitir streams de cámaras IP descubiertas hacia un servidor MediaMTX central.
@@ -89,7 +96,26 @@ Universal Camera Viewer es una herramienta de exploración y gateway de emisión
    - Integration tests con MediaMTX mock
    - Tests de rendimiento con múltiples cámaras
 
+## Errores Conocidos al Inicio
+
+Si no tienes FFmpeg instalado, verás estos errores al iniciar el backend:
+
+```
+ERROR:FFmpegManager:FFmpeg no encontrado en PATH. Instala FFmpeg desde https://ffmpeg.org/download.html
+ERROR:RTSPPublisherService:FFmpeg no está instalado o no es accesible en el sistema
+ERROR:PublishingPresenter:Error durante inicialización: FFmpeg no está instalado o no es accesible en el sistema
+ERROR:websocket.handlers.publishing_handler:Error en loop de métricas: FFmpeg no está instalado o no es accesible en el sistema
+```
+
+**Estos errores son esperados** si no tienes FFmpeg. No afectan otras funcionalidades del sistema como:
+- Conexión directa a cámaras
+- Streaming de video en tiempo real
+- Escaneo de red
+- Gestión de cámaras
+
 ## Uso de la API
+
+### Endpoints de Publicación
 
 ```bash
 # Iniciar publicación
@@ -122,6 +148,41 @@ GET /api/publishing/status
 GET /api/publishing/status/cam-001
 ```
 
+### Endpoints de Configuración
+
+```bash
+# Listar configuraciones
+GET /api/publishing/config
+
+# Obtener configuración activa
+GET /api/publishing/config/active
+
+# Crear nueva configuración
+POST /api/publishing/config
+{
+  "name": "Local MediaMTX",
+  "mediamtx_url": "rtsp://localhost:8554",
+  "api_url": "http://localhost:9997",
+  "api_enabled": true,
+  "username": "admin",
+  "password": "admin123",
+  "auth_enabled": true,
+  "use_tcp": true,
+  "max_reconnects": 3,
+  "reconnect_delay": 5.0,
+  "publish_path_template": "camera_{camera_id}"
+}
+
+# Activar configuración
+POST /api/publishing/config/{config_name}/activate
+
+# Actualizar configuración
+PUT /api/publishing/config/{config_name}
+
+# Eliminar configuración
+DELETE /api/publishing/config/{config_name}
+```
+
 ## Configuración Recomendada
 
 ```python
@@ -142,4 +203,36 @@ config = PublishConfiguration(
 - Los errores se categorizan para mejor debugging
 - Las métricas se actualizan en tiempo real desde FFmpeg
 - La reconexión usa backoff exponencial hasta max_reconnects
+- Las configuraciones se persisten en base de datos con encriptación de passwords
+- Los eventos se emiten por WebSocket para actualizaciones en tiempo real
+- Se corrigieron errores de WebSocket al desconectar clientes
+
+## WebSocket para Eventos en Tiempo Real
+
+```javascript
+// Conectar al WebSocket de publicación
+const ws = new WebSocket('ws://localhost:8000/ws/publishing');
+
+// Suscribirse a eventos de una cámara
+ws.send(JSON.stringify({
+  type: 'subscribe_camera',
+  camera_id: 'cam-001'
+}));
+
+// Recibir eventos
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  switch(data.type) {
+    case 'publishing_started':
+      console.log('Publicación iniciada:', data);
+      break;
+    case 'metrics_update':
+      console.log('Métricas:', data.metrics);
+      break;
+    case 'publishing_error':
+      console.error('Error:', data.error);
+      break;
+  }
+};
+```
 

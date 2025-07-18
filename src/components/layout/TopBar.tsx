@@ -18,7 +18,6 @@ import {
 import {
   Menu as MenuIcon,
   Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   Help as HelpIcon,
   Minimize,
   CropSquare,
@@ -38,7 +37,6 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({
   onMenuToggle,
-  sidebarCollapsed = false,
 }) => {
   const muiTheme = useMuiTheme();
   const { effectiveTheme } = useTheme();

@@ -9,7 +9,6 @@ import {
   Box,
   Typography,
   Paper,
-  Grid2 as Grid,
   Button,
   Card,
   CardContent,
@@ -21,6 +20,7 @@ import {
   alpha,
   Stack,
 } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import {
   Search as SearchIcon,
   NetworkCheck as NetworkIcon,
@@ -31,7 +31,11 @@ import {
   CheckCircle as CheckIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { colorTokens, spacingTokens, borderTokens } from "../../design-system/tokens";
+import {
+  colorTokens,
+  spacingTokens,
+  borderTokens,
+} from "../../design-system/tokens";
 
 interface ScanOption {
   id: string;
@@ -48,7 +52,8 @@ const scanOptions: ScanOption[] = [
   {
     id: "network",
     title: "Escaneo de Red",
-    description: "Descubre todos los dispositivos conectados a tu red local e identifica posibles cámaras IP",
+    description:
+      "Descubre todos los dispositivos conectados a tu red local e identifica posibles cámaras IP",
     icon: <NetworkIcon sx={{ fontSize: 40 }} />,
     path: "/scanner/network",
     color: colorTokens.primary[500],
@@ -63,7 +68,8 @@ const scanOptions: ScanOption[] = [
   {
     id: "ports",
     title: "Escaneo de Puertos",
-    description: "Analiza los puertos abiertos en dispositivos específicos para identificar servicios",
+    description:
+      "Analiza los puertos abiertos en dispositivos específicos para identificar servicios",
     icon: <PortIcon sx={{ fontSize: 40 }} />,
     path: "/scanner/ports",
     color: colorTokens.secondary[500],
@@ -78,7 +84,8 @@ const scanOptions: ScanOption[] = [
   {
     id: "access",
     title: "Prueba de Acceso",
-    description: "Verifica credenciales y establece conexión con las cámaras detectadas en tu red",
+    description:
+      "Verifica credenciales y establece conexión con las cámaras detectadas en tu red",
     icon: <AccessIcon sx={{ fontSize: 40 }} />,
     path: "/scanner/access",
     color: colorTokens.status.connected,
@@ -96,9 +103,12 @@ const ScannerPage = memo(() => {
   const theme = useTheme();
   const navigate = useNavigate();
 
-  const handleNavigate = useCallback((path: string) => {
-    navigate(path);
-  }, [navigate]);
+  const handleNavigate = useCallback(
+    (path: string) => {
+      navigate(path);
+    },
+    [navigate]
+  );
 
   const handleQuickScan = useCallback(() => {
     // Navegar directamente al escaneo de red como inicio rápido
@@ -110,13 +120,25 @@ const ScannerPage = memo(() => {
       {/* Header */}
       <Fade in timeout={600}>
         <Box sx={{ mb: 5, textAlign: "center" }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2, mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 2,
+              mb: 2,
+            }}
+          >
             <SearchIcon sx={{ fontSize: 56, color: "primary.main" }} />
             <Typography variant="h3" component="h1" fontWeight={600}>
               Centro de Escaneo
             </Typography>
           </Box>
-          <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: "auto" }}>
+          <Typography
+            variant="h6"
+            color="text.secondary"
+            sx={{ maxWidth: 600, mx: "auto" }}
+          >
             Descubre y configura cámaras IP en tu red de forma automática
           </Typography>
         </Box>
@@ -141,7 +163,10 @@ const ScannerPage = memo(() => {
               boxShadow: `0 4px 14px 0 ${alpha(colorTokens.primary[500], 0.4)}`,
               "&:hover": {
                 background: `linear-gradient(135deg, ${colorTokens.primary[600]} 0%, ${colorTokens.primary[700]} 100%)`,
-                boxShadow: `0 6px 20px 0 ${alpha(colorTokens.primary[600], 0.4)}`,
+                boxShadow: `0 6px 20px 0 ${alpha(
+                  colorTokens.primary[600],
+                  0.4
+                )}`,
                 transform: "translateY(-2px)",
               },
               transition: "all 0.3s ease",
@@ -153,7 +178,7 @@ const ScannerPage = memo(() => {
       </Fade>
 
       {/* Grid de opciones */}
-      <Grid container spacing={3} sx={{ mb: 5, width: '100%' }}>
+      <Grid container spacing={3} sx={{ mb: 5, width: "100%" }}>
         {scanOptions.map((option, index) => (
           <Grid size={{ xs: 12, md: 4 }} key={option.id}>
             <Fade in timeout={1000 + index * 200}>
@@ -218,23 +243,23 @@ const ScannerPage = memo(() => {
                   >
                     {option.icon}
                   </Box>
-                  
+
                   {/* Título */}
-                  <Typography 
-                    variant="h5" 
-                    component="h2" 
-                    gutterBottom 
+                  <Typography
+                    variant="h5"
+                    component="h2"
+                    gutterBottom
                     fontWeight={600}
                     sx={{ mb: 1.5 }}
                   >
                     {option.title}
                   </Typography>
-                  
+
                   {/* Descripción */}
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary" 
-                    sx={{ 
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
                       mb: 3,
                       minHeight: 60, // Aumentar altura para acomodar textos más largos
                       lineHeight: 1.5,
@@ -258,17 +283,17 @@ const ScannerPage = memo(() => {
                           py: 0.25,
                         }}
                       >
-                        <CheckIcon 
-                          sx={{ 
-                            fontSize: 14, 
+                        <CheckIcon
+                          sx={{
+                            fontSize: 14,
                             color: option.color,
                             opacity: 0.8,
                             flexShrink: 0,
-                          }} 
+                          }}
                         />
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
+                        <Typography
+                          variant="caption"
+                          sx={{
                             fontSize: "0.813rem",
                             color: "text.secondary",
                             lineHeight: 1.4,
@@ -280,14 +305,14 @@ const ScannerPage = memo(() => {
                     ))}
                   </Stack>
                 </CardContent>
-                
+
                 {/* Acción */}
-                <CardActions 
-                  sx={{ 
-                    px: 3, 
-                    pb: 3, 
+                <CardActions
+                  sx={{
+                    px: 3,
+                    pb: 3,
                     pt: 0,
-                    justifyContent: "center" 
+                    justifyContent: "center",
                   }}
                 >
                   <Button
@@ -322,30 +347,32 @@ const ScannerPage = memo(() => {
         <Paper
           sx={{
             p: 4,
-            backgroundColor: theme.palette.mode === "dark"
-              ? alpha(colorTokens.background.darkElevated, 0.5)
-              : alpha(colorTokens.background.lightElevated, 0.5),
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? alpha(colorTokens.background.darkElevated, 0.5)
+                : alpha(colorTokens.background.lightElevated, 0.5),
             borderRadius: 2,
             border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
             backdropFilter: "blur(10px)",
           }}
         >
           <Box sx={{ display: "flex", alignItems: "flex-start", gap: 3 }}>
-            <TipsIcon 
-              sx={{ 
-                color: "primary.main", 
+            <TipsIcon
+              sx={{
+                color: "primary.main",
                 mt: 0.5,
                 fontSize: 28,
-              }} 
+              }}
             />
             <Box sx={{ flex: 1 }}>
               <Typography variant="h6" gutterBottom fontWeight={600}>
                 ¿Cómo empezar?
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                El proceso de descubrimiento de cámaras es simple y se realiza en tres pasos:
+                El proceso de descubrimiento de cámaras es simple y se realiza
+                en tres pasos:
               </Typography>
-              
+
               <Grid container spacing={3} sx={{ mt: 1 }}>
                 {scanOptions.map((option) => (
                   <Grid size={{ xs: 12, sm: 4 }} key={option.id}>
@@ -374,18 +401,21 @@ const ScannerPage = memo(() => {
                         {option.step}
                       </Box>
                       <Box>
-                        <Typography 
-                          variant="subtitle2" 
-                          fontWeight={600} 
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={600}
                           gutterBottom
                           sx={{ color: option.color }}
                         >
                           {option.title}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {option.step === 1 && "Encuentra todos los dispositivos conectados a tu red local"}
-                          {option.step === 2 && "Identifica los servicios de cámara analizando puertos"}
-                          {option.step === 3 && "Conecta y configura las cámaras con credenciales válidas"}
+                          {option.step === 1 &&
+                            "Encuentra todos los dispositivos conectados a tu red local"}
+                          {option.step === 2 &&
+                            "Identifica los servicios de cámara analizando puertos"}
+                          {option.step === 3 &&
+                            "Conecta y configura las cámaras con credenciales válidas"}
                         </Typography>
                       </Box>
                     </Box>
@@ -401,6 +431,6 @@ const ScannerPage = memo(() => {
 });
 
 // Añadir displayName para debugging
-ScannerPage.displayName = 'ScannerPage';
+ScannerPage.displayName = "ScannerPage";
 
 export default ScannerPage;

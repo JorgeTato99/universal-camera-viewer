@@ -1,0 +1,183 @@
+src/components/dialogs/AboutDialog.tsx(157,10): error TS6133: 'rippleActive' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(157,24): error TS6133: 'setRippleActive' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(176,28): error TS6133: 'event' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(23,3): error TS6133: 'Grow' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(36,12): error TS6133: 'EmailIcon' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(483,29): error TS6133: 'index' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(51,3): error TS6133: 'spacingTokens' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(54,22): error TS6133: 'getAppVersion' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(88,7): error TS6133: 'slideInRight' is declared but its value is never read.
+src/components/dialogs/AboutDialog.tsx(99,7): error TS6133: 'rippleEffect' is declared but its value is never read.
+src/components/dialogs/LicenseDialog.tsx(108,33): error TS2304: Cannot find name 'APP_CONFIG'.
+src/components/dialogs/LicenseDialog.tsx(130,21): error TS2304: Cannot find name 'APP_CONFIG'.
+src/components/feedback/ConnectionErrorState.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/components/layout/BottomMenu.tsx(13,3): error TS6133: 'LinearProgress' is declared but its value is never read.
+src/components/layout/BottomMenu.tsx(27,1): error TS6133: 'useNotificationStore' is declared but its value is never read.
+src/components/layout/BottomMenu.tsx(42,28): error TS6133: 'setBackendConnected' is declared but its value is never read.
+src/components/layout/MainLayout.tsx(11,1): error TS6133: 'colorTokens' is declared but its value is never read.
+src/components/layout/Sidebar.tsx(21,16): error TS6133: 'DashboardIcon' is declared but its value is never read.
+src/components/layout/Sidebar.tsx(23,17): error TS6133: 'ExpandLessIcon' is declared but its value is never read.
+src/components/layout/TopBar.tsx(21,20): error TS6133: 'NotificationsIcon' is declared but its value is never read.
+src/components/layout/TopBar.tsx(41,3): error TS6133: 'sidebarCollapsed' is declared but its value is never read.
+src/components/menus/QuickSettingsMenu.tsx(20,3): error TS6133: 'Paper' is declared but its value is never read.
+src/components/menus/QuickSettingsMenu.tsx(37,37): error TS6133: 'spacingTokens' is declared but its value is never read.
+src/components/ui/ThemeToggle.tsx(63,3): error TS6133: 'showLabel' is declared but its value is never read.
+src/components/ui/ThemeToggle.tsx(64,3): error TS6133: 'variant' is declared but its value is never read.
+src/components/ui/ThemeToggle.tsx(66,9): error TS6133: 'muiTheme' is declared but its value is never read.
+src/features/analytics/AnalyticsPage.tsx(7,33): error TS6133: 'lazy' is declared but its value is never read.
+src/features/analytics/AnalyticsPage.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/features/cameras/CamerasPage.tsx(101,28): error TS2554: Expected 1 arguments, but got 0.
+src/features/cameras/CamerasPage.tsx(101,62): error TS2339: Property 'cameraId' does not exist on type 'StreamingService'.
+src/features/cameras/CamerasPage.tsx(102,32): error TS2554: Expected 1 arguments, but got 0.
+src/features/cameras/CamerasPage.tsx(103,26): error TS2554: Expected 1 arguments, but got 0.
+src/features/cameras/CamerasPage.tsx(118,50): error TS6133: 'cameraId' is declared but its value is never read.
+src/features/cameras/CamerasPage.tsx(157,9): error TS2322: Type 'number' is not assignable to type '2 | 3 | 4 | 5'.
+src/features/cameras/CamerasPage.tsx(214,11): error TS2322: Type 'number' is not assignable to type '2 | 3 | 4 | 5'.
+src/features/cameras/CamerasPage.tsx(30,5): error TS6133: 'clearConnectionError' is declared but its value is never read.
+src/features/cameras/CamerasPage.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(14,3): error TS6133: 'IconButton' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(15,3): error TS6133: 'Divider' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(19,15): error TS6133: 'VideocamIcon' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(30,22): error TS6133: 'statusStyles' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(359,31): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(359,52): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(360,109): error TS2339: Property 'minRtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(360,141): error TS2339: Property 'maxRtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(360,43): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(360,77): error TS2339: Property 'avgRtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(365,118): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(365,139): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(382,75): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(382,96): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(387,36): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(387,57): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(389,40): error TS2339: Property 'rtt' does not exist on type '{ fps: number; latency: number; isStreaming: boolean; latencyType: "real" | "simulated"; avgFps: number; avgLatency: number; healthScore: number; }'.
+src/features/cameras/components/CameraCard.tsx(441,16): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/features/cameras/components/CameraCard.tsx(444,13): error TS2322: Type 'Function' is not assignable to type '(metrics: StreamMetrics) => void'.
+src/features/cameras/components/CameraCard.tsx(445,15): error TS2345: Argument of type '((metrics: any) => void) | undefined' is not assignable to parameter of type 'Function'.
+src/features/cameras/components/CameraCard.tsx(445,30): error TS7006: Parameter 'metrics' implicitly has an 'any' type.
+src/features/cameras/components/CameraCard.tsx(54,3): error TS6133: 'aspectRatio' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(56,3): error TS6133: 'fps' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(57,3): error TS6133: 'latency' is declared but its value is never read.
+src/features/cameras/components/CameraCard.tsx(58,3): error TS6133: 'connectedTime' is declared but its value is never read.
+src/features/cameras/components/CameraDetailsCard.tsx(114,9): error TS6133: 'primaryProtocol' is declared but its value is never read.
+src/features/cameras/components/CameraDetailsCard.tsx(115,9): error TS6133: 'rtspEndpoint' is declared but its value is never read.
+src/features/cameras/components/CameraDetailsCard.tsx(117,28): error TS6133: 'event' is declared but its value is never read.
+src/features/cameras/components/CameraDetailsCard.tsx(29,3): error TS6133: 'Tooltip' is declared but its value is never read.
+src/features/cameras/components/CameraDetailsCard.tsx(41,3): error TS6133: 'Link' is declared but its value is never read.
+src/features/cameras/components/CameraDetailsCard.tsx(443,54): error TS2322: Type '{ size: number; }' is not assignable to type 'IntrinsicAttributes & LinearProgressProps'.
+src/features/cameras/components/CameraDetailsCard.tsx(45,3): error TS6133: 'Save' is declared but its value is never read.
+src/features/cameras/components/CameraDetailsCard.tsx(46,3): error TS6133: 'Cancel' is declared but its value is never read.
+src/features/cameras/components/CameraFormDialog.tsx(113,19): error TS2345: Argument of type '{ brand?: string | undefined; model?: string; display_name?: string | undefined; ip?: string | undefined; location?: string; description?: string; username?: string | undefined; password?: string | undefined; auth_type?: AuthType; onvif_port?: number; rtsp_port?: number; http_port?: number; }' is not assignable to parameter of type 'SetStateAction<CameraFormData>'.
+src/features/cameras/components/CameraFormDialog.tsx(166,41): error TS2345: Argument of type '{ type: "error"; message: string; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/components/CameraFormDialog.tsx(194,43): error TS2345: Argument of type '{ type: "success"; message: string; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/components/CameraFormDialog.tsx(219,41): error TS2345: Argument of type '{ type: "error"; message: string; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/components/CameraFormDialog.tsx(27,3): error TS6133: 'Chip' is declared but its value is never read.
+src/features/cameras/components/CameraFormDialog.tsx(28,3): error TS6133: 'FormControlLabel' is declared but its value is never read.
+src/features/cameras/components/CameraFormDialog.tsx(29,3): error TS6133: 'Switch' is declared but its value is never read.
+src/features/cameras/components/CameraFormDialog.tsx(36,3): error TS6133: 'Add' is declared but its value is never read.
+src/features/cameras/components/CameraFormDialog.tsx(37,3): error TS6133: 'Delete' is declared but its value is never read.
+src/features/cameras/components/CameraFormDialog.tsx(38,3): error TS2305: Module '"@mui/icons-material"' has no exported member 'TestConnection'.
+src/features/cameras/components/CameraFormDialog.tsx(44,3): error TS6133: 'CreateCameraRequest' is declared but its value is never read.
+src/features/cameras/components/CameraFormDialog.tsx(99,60): error TS2345: Argument of type '{ brand?: string | undefined; model?: string; display_name?: string | undefined; ip?: string | undefined; location?: string; description?: string; username?: string | undefined; password?: string | undefined; auth_type?: AuthType; onvif_port?: number; rtsp_port?: number; http_port?: number; }' is not assignable to parameter of type 'CameraFormData | (() => CameraFormData)'.
+src/features/cameras/components/CameraGrid.tsx(6,8): error TS6133: 'React' is declared but its value is never read.
+src/features/cameras/components/CameraVideoPreview.tsx(24,3): error TS6133: 'aspectRatio' is declared but its value is never read.
+src/features/cameras/components/CameraVideoPreview.tsx(25,3): error TS6133: 'height' is declared but its value is never read.
+src/features/cameras/components/CameraVideoPreview.tsx(26,3): error TS6133: 'onError' is declared but its value is never read.
+src/features/cameras/components/CameraVideoPreview.tsx(29,10): error TS6133: 'showVideo' is declared but its value is never read.
+src/features/cameras/components/management/CameraCreationWizard.tsx(29,3): error TS6133: 'alpha' is declared but its value is never read.
+src/features/cameras/components/management/CameraCreationWizard.tsx(86,9): error TS6133: 'theme' is declared but its value is never read.
+src/features/cameras/components/management/CameraDataTable.tsx(139,25): error TS2339: Property 'last_connection_at' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(139,62): error TS2339: Property 'last_connection_at' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(260,65): error TS2339: Property 'total_connections' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(268,70): error TS2339: Property 'successful_connections' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(276,66): error TS2339: Property 'failed_connections' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(285,26): error TS2339: Property 'success_rate' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(285,63): error TS2339: Property 'success_rate' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(286,65): error TS2339: Property 'success_rate' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraDataTable.tsx(32,22): error TS6133: 'CollapseIcon' is declared but its value is never read.
+src/features/cameras/components/management/CameraDataTable.tsx(39,13): error TS6133: 'StatusIcon' is declared but its value is never read.
+src/features/cameras/components/management/CameraDataTable.tsx(624,65): error TS2345: Argument of type '{ type: "success"; message: string; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/components/management/CameraDataTable.tsx(769,39): error TS6133: 'connectCamera' is declared but its value is never read.
+src/features/cameras/components/management/CameraDataTable.tsx(769,54): error TS6133: 'disconnectCamera' is declared but its value is never read.
+src/features/cameras/components/management/CameraGridView.tsx(188,40): error TS2339: Property 'last_snapshot' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraGridView.tsx(191,25): error TS2339: Property 'last_snapshot' does not exist on type 'CameraResponse'.
+src/features/cameras/components/management/CameraListView.tsx(319,30): error TS6133: 'event' is declared but its value is never read.
+src/features/cameras/components/management/CameraListView.tsx(325,29): error TS6133: 'event' is declared but its value is never read.
+src/features/cameras/components/management/CameraListView.tsx(354,29): error TS2345: Argument of type '(a: { location: any; status: any; camera_id: any; brand: any; model: any; display_name: any; description: any; credentials: any; ip_address: any; mac_address: any; is_active: any; is_connected: any; is_streaming: any; ... 9 more ...; updated_at: any; }, b: { ...; }) => number' is not assignable to parameter of type '(a: CameraResponse, b: CameraResponse) => number'.
+src/features/cameras/components/management/CameraMapView.tsx(28,3): error TS6133: 'isLoading' is declared but its value is never read.
+src/features/cameras/components/management/CameraMapView.tsx(29,3): error TS6133: 'selectedCameras' is declared but its value is never read.
+src/features/cameras/components/management/CameraMapView.tsx(30,3): error TS6133: 'onSelectCamera' is declared but its value is never read.
+src/features/cameras/components/VideoStream.tsx(101,40): error TS6133: 'rtt' is declared but its value is never read.
+src/features/cameras/components/VideoStream.tsx(202,9): error TS2322: Type 'undefined' is not assignable to type 'HTMLImageElement'.
+src/features/cameras/components/VideoStream.tsx(38,3): error TS6133: 'aspectRatio' is declared but its value is never read.
+src/features/cameras/components/VideoStream.tsx(39,3): error TS6133: 'height' is declared but its value is never read.
+src/features/cameras/components/VideoStream.tsx(44,20): error TS2554: Expected 1 arguments, but got 0.
+src/features/cameras/components/VideoStream.tsx(46,26): error TS2554: Expected 1 arguments, but got 0.
+src/features/cameras/pages/LiveViewPage.tsx(109,23): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(114,23): error TS2345: Argument of type '{ message: string; type: "error"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(130,23): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(135,23): error TS2345: Argument of type '{ message: string; type: "error"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(145,23): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(150,23): error TS2345: Argument of type '{ message: string; type: "error"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(17,5): error TS6133: 'cameras' is declared but its value is never read.
+src/features/cameras/pages/LiveViewPage.tsx(209,15): error TS2322: Type 'number' is not assignable to type '2 | 3 | 4 | 5'.
+src/features/cameras/pages/LiveViewPage.tsx(42,25): error TS2345: Argument of type '{ type: "error"; message: string; duration: number; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/features/cameras/pages/LiveViewPage.tsx(83,9): error TS6133: 'handleRefresh' is declared but its value is never read.
+src/features/cameras/pages/LiveViewPage.tsx(85,21): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(94,23): error TS2345: Argument of type '{ message: string; type: "success"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/LiveViewPage.tsx(99,23): error TS2345: Argument of type '{ message: string; type: "error"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/management/CameraManagementPage.tsx(24,9): error TS6133: 'isMobile' is declared but its value is never read.
+src/features/cameras/pages/management/CameraManagementPage.tsx(28,5): error TS6133: 'cameras' is declared but its value is never read.
+src/features/cameras/pages/management/CameraManagementPage.tsx(6,38): error TS6133: 'useMemo' is declared but its value is never read.
+src/features/cameras/pages/RegisterPage.tsx(171,21): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/RegisterPage.tsx(181,41): error TS6133: 'cameraId' is declared but its value is never read.
+src/features/cameras/pages/RegisterPage.tsx(182,21): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/RegisterPage.tsx(188,45): error TS6133: 'cameraId' is declared but its value is never read.
+src/features/cameras/pages/RegisterPage.tsx(189,21): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/RegisterPage.tsx(200,23): error TS2345: Argument of type '{ message: string; type: "success"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/RegisterPage.tsx(207,23): error TS2345: Argument of type '{ message: string; type: "error"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/RegisterPage.tsx(215,21): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/RegisterPage.tsx(222,21): error TS2345: Argument of type '{ message: string; type: "info"; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/cameras/pages/RegisterPage.tsx(260,65): error TS2551: Property 'disconnected' does not exist on type '{ total: number; active: number; connected: number; streaming: number; withCredentials: number; byBrand: Record<string, number>; byLocation: Record<string, number>; }'. Did you mean 'connected'?
+src/features/cameras/pages/RegisterPage.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/features/scanner/components/AccessTestPanel.tsx(303,20): error TS2769: No overload matches this call.
+src/features/scanner/components/AccessTestPanel.tsx(31,13): error TS6133: 'KeyIcon' is declared but its value is never read.
+src/features/scanner/components/AccessTestPanel.tsx(36,11): error TS6133: 'InfoIcon' is declared but its value is never read.
+src/features/scanner/components/AccessTestPanel.tsx(422,19): error TS2769: No overload matches this call.
+src/features/scanner/components/NetworkScanPanel.tsx(20,3): error TS6133: 'Divider' is declared but its value is never read.
+src/features/scanner/components/NetworkScanPanel.tsx(35,12): error TS6133: 'TimerIcon' is declared but its value is never read.
+src/features/scanner/components/NetworkScanPanel.tsx(37,23): error TS6133: 'spacingTokens' is declared but its value is never read.
+src/features/scanner/components/NetworkScanPanel.tsx(40,7): error TS6133: 'scanAnimation' is declared but its value is never read.
+src/features/scanner/components/NetworkScanPanel.tsx(74,21): error TS6133: 'setCurrentIP' is declared but its value is never read.
+src/features/scanner/components/NetworkScanPanel.tsx(75,24): error TS6133: 'setDevicesFound' is declared but its value is never read.
+src/features/scanner/components/NetworkScanPanel.tsx(76,23): error TS6133: 'setElapsedTime' is declared but its value is never read.
+src/features/scanner/components/PortScanPanel.tsx(32,14): error TS6133: 'RescanIcon' is declared but its value is never read.
+src/features/scanner/components/ScanResults.tsx(34,11): error TS6133: 'InfoIcon' is declared but its value is never read.
+src/features/scanner/components/ScanResults.tsx(430,45): error TS6133: 'theme' is declared but its value is never read.
+src/features/scanner/pages/access/AccessTestPage.tsx(228,13): error TS2322: Type '{ selectedIP: any; onComplete: () => void; onBack: () => void; onTestResult: (result: TestResult) => void; }' is not assignable to type 'IntrinsicAttributes & AccessTestPanelProps'.
+src/features/scanner/pages/access/AccessTestPage.tsx(281,35): error TS7006: Parameter 'port' implicitly has an 'any' type.
+src/features/scanner/pages/access/AccessTestPage.tsx(39,23): error TS6133: 'spacingTokens' is declared but its value is never read.
+src/features/scanner/pages/access/AccessTestPage.tsx(61,59): error TS2339: Property 'selectedDevice' does not exist on type 'ScannerState'.
+src/features/scanner/pages/access/AccessTestPage.tsx(72,10): error TS6133: 'testComplete' is declared but its value is never read.
+src/features/scanner/pages/access/AccessTestPage.tsx(90,23): error TS2345: Argument of type '{ type: "success"; message: string; }' is not assignable to parameter of type 'Omit<NotificationMessage, "id" | "timestamp">'.
+src/features/scanner/pages/network/NetworkScanPage.tsx(224,17): error TS2322: Type 'DeviceScanResult[]' is not assignable to type 'ScanResult[]'.
+src/features/scanner/pages/network/NetworkScanPage.tsx(26,23): error TS6133: 'spacingTokens' is declared but its value is never read.
+src/features/scanner/pages/network/NetworkScanPage.tsx(39,56): error TS2339: Property 'results' does not exist on type 'ScannerState'.
+src/features/scanner/pages/network/NetworkScanPage.tsx(40,59): error TS2339: Property 'selectedDevice' does not exist on type 'ScannerState'.
+src/features/scanner/pages/network/NetworkScanPage.tsx(40,9): error TS6133: 'selectedDevice' is declared but its value is never read.
+src/features/scanner/pages/network/NetworkScanPage.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/features/scanner/pages/ports/PortScanPage.tsx(169,15): error TS2322: Type '(ports: number[]) => void' is not assignable to type '() => void'.
+src/features/scanner/pages/ports/PortScanPage.tsx(29,23): error TS6133: 'spacingTokens' is declared but its value is never read.
+src/features/scanner/pages/ports/PortScanPage.tsx(40,59): error TS2339: Property 'selectedDevice' does not exist on type 'ScannerState'.
+src/features/scanner/pages/ports/PortScanPage.tsx(7,40): error TS6133: 'useEffect' is declared but its value is never read.
+src/features/scanner/pages/ports/PortScanPage.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/features/scanner/ScannerPage.tsx(19,3): error TS6133: 'Chip' is declared but its value is never read.
+src/features/scanner/ScannerPage.tsx(274,52): error TS6133: 'idx' is declared but its value is never read.
+src/features/scanner/ScannerPage.tsx(36,3): error TS6133: 'spacingTokens' is declared but its value is never read.
+src/features/scanner/ScannerPage.tsx(37,3): error TS6133: 'borderTokens' is declared but its value is never read.
+src/features/settings/SettingsPage.tsx(167,40): error TS6133: 'event' is declared but its value is never read.
+src/features/settings/SettingsPage.tsx(18,3): error TS6133: 'ListItemIcon' is declared but its value is never read.
+src/features/settings/SettingsPage.tsx(198,17): error TS2769: No overload matches this call.
+src/features/settings/SettingsPage.tsx(7,56): error TS6133: 'lazy' is declared but its value is never read.

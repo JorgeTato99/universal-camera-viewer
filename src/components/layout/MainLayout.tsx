@@ -8,7 +8,6 @@ import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import { BottomMenu } from "./BottomMenu";
-import { colorTokens } from "../../design-system/tokens";
 
 interface MainLayoutProps {
   children: React.ReactNode;

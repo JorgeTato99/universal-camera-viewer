@@ -117,10 +117,20 @@
 
 ### Integración y APIs
 
-- **REST API** para control remoto
-- **WebSocket** para eventos real-time
+- **REST API v2** completa con 15+ endpoints CRUD
+- **WebSocket** para eventos real-time y streaming
+- **MediaMTX Integration** ✅ para publicación de streams (requiere FFmpeg)
 - **MQTT** para IoT (planeado)
 - **Integración con NVR** (planeado)
+
+### MediaMTX Publishing (Nuevo en v0.9.10)
+
+- **Relay RTSP a MediaMTX** usando FFmpeg sin transcodificación
+- **Gestión de configuraciones** persistente en DB
+- **WebSocket para eventos** de publicación en tiempo real
+- **API REST completa** para control de publicaciones
+- **Reconexión automática** con backoff exponencial
+- **Métricas en tiempo real** desde procesos FFmpeg
 
 ---
 

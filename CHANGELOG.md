@@ -7,7 +7,118 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
-## [0.9.9] - 2025-01-17 - 🚀 API v2 COMPLETA Y MÉTRICAS AVANZADAS
+## [0.9.11] - 2025-07-18 - 📝 DOCUMENTACIÓN Y REFACTORING FINAL
+
+### 📚 Documentation - Actualización Completa
+
+#### 🎯 README Principal Refactorizado
+
+- **Nuevo enfoque como "Universal Camera Gateway"** reflejando el verdadero propósito
+- **Descripción clara** como gateway inteligente entre cámaras locales y MediaMTX
+- **Diagrama ASCII** de arquitectura: Cámaras → Gateway → MediaMTX
+- **Casos de uso reales**: Hogar inteligente, empresas, instaladores CCTV
+- **Flujo de trabajo** documentado paso a paso
+- **Métricas de rendimiento** realistas para gateway y streaming
+
+#### 📋 Documentación Actualizada
+
+- **CURRENT_STATUS.md** actualizado a v0.9.10 con estado de integración MediaMTX
+- **mediamtx-integration.md** con estado funcional y requerimientos
+- **features.md** actualizado con MediaMTX Publishing
+- **Correcciones documentadas** de errores de WebSocket y PublishingPresenter
+
+### 🔧 Technical - Correcciones Finales
+
+- **Documentación inline** mejorada en código crítico
+- **Comentarios actualizados** reflejando arquitectura actual
+- **TODOs resueltos** o documentados apropiadamente
+
+---
+
+## [0.9.10] - 2025-07-18 - 🚀 INTEGRACIÓN MEDIAMTX COMPLETA
+
+### ✨ Added - MediaMTX Publishing System
+
+#### 🌐 WebSocket Handler para Publicación
+
+- **PublishingWebSocketHandler** completo con eventos en tiempo real
+- **Sistema de suscripciones** por cámara para eventos dirigidos
+- **Loop de actualización de métricas** cada 2 segundos
+- **Comandos implementados**:
+  - `subscribe_camera/unsubscribe_camera` - Gestión de suscripciones
+  - `start_publishing/stop_publishing` - Control de publicación
+  - `get_status` - Estado de publicaciones activas
+- **Integración con PublishingPresenter** para emisión de eventos
+
+#### 💾 Base de Datos para Configuraciones
+
+- **PublishingDatabaseService** con persistencia completa:
+  - Tablas: `publishing_configurations`, `publishing_states`, `publishing_history`, `publishing_metrics`
+  - Encriptación de passwords con Fernet
+  - Seguimiento de estados activos y métricas históricas
+  - Transacciones ACID para integridad de datos
+- **CRUD de configuraciones MediaMTX** con validación
+- **Historial completo** de sesiones de publicación
+
+#### 🔌 API REST de Configuración
+
+- **Router completo** `/api/publishing/config` con:
+  - GET `/` - Listar todas las configuraciones
+  - GET `/active` - Obtener configuración activa
+  - POST `/` - Crear nueva configuración
+  - PUT `/{name}` - Actualizar configuración
+  - DELETE `/{name}` - Eliminar configuración
+  - POST `/{name}/activate` - Activar configuración
+- **Validación robusta** con códigos HTTP apropiados
+- **Protección** contra eliminación de configuraciones en uso
+
+### 🐛 Fixed - Errores Críticos
+
+#### 🔧 WebSocket Connection Issues
+
+- **Verificación de estado** antes de enviar mensajes
+- **Manejo mejorado** de desconexiones esperadas
+- **Logs optimizados** para reducir ruido en errores normales
+- **Cleanup robusto** al desconectar clientes
+
+#### 🏗️ PublishingPresenter Abstract Methods
+
+- **Implementados métodos faltantes**:
+  - `_initialize_presenter()` - Requerido por BasePresenter
+  - `_cleanup_presenter()` - Para limpieza de recursos
+- **Herencia correcta** de BasePresenter sin errores
+
+#### ⚙️ PublishConfiguration API Conflicts
+
+- **Conflicto resuelto** entre parámetro `api_url` y propiedad
+- **Cambio de propiedad a método** `get_api_url()`
+- **Actualización completa** de todas las referencias en:
+  - `presenters/publishing_presenter.py`
+  - `services/publishing/rtsp_publisher_service.py`
+  - `api/routers/publishing_config.py`
+
+### 📊 Technical Improvements
+
+- **Inicialización mejorada** del PublishingPresenter desde DB
+- **Configuración por defecto** si no existe en base de datos
+- **Integración completa** entre todos los componentes
+- **FFmpeg detection** con mensajes claros si no está instalado
+
+### ⚠️ Known Issues
+
+- **Requiere FFmpeg instalado** para funcionar
+- **Errores esperados al inicio** si no hay FFmpeg:
+
+  ```bash
+  ERROR:FFmpegManager:FFmpeg no encontrado en PATH
+  ERROR:RTSPPublisherService:FFmpeg no está instalado
+  ```
+
+- **No afecta** otras funcionalidades del sistema
+
+---
+
+## [0.9.9] - 2025-07-17 - 🚀 API v2 COMPLETA Y MÉTRICAS AVANZADAS
 
 ### ✨ Added - API v2 Completa
 

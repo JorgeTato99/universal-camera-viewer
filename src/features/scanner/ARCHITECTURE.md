@@ -32,6 +32,7 @@ El módulo de Scanner permite el descubrimiento automático de cámaras IP en la
 ### 2. **Types** (`/types/scanner.types.ts`)
 
 Define todas las interfaces y tipos necesarios:
+
 - `ScanConfig`: Configuración del escaneo
 - `DeviceScanResult`: Resultado por dispositivo
 - `PortScanResult`: Estado de puertos
@@ -40,6 +41,7 @@ Define todas las interfaces y tipos necesarios:
 ### 3. **Service** (`/services/scanner/scannerService.ts`)
 
 Maneja la comunicación con el backend:
+
 - HTTP requests para iniciar/detener escaneos
 - WebSocket para actualizaciones en tiempo real
 - Transformación de datos entre frontend y backend
@@ -47,6 +49,7 @@ Maneja la comunicación con el backend:
 ### 4. **Store** (`/stores/scannerStore.ts`)
 
 Estado global del scanner (Zustand):
+
 ```typescript
 interface ScannerStore {
   // Estado
@@ -68,6 +71,7 @@ interface ScannerStore {
 ### Backend Endpoints Requeridos
 
 #### 1. **Escaneo de Red**
+
 ```
 POST /api/v2/scanner/start
 Body: {
@@ -99,6 +103,7 @@ Response: { status: "cancelled" }
 ```
 
 #### 2. **Escaneo de Puertos**
+
 ```
 POST /api/v2/scanner/ports/{ip}
 Body: { ports: number[], timeout: number }
@@ -111,6 +116,7 @@ Response: PortScanResult[]
 ```
 
 #### 3. **Prueba de Acceso**
+
 ```
 POST /api/v2/scanner/test-access
 Body: {
@@ -124,6 +130,7 @@ Response: AccessTestResult[]
 ```
 
 #### 4. **WebSocket**
+
 ```
 WS /ws/scanner/{scan_id}
 
@@ -141,6 +148,7 @@ Mensajes esperados:
 
 1. Usuario configura parámetros en `NetworkScanPanel`
 2. Al hacer clic en "Iniciar":
+
    ```typescript
    // En el componente
    const config = {
@@ -154,6 +162,7 @@ Mensajes esperados:
    ```
 
 3. El store llama al servicio:
+
    ```typescript
    // En el store
    const scanId = await scannerService.startNetworkScan(config);
@@ -161,6 +170,7 @@ Mensajes esperados:
    ```
 
 4. Actualizaciones por WebSocket:
+
    ```typescript
    // El servicio recibe mensajes y actualiza el store
    handleWebSocketMessage(message) {
@@ -174,6 +184,7 @@ Mensajes esperados:
 
 1. Usuario selecciona IP y configura puertos
 2. Inicia escaneo específico:
+
    ```typescript
    await useScannerStore.getState().startPortScan({
      ip: selectedIP,
@@ -186,6 +197,7 @@ Mensajes esperados:
 
 1. Usuario ingresa credenciales
 2. Prueba conexión:
+
    ```typescript
    const results = await scannerService.testCameraAccess({
      ip: selectedIP,
@@ -256,6 +268,7 @@ private handleWebSocketMessage(message: any): void {
 ### 4. Manejo de Errores
 
 Implementar manejo consistente de errores:
+
 - Mostrar toast/snackbar para errores de red
 - Estados de error en componentes
 - Reintentos automáticos para WebSocket
@@ -271,6 +284,7 @@ Implementar manejo consistente de errores:
 ## 🧪 Testing
 
 Para probar sin backend real:
+
 1. Usar MSW (Mock Service Worker) para interceptar peticiones
 2. Simular respuestas WebSocket
 3. Usar datos mock en desarrollo

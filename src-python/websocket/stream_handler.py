@@ -226,6 +226,16 @@ class StreamHandler:
             frame_data: Frame en base64
             capture_timestamp: Timestamp de captura en milisegundos (opcional)
         """
+        # Verificar que la conexión sigue activa
+        if not self.connection:
+            logger.debug(f"[{self.camera_id}] No hay conexión activa, ignorando frame")
+            return
+        
+        # Verificar estado del WebSocket
+        if hasattr(self.websocket, 'client_state') and self.websocket.client_state.value != 1:
+            logger.debug(f"[{self.camera_id}] WebSocket desconectado, ignorando frame")
+            return
+        
         # Obtener métricas sin latencia (el frontend la calculará)
         metrics = self.calculate_metrics()
         
@@ -258,6 +268,16 @@ class StreamHandler:
         Args:
             error: Mensaje de error
         """
+        # Verificar que la conexión sigue activa
+        if not self.connection:
+            logger.debug(f"[{self.camera_id}] No hay conexión activa, ignorando error")
+            return
+        
+        # Verificar estado del WebSocket
+        if hasattr(self.websocket, 'client_state') and self.websocket.client_state.value != 1:
+            logger.debug(f"[{self.camera_id}] WebSocket desconectado, ignorando error")
+            return
+        
         message = {
             "type": "error",
             "camera_id": self.camera_id,
@@ -275,6 +295,16 @@ class StreamHandler:
             status: Estado del stream
             data: Datos adicionales opcionales
         """
+        # Verificar que la conexión sigue activa
+        if not self.connection:
+            logger.debug(f"[{self.camera_id}] No hay conexión activa, ignorando status")
+            return
+        
+        # Verificar estado del WebSocket
+        if hasattr(self.websocket, 'client_state') and self.websocket.client_state.value != 1:
+            logger.debug(f"[{self.camera_id}] WebSocket desconectado, ignorando status")
+            return
+        
         message = {
             "type": "status",
             "camera_id": self.camera_id,
@@ -513,7 +543,10 @@ class StreamManager:
                 await handler.handle_message(data)
                 
         except Exception as e:
-            self.logger.error(f"Error en conexión de stream: {e}")
+            # Solo loggear si no es una desconexión esperada
+            error_msg = str(e)
+            if not ("WebSocket" in error_msg and "not connected" in error_msg):
+                self.logger.error(f"Error en conexión de stream: {e}")
         finally:
             # Limpiar al desconectar
             await self.cleanup_stream(camera_id, client_id)
@@ -526,23 +559,28 @@ class StreamManager:
             camera_id: ID de la cámara
             client_id: ID del cliente
         """
-        # Detener stream si está activo
-        if camera_id in self.active_streams:
-            if client_id in self.active_streams[camera_id]:
-                handler = self.active_streams[camera_id][client_id]
-                if handler.is_streaming:
-                    await handler.stop_stream()
-                
-                del self.active_streams[camera_id][client_id]
-                
-                # Eliminar diccionario de cámara si está vacío
-                if not self.active_streams[camera_id]:
-                    del self.active_streams[camera_id]
-        
-        # Desconectar del manager
-        await manager.disconnect(client_id)
-        
-        logger.info(f"Cliente {client_id} desconectado de stream {camera_id}")
+        try:
+            # Detener stream si está activo
+            if camera_id in self.active_streams:
+                if client_id in self.active_streams[camera_id]:
+                    handler = self.active_streams[camera_id][client_id]
+                    if handler.is_streaming:
+                        # Marcar como no streaming primero para evitar más envíos
+                        handler.is_streaming = False
+                        await handler.stop_stream()
+                    
+                    del self.active_streams[camera_id][client_id]
+                    
+                    # Eliminar diccionario de cámara si está vacío
+                    if not self.active_streams[camera_id]:
+                        del self.active_streams[camera_id]
+            
+            # Desconectar del manager
+            await manager.disconnect(client_id)
+            
+            logger.info(f"Cliente {client_id} desconectado de stream {camera_id}")
+        except Exception as e:
+            logger.error(f"Error durante cleanup de stream: {e}")
     
     def get_stream_stats(self) -> Dict[str, Any]:
         """

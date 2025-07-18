@@ -32,10 +32,22 @@ class WebSocketConnection:
             bool: True si se envió correctamente
         """
         try:
+            # Verificar estado del WebSocket antes de enviar
+            if hasattr(self.websocket, 'client_state'):
+                # 0 = CONNECTING, 1 = CONNECTED, 2 = DISCONNECTED
+                if self.websocket.client_state.value != 1:
+                    logger.debug(f"WebSocket no conectado para {self.client_id}, ignorando mensaje")
+                    return False
+            
             await self.websocket.send_json(data)
             return True
         except Exception as e:
-            logger.error(f"Error enviando a {self.client_id}: {e}")
+            # Solo loggear si no es un error esperado de desconexión
+            error_msg = str(e)
+            if "WebSocket" in error_msg or "Cannot call" in error_msg or "close message" in error_msg:
+                logger.debug(f"WebSocket cerrado para {self.client_id}: {error_msg}")
+            else:
+                logger.error(f"Error enviando a {self.client_id}: {e}")
             return False
     
     async def send_text(self, message: str) -> bool:
@@ -49,10 +61,21 @@ class WebSocketConnection:
             bool: True si se envió correctamente
         """
         try:
+            # Verificar estado del WebSocket antes de enviar
+            if hasattr(self.websocket, 'client_state'):
+                if self.websocket.client_state.value != 1:
+                    logger.debug(f"WebSocket no conectado para {self.client_id}, ignorando mensaje")
+                    return False
+            
             await self.websocket.send_text(message)
             return True
         except Exception as e:
-            logger.error(f"Error enviando a {self.client_id}: {e}")
+            # Solo loggear si no es un error esperado de desconexión
+            error_msg = str(e)
+            if "WebSocket" in error_msg or "Cannot call" in error_msg or "close message" in error_msg:
+                logger.debug(f"WebSocket cerrado para {self.client_id}: {error_msg}")
+            else:
+                logger.error(f"Error enviando a {self.client_id}: {e}")
             return False
 
 

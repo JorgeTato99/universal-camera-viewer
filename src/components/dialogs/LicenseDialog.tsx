@@ -23,6 +23,7 @@ import {
   Download as DownloadIcon,
 } from "@mui/icons-material";
 import { colorTokens, borderTokens } from "../../design-system/tokens";
+import { APP_CONFIG } from "../../config/appConfig";
 
 interface LicenseDialogProps {
   open: boolean;

@@ -254,7 +254,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
         <TabPanel value={activeTab} index={0}>
           {/* Basic Information */}
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Display Name"
@@ -266,7 +266,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Brand</InputLabel>
                 <Select
@@ -283,7 +283,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Model"
@@ -293,7 +293,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Location"
@@ -303,7 +303,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="IP Address"
@@ -316,7 +316,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 multiline
@@ -333,13 +333,13 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
         <TabPanel value={activeTab} index={1}>
           {/* Connection Settings */}
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Authentication
               </Typography>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Username"
@@ -351,7 +351,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Password"
@@ -376,7 +376,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>Auth Type</InputLabel>
                 <Select
@@ -390,14 +390,14 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Accordion>
                 <AccordionSummary expandIcon={<ExpandMore />}>
                   <Typography>Protocol Ports (Optional)</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <TextField
                         fullWidth
                         label="ONVIF Port"
@@ -407,7 +407,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
                         InputProps={{ inputProps: { min: 1, max: 65535 } }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <TextField
                         fullWidth
                         label="RTSP Port"
@@ -417,7 +417,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
                         InputProps={{ inputProps: { min: 1, max: 65535 } }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <TextField
                         fullWidth
                         label="HTTP Port"
@@ -432,7 +432,7 @@ export const CameraFormDialog: React.FC<CameraFormDialogProps> = ({
               </Accordion>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box display="flex" justifyContent="center" mt={2}>
                 <Button
                   variant="outlined"

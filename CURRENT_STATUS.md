@@ -1,4 +1,4 @@
-# 📊 Estado Actual del Proyecto - v0.9.9 (17 Enero 2025)
+# 📊 Estado Actual del Proyecto - v0.9.10 (18 Enero 2025)
 
 > **Documento técnico consolidado** - Sistema con streaming funcional, API v2 completa y métricas avanzadas.
 
@@ -7,7 +7,7 @@
 ![Frontend](https://img.shields.io/badge/Frontend%20React-100%25%20Streaming-brightgreen)
 ![Database](https://img.shields.io/badge/Database-3FN%20Normalizada-brightgreen)
 ![API](https://img.shields.io/badge/API%20v2-CRUD%20Completo-brightgreen)
-![Versión](https://img.shields.io/badge/Versión-0.9.9-blue)
+![Versión](https://img.shields.io/badge/Versión-0.9.10-blue)
 
 ---
 
@@ -142,6 +142,15 @@ FPS nativos: 15
 
 ---
 
+## 🆕 **Nuevas Características v0.9.10**
+
+### **Integración MediaMTX (Experimental)**
+- ✅ **WebSocket Handler**: Eventos en tiempo real para publicación
+- ✅ **Configuración desde DB**: Persistencia de configuraciones MediaMTX
+- ✅ **API REST**: Endpoints CRUD para gestión de configuraciones
+- ✅ **Publicación RTSP**: Relay de streams a servidor MediaMTX
+- ⚠️ **Requiere FFmpeg**: Instalar desde https://ffmpeg.org/download.html
+
 ## 🆕 **Nuevas Características v0.9.9**
 
 ### **API v2 Completa**
@@ -193,6 +202,18 @@ FPS nativos: 15
 7. **Autenticación ONVIF fallando**
    - Causa: Password incorrecto en base de datos
    - Solución: Actualizar seed_database.py con credenciales correctas
+
+8. **Errores WebSocket al desconectar**
+   - Causa: Intentar enviar mensajes después del cierre
+   - Solución: Verificar estado del WebSocket antes de enviar
+
+9. **PublishingPresenter sin métodos abstractos**
+   - Causa: No implementaba métodos requeridos por BasePresenter
+   - Solución: Agregar _initialize_presenter() y _cleanup_presenter()
+
+10. **PublishConfiguration con conflicto api_url**
+    - Causa: Parámetro y propiedad con mismo nombre
+    - Solución: Cambiar propiedad a método get_api_url()
 
 ---
 
@@ -343,5 +364,5 @@ yarn tauri-build    # Generar instalador .exe/.msi
 ---
 
 > **El Universal Camera Viewer tiene ahora un ciclo completo funcional de streaming en tiempo real.**  
-> **Versión: 0.9.8 - Con reorganización de streaming y optimizaciones de UI**  
-> **Última actualización: 17 de Julio 2025**
+> **Versión: 0.9.10 - Con integración MediaMTX y correcciones de WebSocket**  
+> **Última actualización: 18 de Enero 2025**
