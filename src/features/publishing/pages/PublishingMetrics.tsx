@@ -24,6 +24,7 @@ import {
   Menu,
   ListItemIcon,
   ListItemText,
+  Tooltip,
 } from "@mui/material";
 import {
   Timeline as TimelineIcon,
@@ -33,6 +34,9 @@ import {
   GetApp as DownloadIcon,
   Description as CsvIcon,
   TableChart as ExcelIcon,
+  HelpOutline as HelpIcon,
+  Info as InfoIcon,
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 import { usePublishingStore } from "../../../stores/publishingStore";
 import { useCameraStoreV2 } from "../../../stores/cameraStore.v2";
@@ -100,9 +104,18 @@ const PublishingMetrics = memo(() => {
         <Box>
           {/* Header */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="h4" gutterBottom>
-              Métricas de Publicación
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="h4">
+                Métricas de Publicación
+              </Typography>
+              <Tooltip 
+                title="Monitoreo en tiempo real del rendimiento de las publicaciones activas. Las métricas se actualizan automáticamente cada 5 segundos" 
+                arrow 
+                placement="right"
+              >
+                <HelpIcon sx={{ fontSize: 20, cursor: 'help', color: 'action.disabled' }} />
+              </Tooltip>
+            </Box>
             <Typography variant="body2" color="text.secondary">
               Estadísticas en tiempo real y análisis de rendimiento
             </Typography>
@@ -211,6 +224,13 @@ const PublishingMetrics = memo(() => {
                         <Typography variant="subtitle2" color="text.secondary">
                           FPS Actual
                         </Typography>
+                        <Tooltip 
+                          title="Frames por segundo en tiempo real. Un FPS estable indica buena conexión" 
+                          arrow 
+                          placement="top"
+                        >
+                          <HelpIcon sx={{ fontSize: 14, cursor: 'help', color: 'action.disabled', ml: 'auto' }} />
+                        </Tooltip>
                       </Box>
                       <Typography variant="h4">
                         {latestMetric?.fps || 0}
@@ -257,6 +277,13 @@ const PublishingMetrics = memo(() => {
                         <Typography variant="subtitle2" color="text.secondary">
                           Viewers
                         </Typography>
+                        <Tooltip 
+                          title="Número de clientes conectados viendo este stream. Incluye reproductores, aplicaciones y otros servicios" 
+                          arrow 
+                          placement="top"
+                        >
+                          <InfoIcon sx={{ fontSize: 14, cursor: 'help', color: 'info.main', ml: 'auto' }} />
+                        </Tooltip>
                       </Box>
                       <Typography variant="h4">
                         {latestMetric?.viewers || 0}

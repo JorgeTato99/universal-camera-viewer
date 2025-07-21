@@ -7,6 +7,95 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.14] - 2025-07-21 - 🚀 INTEGRACIÓN MEDIAMTX FRONTEND COMPLETA
+
+### ✨ Added - Sistema de Publicación MediaMTX Frontend
+
+#### 🎯 Menú "Publicación" Completo
+- **Nueva sección en Sidebar** con icono de streaming y 5 subsecciones:
+  - **Dashboard**: Panel principal con estado del sistema y métricas
+  - **Publicaciones Activas**: Control de streaming con tabla interactiva
+  - **Métricas**: Estadísticas en tiempo real con visualizaciones
+  - **Historial**: Registro completo de sesiones con filtros
+  - **Configuración**: Gestión de servidores MediaMTX
+
+#### 📊 Componentes Implementados (Fase 5)
+- **Dashboard Components**:
+  - `HealthStatusCard`: Estado de salud del sistema con indicadores visuales
+  - `ActivePublicationsWidget`: Widget de publicaciones activas con animaciones
+  - `QuickActionsCard`: Acciones rápidas para control de publicación
+  - `AlertsList`: Lista de alertas con severidad y timestamps
+  - `ViewersChart`: Gráfico de viewers en tiempo real
+  
+- **Control Components**:
+  - `PublishingControls`: Controles principales start/stop con confirmación
+  - `StreamStatusBadge`: Badge de estado con colores semánticos
+  - `TestConnectionButton`: Botón de prueba con feedback visual
+  - `MetricsGauge`: Indicador radial de métricas (FPS, Bitrate)
+  
+- **Chart Components**:
+  - `MetricsLineChart`: Gráfico de líneas con Recharts
+  - `ViewersAreaChart`: Gráfico de área para viewers
+  - `BitrateChart`: Visualización de bitrate en tiempo real
+
+#### 🎨 Mejoras Visuales (Fase 6)
+- **Tooltips informativos** implementados en todas las vistas:
+  - Iconos "?" para información de ayuda con hover
+  - Iconos "!" para advertencias importantes
+  - Iconos "ℹ️" para información contextual
+  - Tooltips en headers de tablas, botones y métricas
+
+- **Formulario de configuración mejorado**:
+  - Organización en secciones con títulos descriptivos
+  - Iconos temáticos (candado, API, configuración)
+  - Animaciones Fade para campos condicionales
+  - Header con color primario y diseño profesional
+
+### 🏗️ Enhanced - Arquitectura Frontend
+
+#### 📦 Servicios y Store
+- **PublishingService** completo con 30+ métodos API
+- **PublishingStore** (Zustand) con estado global y selectores
+- **Hooks personalizados**:
+  - `usePublishingStatus`: Estado de publicaciones con polling
+  - `usePublishingHealth`: Salud del sistema con auto-refresh
+  - `usePublishingMetrics`: Métricas con histórico
+
+#### 🔧 Tipos TypeScript
+- **20+ interfaces** para tipos de publicación
+- **Enums** para estados y severidades
+- **Request/Response types** para API
+- **Validación estricta** en toda la aplicación
+
+### 🐛 Fixed - Correcciones Críticas
+
+#### 🔧 Material-UI Grid v7
+- **Migración completa** a nueva sintaxis Grid
+- Cambio de `<Grid item xs={12}>` a `<Grid size={{ xs: 12, md: 6 }}>`
+- Corrección en 10+ componentes afectados
+
+#### 📦 Dependencias y Errores
+- **framer-motion** reemplazado con animaciones CSS nativas
+- **Recharts tooltip types** corregidos con interfaces custom
+- **NotificationStore** métodos actualizados (showSuccess, showError)
+- **ApiResponse conflict** resuelto con exports selectivos
+- **Tooltip imports** añadidos donde faltaban
+
+### 📊 Technical Stats
+- **Archivos creados**: 45+ nuevos archivos TypeScript
+- **Líneas de código**: ~4,000 líneas de React/TypeScript
+- **Componentes**: 35+ componentes nuevos
+- **Cobertura**: Sistema completo de publicación frontend
+- **Performance**: Lazy loading y memoización aplicados
+
+### 🎯 Integration Ready
+- **Frontend completamente preparado** para backend MediaMTX
+- **Mocks funcionales** mientras se implementa el backend
+- **Estructura escalable** para futuras mejoras
+- **Design system** consistente con resto de la aplicación
+
+---
+
 ## [0.9.13] - 2025-07-18 - 📊 SISTEMA DE ESTADÍSTICAS COMPLETO
 
 ### ✨ Added - Sistema de Estadísticas

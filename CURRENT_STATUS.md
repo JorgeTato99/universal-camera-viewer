@@ -1,4 +1,4 @@
-# 📊 Estado Actual del Proyecto - v0.9.10 (18 Enero 2025)
+# 📊 Estado Actual del Proyecto - v0.9.14 (21 Enero 2025)
 
 > **Documento técnico consolidado** - Sistema con streaming funcional, API v2 completa y métricas avanzadas.
 
@@ -7,7 +7,8 @@
 ![Frontend](https://img.shields.io/badge/Frontend%20React-100%25%20Streaming-brightgreen)
 ![Database](https://img.shields.io/badge/Database-3FN%20Normalizada-brightgreen)
 ![API](https://img.shields.io/badge/API%20v2-CRUD%20Completo-brightgreen)
-![Versión](https://img.shields.io/badge/Versión-0.9.10-blue)
+![Versión](https://img.shields.io/badge/Versión-0.9.14-blue)
+![MediaMTX](https://img.shields.io/badge/MediaMTX%20Frontend-100%25%20Completo-brightgreen)
 
 ---
 
@@ -33,6 +34,7 @@
 | **WebSocket** | ✅ Estable | 100% | Heartbeat y reconexión automática |
 | **UI/UX** | ✅ Pulido | 95% | Material-UI, tema dark/light |
 | **Gestión de Estado** | ✅ Implementado | 100% | Zustand stores funcionales |
+| **MediaMTX Frontend** | ✅ Completo | 100% | Dashboard, métricas, configuración |
 
 ---
 

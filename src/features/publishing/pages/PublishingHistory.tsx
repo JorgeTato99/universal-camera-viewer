@@ -37,6 +37,8 @@ import {
   Info as InfoIcon,
   DeleteSweep as CleanupIcon,
   GetApp as ExportIcon,
+  HelpOutline as HelpIcon,
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -166,20 +168,34 @@ const PublishingHistory = memo(() => {
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 2 }}>
-              <Button
-                variant="outlined"
-                startIcon={<CleanupIcon />}
-                onClick={() => setCleanupDialogOpen(true)}
+              <Tooltip 
+                title="Eliminar sesiones de publicación antiguas para liberar espacio en la base de datos" 
+                arrow 
+                placement="bottom"
               >
-                Limpiar Antiguas
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<ExportIcon />}
-                disabled={sessions.length === 0}
+                <Button
+                  variant="outlined"
+                  startIcon={<CleanupIcon />}
+                  onClick={() => setCleanupDialogOpen(true)}
+                >
+                  Limpiar Antiguas
+                </Button>
+              </Tooltip>
+              <Tooltip 
+                title="Exportar el historial de publicaciones en formato CSV o Excel" 
+                arrow 
+                placement="bottom"
               >
-                Exportar
-              </Button>
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<ExportIcon />}
+                    disabled={sessions.length === 0}
+                  >
+                    Exportar
+                  </Button>
+                </span>
+              </Tooltip>
             </Box>
           </Box>
 

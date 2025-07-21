@@ -23,6 +23,8 @@ import {
   Timer as TimerIcon,
   Speed as SpeedIcon,
   HealthAndSafety as HealthIcon,
+  HelpOutline as HelpIcon,
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 import { cardStyles } from "../../../design-system/components";
 import { colorTokens } from "../../../design-system/tokens";
@@ -292,42 +294,46 @@ export const CameraCard = memo<CameraCardProps>(({
             }}
           >
             {/* IP */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <NetworkIcon
-                sx={{
-                  fontSize: "0.8rem",
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-              <Typography
-                variant="caption"
-                sx={{
-                  fontSize: "0.7rem",
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              >
-                {ip}
-              </Typography>
-            </Box>
+            <Tooltip title="Dirección IP de la cámara en la red local" arrow placement="top">
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: 'help' }}>
+                <NetworkIcon
+                  sx={{
+                    fontSize: "0.8rem",
+                    color: (theme) => theme.palette.text.secondary,
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: "0.7rem",
+                    color: (theme) => theme.palette.text.secondary,
+                  }}
+                >
+                  {ip}
+                </Typography>
+              </Box>
+            </Tooltip>
 
             {/* Tiempo conectado */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <TimerIcon
-                sx={{
-                  fontSize: "0.8rem",
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-              <Typography
-                variant="caption"
-                sx={{
-                  fontSize: "0.7rem",
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              >
-                {displayTime}
-              </Typography>
-            </Box>
+            <Tooltip title="Tiempo transcurrido desde la conexión" arrow placement="top">
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: 'help' }}>
+                <TimerIcon
+                  sx={{
+                    fontSize: "0.8rem",
+                    color: (theme) => theme.palette.text.secondary,
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: "0.7rem",
+                    color: (theme) => theme.palette.text.secondary,
+                  }}
+                >
+                  {displayTime}
+                </Typography>
+              </Box>
+            </Tooltip>
 
             {/* FPS */}
             <Tooltip 

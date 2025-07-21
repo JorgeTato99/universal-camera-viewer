@@ -15,6 +15,7 @@ graph TB
         B[Scanner]
         C[Statistics]
         D[Settings]
+        E[Publishing]
     end
     
     subgraph "Cameras Module"
@@ -39,6 +40,14 @@ graph TB
         D --> D1[General]
         D --> D2[Network]
         D --> D3[Security]
+    end
+    
+    subgraph "Publishing Module"
+        E --> E1[Dashboard]
+        E --> E2[ActivePublications]
+        E --> E3[Metrics]
+        E --> E4[History]
+        E --> E5[Configuration]
     end
 ```
 
@@ -202,6 +211,52 @@ Configuración completa de la aplicación.
 - **Optimización de Red**:
   - Buffer de streaming ajustable
   - Prioridad de protocolo (TCP/UDP)
+
+## 🚀 Feature: Publishing (MediaMTX)
+
+### Descripción
+
+Módulo completo para publicación de streams hacia servidores MediaMTX, permitiendo compartir cámaras locales a través de RTSP/RTMP.
+
+### Componentes Principales
+
+- **PublishingDashboard**:
+  - Estado general del sistema MediaMTX
+  - Widgets de salud del sistema
+  - Métricas agregadas en tiempo real
+  - Lista de alertas activas
+
+- **ActivePublications**:
+  - Tabla interactiva de publicaciones activas
+  - Control start/stop por cámara
+  - Métricas en tiempo real (FPS, bitrate, viewers)
+  - Estados visuales por colores
+
+- **PublishingMetrics**:
+  - Gráficos de línea temporal para FPS y bitrate
+  - Indicadores radiales de rendimiento
+  - Estadísticas de viewers conectados
+  - Histórico de métricas por cámara
+
+- **PublishingHistory**:
+  - Registro completo de sesiones pasadas
+  - Filtros por fecha, cámara y estado
+  - Exportación a CSV/Excel
+  - Limpieza de historial antiguo
+
+- **PathConfiguration**:
+  - Gestión de servidores MediaMTX
+  - Formulario avanzado con tooltips
+  - Configuración de autenticación
+  - Prueba de conexión integrada
+
+### Características Destacadas
+
+- **Estado global con Zustand**: PublishingStore centralizado
+- **Polling automático**: Actualización cada 5 segundos
+- **Hooks personalizados**: usePublishingStatus, usePublishingHealth
+- **Tooltips informativos**: Ayuda contextual en todas las vistas
+- **Diseño responsive**: Adaptable a diferentes tamaños
 
 ## 🔗 Integración entre Features
 

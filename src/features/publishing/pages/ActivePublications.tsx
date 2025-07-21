@@ -35,7 +35,9 @@ import {
   Refresh as RefreshIcon,
   Search as SearchIcon,
   Error as ErrorIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  HelpOutline as HelpIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { usePublishingStore } from '../../../stores/publishingStore';
 import { useCameraStoreV2 } from '../../../stores/cameraStore.v2';
@@ -168,12 +170,54 @@ const ActivePublications = memo(() => {
                 <TableRow>
                   <TableCell>Cámara</TableCell>
                   <TableCell>Dirección IP</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell align="center">Tiempo Activo</TableCell>
-                  <TableCell align="center">FPS</TableCell>
-                  <TableCell align="center">Bitrate</TableCell>
-                  <TableCell align="center">Viewers</TableCell>
-                  <TableCell align="center">Errores</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Estado
+                      <Tooltip title="Estado actual de la publicación hacia MediaMTX. Verde = Activo, Amarillo = Iniciando, Rojo = Error" arrow placement="top">
+                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      Tiempo Activo
+                      <Tooltip title="Tiempo transcurrido desde que se inició la publicación" arrow placement="top">
+                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      FPS
+                      <Tooltip title="Frames por segundo actuales. Valores normales: 15-30 FPS" arrow placement="top">
+                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      Bitrate
+                      <Tooltip title="Tasa de bits actual del stream. Mayor bitrate = mejor calidad pero más ancho de banda" arrow placement="top">
+                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      Viewers
+                      <Tooltip title="Número de clientes conectados viendo este stream en tiempo real" arrow placement="top">
+                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      Errores
+                      <Tooltip title="Cantidad de errores ocurridos durante la publicación. Click para ver detalles" arrow placement="top">
+                        <WarningIcon sx={{ fontSize: 16, cursor: 'help', color: 'warning.main' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
                   <TableCell align="center">Acciones</TableCell>
                 </TableRow>
               </TableHead>

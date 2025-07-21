@@ -14,7 +14,13 @@ import {
   CircularProgress,
   useTheme,
   alpha,
+  Tooltip,
 } from "@mui/material";
+import {
+  HelpOutline as HelpIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckIcon,
+} from "@mui/icons-material";
 import { usePublishingHealth } from "../hooks/usePublishingHealth";
 import { usePublishingStore } from "../../../stores/publishingStore";
 import { colorTokens } from "../../../design-system/tokens";
@@ -89,13 +95,22 @@ const PublishingDashboard = memo(() => {
                     : colorTokens.alert.warning,
                 }}
               >
-                <Typography
-                  variant="subtitle2"
-                  color="text.secondary"
-                  gutterBottom
-                >
-                  Estado del Sistema
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Estado del Sistema
+                  </Typography>
+                  <Tooltip 
+                    title="Estado general de todos los servidores MediaMTX configurados. Saludable = todos los servidores funcionando correctamente" 
+                    arrow 
+                    placement="top"
+                  >
+                    <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled', mb: 1 }} />
+                  </Tooltip>
+                </Box>
                 <Typography variant="h4" sx={{ mb: 1 }}>
                   {systemHealth?.overall_status === "healthy"
                     ? "✅ Saludable"

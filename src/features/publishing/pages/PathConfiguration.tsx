@@ -28,6 +28,7 @@ import {
   Alert,
   Tooltip,
   Divider,
+  InputAdornment,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -36,6 +37,11 @@ import {
   PlayArrow as TestIcon,
   CheckCircle as ActiveIcon,
   RadioButtonUnchecked as InactiveIcon,
+  HelpOutline as HelpIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
+  Settings as SettingsIcon,
+  Api as ApiIcon,
 } from "@mui/icons-material";
 import { usePublishingStore } from "../../../stores/publishingStore";
 import { PublishConfiguration, CreateConfigurationRequest } from "../types";
@@ -400,196 +406,377 @@ const PathConfiguration = memo(() => {
             </Grid>
           )}
 
-          {/* Diálogo de formulario */}
+          {/* Diálogo de formulario mejorado */}
           <Dialog
             open={dialogOpen}
             onClose={() => setDialogOpen(false)}
-            maxWidth="sm"
+            maxWidth="md"
             fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                boxShadow: 24,
+              },
+            }}
           >
-            <DialogTitle>
-              {editingConfig ? "Editar Configuración" : "Nueva Configuración"}
+            <DialogTitle
+              sx={{
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <SettingsIcon />
+              {editingConfig ? "Editar Configuración" : "Nueva Configuración MediaMTX"}
             </DialogTitle>
-            <DialogContent>
-              <Box
-                sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}
-              >
-                <TextField
-                  label="Nombre"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  error={!!formErrors.name}
-                  helperText={formErrors.name}
-                  fullWidth
-                  required
-                />
+            <DialogContent sx={{ mt: 3 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {/* Información básica */}
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
+                  >
+                    INFORMACIÓN BÁSICA
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={12}>
+                      <TextField
+                        label="Nombre de la configuración"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                        error={!!formErrors.name}
+                        helperText={formErrors.name}
+                        fullWidth
+                        required
+                        InputProps={{
+                          endAdornment: (
+                            <Tooltip
+                              title="Nombre único para identificar esta configuración. Ejemplo: 'Servidor Principal' o 'MediaMTX Local'"
+                              arrow
+                              placement="top"
+                            >
+                              <HelpIcon sx={{ cursor: "help", color: "action.disabled" }} />
+                            </Tooltip>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        label="URL del servidor MediaMTX"
+                        value={formData.mediamtx_url}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            mediamtx_url: e.target.value,
+                          }))
+                        }
+                        error={!!formErrors.mediamtx_url}
+                        helperText={
+                          formErrors.mediamtx_url || "Ejemplo: rtsp://192.168.1.100:8554"
+                        }
+                        fullWidth
+                        required
+                        InputProps={{
+                          endAdornment: (
+                            <Tooltip
+                              title="URL completa del servidor MediaMTX. Puede usar rtsp://, rtmp://, http:// o https://. El puerto por defecto para RTSP es 8554"
+                              arrow
+                              placement="top"
+                            >
+                              <HelpIcon sx={{ cursor: "help", color: "action.disabled" }} />
+                            </Tooltip>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
 
-                <TextField
-                  label="URL MediaMTX"
-                  value={formData.mediamtx_url}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      mediamtx_url: e.target.value,
-                    }))
-                  }
-                  error={!!formErrors.mediamtx_url}
-                  helperText={
-                    formErrors.mediamtx_url || "Ejemplo: rtsp://localhost:8554"
-                  }
-                  fullWidth
-                  required
-                />
+                <Divider />
 
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.use_tcp}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          use_tcp: e.target.checked,
-                        }))
+                {/* Configuración de conexión */}
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
+                  >
+                    CONFIGURACIÓN DE CONEXIÓN
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={12}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={formData.use_tcp}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  use_tcp: e.target.checked,
+                                }))
+                              }
+                            />
+                          }
+                          label="Usar protocolo TCP"
+                        />
+                        <Tooltip
+                          title="TCP es más confiable para conexiones inestables pero puede tener mayor latencia. UDP es más rápido pero puede perder paquetes"
+                          arrow
+                          placement="top"
+                        >
+                          <HelpIcon sx={{ cursor: "help", color: "action.disabled", fontSize: 20 }} />
+                        </Tooltip>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        label="Máximo de reintentos"
+                        type="number"
+                        value={formData.max_reconnects}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            max_reconnects: parseInt(e.target.value),
+                          }))
+                        }
+                        inputProps={{ min: 0, max: 10 }}
+                        fullWidth
+                        InputProps={{
+                          endAdornment: (
+                            <Tooltip
+                              title="Número de veces que se intentará reconectar automáticamente si se pierde la conexión. 0 = sin reintentos"
+                              arrow
+                              placement="top"
+                            >
+                              <HelpIcon sx={{ cursor: "help", color: "action.disabled" }} />
+                            </Tooltip>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        label="Delay entre reintentos (seg)"
+                        type="number"
+                        value={formData.reconnect_delay}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            reconnect_delay: parseFloat(e.target.value),
+                          }))
+                        }
+                        inputProps={{ min: 1, max: 60, step: 0.5 }}
+                        fullWidth
+                        InputProps={{
+                          endAdornment: (
+                            <Tooltip
+                              title="Tiempo de espera en segundos antes de cada intento de reconexión"
+                              arrow
+                              placement="top"
+                            >
+                              <HelpIcon sx={{ cursor: "help", color: "action.disabled" }} />
+                            </Tooltip>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Divider />
+
+                {/* Autenticación */}
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
+                  >
+                    AUTENTICACIÓN
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.auth_enabled}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              auth_enabled: e.target.checked,
+                            }))
+                          }
+                        />
                       }
-                    />
-                  }
-                  label="Usar TCP (más confiable pero más lento)"
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.auth_enabled}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          auth_enabled: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Requiere autenticación"
-                />
-
-                {formData.auth_enabled && (
-                  <>
-                    <TextField
-                      label="Usuario"
-                      value={formData.username}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          username: e.target.value,
-                        }))
-                      }
-                      error={!!formErrors.username}
-                      helperText={formErrors.username}
-                      fullWidth
-                    />
-
-                    <TextField
                       label={
-                        editingConfig
-                          ? "Nueva Contraseña (dejar vacío para mantener)"
-                          : "Contraseña"
-                      }
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          password: e.target.value,
-                        }))
-                      }
-                      error={!!formErrors.password}
-                      helperText={formErrors.password}
-                      fullWidth
-                      required={!editingConfig}
-                    />
-                  </>
-                )}
-
-                <TextField
-                  label="Máximo de reintentos"
-                  type="number"
-                  value={formData.max_reconnects}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      max_reconnects: parseInt(e.target.value),
-                    }))
-                  }
-                  inputProps={{ min: 0, max: 10 }}
-                  fullWidth
-                />
-
-                <TextField
-                  label="Delay entre reintentos (segundos)"
-                  type="number"
-                  value={formData.reconnect_delay}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      reconnect_delay: parseFloat(e.target.value),
-                    }))
-                  }
-                  inputProps={{ min: 1, max: 60, step: 0.5 }}
-                  fullWidth
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.api_enabled}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          api_enabled: e.target.checked,
-                        }))
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          {formData.auth_enabled ? <LockIcon /> : <LockOpenIcon />}
+                          Requiere autenticación
+                        </Box>
                       }
                     />
-                  }
-                  label="Habilitar API MediaMTX"
-                />
+                    <Tooltip
+                      title="Habilitar si el servidor MediaMTX requiere usuario y contraseña para publicar streams"
+                      arrow
+                      placement="top"
+                    >
+                      <HelpIcon sx={{ cursor: "help", color: "action.disabled", fontSize: 20 }} />
+                    </Tooltip>
+                  </Box>
+                  {formData.auth_enabled && (
+                    <Fade in={formData.auth_enabled}>
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <TextField
+                            label="Usuario"
+                            value={formData.username}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                username: e.target.value,
+                              }))
+                            }
+                            error={!!formErrors.username}
+                            helperText={formErrors.username}
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <TextField
+                            label={
+                              editingConfig
+                                ? "Nueva Contraseña (vacío = mantener)"
+                                : "Contraseña"
+                            }
+                            type="password"
+                            value={formData.password}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                password: e.target.value,
+                              }))
+                            }
+                            error={!!formErrors.password}
+                            helperText={formErrors.password}
+                            fullWidth
+                            required={!editingConfig}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Fade>
+                  )}
+                </Box>
 
-                {formData.api_enabled && (
-                  <TextField
-                    label="URL API"
-                    value={formData.api_url}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        api_url: e.target.value,
-                      }))
-                    }
-                    error={!!formErrors.api_url}
-                    helperText={
-                      formErrors.api_url || "Ejemplo: http://localhost:9997"
-                    }
-                    fullWidth
-                  />
-                )}
+                <Divider />
 
-                <TextField
-                  label="Plantilla de Path"
-                  value={formData.publish_path_template}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      publish_path_template: e.target.value,
-                    }))
-                  }
-                  helperText="Variables disponibles: {camera_id}, {timestamp}, {random}"
-                  fullWidth
-                />
+                {/* Configuración avanzada */}
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
+                  >
+                    CONFIGURACIÓN AVANZADA
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={12}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={formData.api_enabled}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  api_enabled: e.target.checked,
+                                }))
+                              }
+                            />
+                          }
+                          label={
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              <ApiIcon />
+                              Habilitar API MediaMTX
+                            </Box>
+                          }
+                        />
+                        <Tooltip
+                          title="Permite usar la API REST de MediaMTX para obtener estadísticas y gestionar paths dinámicamente"
+                          arrow
+                          placement="top"
+                        >
+                          <HelpIcon sx={{ cursor: "help", color: "action.disabled", fontSize: 20 }} />
+                        </Tooltip>
+                      </Box>
+                      {formData.api_enabled && (
+                        <Fade in={formData.api_enabled}>
+                          <TextField
+                            label="URL de la API"
+                            value={formData.api_url}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                api_url: e.target.value,
+                              }))
+                            }
+                            error={!!formErrors.api_url}
+                            helperText={
+                              formErrors.api_url || "Ejemplo: http://192.168.1.100:9997"
+                            }
+                            fullWidth
+                            InputProps={{
+                              endAdornment: (
+                                <Tooltip
+                                  title="URL del endpoint API de MediaMTX. Por defecto usa el puerto 9997"
+                                  arrow
+                                  placement="top"
+                                >
+                                  <HelpIcon sx={{ cursor: "help", color: "action.disabled" }} />
+                                </Tooltip>
+                              ),
+                            }}
+                          />
+                        </Fade>
+                      )}
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        label="Plantilla de Path"
+                        value={formData.publish_path_template}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            publish_path_template: e.target.value,
+                          }))
+                        }
+                        helperText="Variables: {camera_id}, {timestamp}, {random}"
+                        fullWidth
+                        InputProps={{
+                          endAdornment: (
+                            <Tooltip
+                              title="Plantilla para generar los nombres de path en MediaMTX. {camera_id} = ID de la cámara, {timestamp} = fecha/hora actual, {random} = cadena aleatoria"
+                              arrow
+                              placement="top"
+                            >
+                              <HelpIcon sx={{ cursor: "help", color: "action.disabled" }} />
+                            </Tooltip>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
               </Box>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleSave} variant="contained">
-                {editingConfig ? "Actualizar" : "Crear"}
+            <DialogActions sx={{ px: 3, py: 2, bgcolor: "action.hover" }}>
+              <Button onClick={() => setDialogOpen(false)} size="large">
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} variant="contained" size="large">
+                {editingConfig ? "Actualizar" : "Crear Configuración"}
               </Button>
             </DialogActions>
           </Dialog>
