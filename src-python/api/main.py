@@ -23,6 +23,10 @@ from routers.cameras_v2 import router as cameras_v2_router
 from routers.stream_profiles import router as stream_profiles_router
 from api.routers.publishing import router as publishing_router
 from api.routers.publishing_config import router as publishing_config_router
+from routers.publishing_metrics import router as metrics_router
+from routers.publishing_history import router as history_router
+from routers.publishing_viewers import router as viewers_router
+from routers.mediamtx_paths import router as paths_router
 from services.camera_manager_service import camera_manager_service
 from websocket.handlers.publishing_handler import get_publishing_ws_handler
 
@@ -268,6 +272,10 @@ app.include_router(stream_profiles_router, prefix="/api/v2")
 # Publishing routers (para MediaMTX)
 app.include_router(publishing_router)
 app.include_router(publishing_config_router)
+app.include_router(metrics_router)
+app.include_router(history_router)
+app.include_router(viewers_router)
+app.include_router(paths_router)
 
 # WebSocket routers (sin prefijo API)
 app.include_router(streaming.router, prefix="/ws")

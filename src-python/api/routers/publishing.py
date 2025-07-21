@@ -5,9 +5,10 @@ Expone funcionalidades de control y monitoreo de streams publicados.
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Query
 from fastapi.responses import JSONResponse
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 from api.models.publishing_models import (
     StartPublishRequest,
@@ -16,9 +17,14 @@ from api.models.publishing_models import (
     PublishListResponse,
     MediaMTXConfigRequest
 )
+from api.schemas.requests.mediamtx_requests import HealthCheckRequest
+from api.schemas.responses.mediamtx_responses import (
+    SystemHealthResponse, ServerHealthStatus, AlertsListResponse, PublishingAlert
+)
 from presenters.publishing_presenter import get_publishing_presenter
 from models.publishing import PublishConfiguration, PublisherProcess, PublishErrorType
 from utils.exceptions import ServiceError
+from services.database import get_publishing_db_service
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -337,3 +343,416 @@ async def get_camera_publishing_status(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error obteniendo estado de publicación"
         )
+
+
+# === Endpoints de Health y Monitoreo ===
+
+@router.get(
+    "/health",
+    response_model=SystemHealthResponse,
+    summary="Estado de salud del sistema",
+    description="""
+    Obtiene el estado de salud global del sistema de publicación.
+    
+    Incluye:
+    - Estado general del sistema
+    - Salud de cada servidor MediaMTX
+    - Publicaciones activas
+    - Alertas y recomendaciones
+    """
+)
+async def get_system_health() -> SystemHealthResponse:
+    """
+    Obtiene el estado de salud global del sistema.
+    
+    Returns:
+        SystemHealthResponse con información detallada
+    """
+    logger.debug("Obteniendo estado de salud del sistema de publicación")
+    
+    try:
+        from api.schemas.responses.mediamtx_responses import (
+            SystemHealthResponse, ServerHealthStatus
+        )
+        from services.database.mediamtx_db_service import get_mediamtx_db_service
+        
+        db_service = get_mediamtx_db_service()
+        await db_service.initialize()
+        
+        # Obtener servidores configurados
+        pub_db = get_publishing_db_service()
+        await pub_db.initialize()
+        configs = await pub_db.get_all_configurations()
+        
+        # Estado de cada servidor
+        servers = []
+        healthy_count = 0
+        total_publications = 0
+        total_viewers = 0
+        active_alerts = []
+        
+        for config in configs:
+            server_id = config['config_id']
+            
+            # Obtener estado de salud del servidor
+            server_health = await db_service.get_server_health_status(server_id)
+            
+            if server_health:
+                servers.append(ServerHealthStatus(**server_health))
+                
+                if server_health['health_status'] == 'healthy':
+                    healthy_count += 1
+                    
+                total_publications += server_health['active_connections']
+                
+                # Agregar alertas si hay problemas
+                if server_health['health_status'] == 'unhealthy':
+                    active_alerts.append({
+                        'severity': 'error',
+                        'title': f"Servidor {server_health['server_name']} no responde",
+                        'message': server_health.get('last_error', 'Sin conexión'),
+                        'server_id': server_id
+                    })
+                elif server_health['error_count'] > 5:
+                    active_alerts.append({
+                        'severity': 'warning',
+                        'title': f"Errores frecuentes en {server_health['server_name']}",
+                        'message': f"{server_health['error_count']} errores en la última hora",
+                        'server_id': server_id
+                    })
+        
+        # Determinar estado general
+        overall_status = 'healthy'
+        if healthy_count == 0:
+            overall_status = 'critical'
+        elif healthy_count < len(servers):
+            overall_status = 'degraded'
+        
+        # Recomendaciones
+        recommendations = []
+        if overall_status == 'critical':
+            recommendations.append("Todos los servidores están fuera de línea. Verificar conectividad.")
+        elif overall_status == 'degraded':
+            recommendations.append("Algunos servidores presentan problemas. Revisar logs.")
+        
+        if total_publications > 50:
+            recommendations.append("Alto número de publicaciones activas. Considerar balanceo de carga.")
+        
+        # Obtener total de viewers (sumando de todos los servidores)
+        # TODO: Implementar consulta real
+        total_viewers = total_publications * 3  # Mock: 3 viewers por publicación
+        
+        response = SystemHealthResponse(
+            overall_status=overall_status,
+            check_timestamp=datetime.utcnow(),
+            total_servers=len(servers),
+            healthy_servers=healthy_count,
+            active_publications=total_publications,
+            total_viewers=total_viewers,
+            servers=servers,
+            active_alerts=active_alerts,
+            recommendations=recommendations
+        )
+        
+        logger.info(f"Health check: {overall_status}, {healthy_count}/{len(servers)} servidores OK")
+        
+        return response
+        
+    except Exception as e:
+        logger.exception("Error obteniendo estado de salud")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error obteniendo estado de salud"
+        )
+
+
+@router.post(
+    "/servers/{server_id}/health-check",
+    response_model=ServerHealthStatus,
+    summary="Verificar servidor MediaMTX",
+    description="Ejecuta un health check manual en un servidor específico"
+)
+async def check_server_health(
+    server_id: int,
+    request: HealthCheckRequest = HealthCheckRequest()
+) -> ServerHealthStatus:
+    """
+    Ejecuta verificación de salud en un servidor.
+    
+    Args:
+        server_id: ID del servidor a verificar
+        request: Parámetros del health check
+        
+    Returns:
+        ServerHealthStatus con resultado de la verificación
+    """
+    logger.info(f"Health check manual para servidor {server_id}")
+    
+    try:
+        from api.schemas.requests.mediamtx_requests import HealthCheckRequest
+        from api.schemas.responses.mediamtx_responses import ServerHealthStatus
+        from services.database.mediamtx_db_service import get_mediamtx_db_service
+        import aiohttp
+        import asyncio
+        
+        db_service = get_mediamtx_db_service()
+        await db_service.initialize()
+        
+        # Obtener configuración del servidor
+        pub_db = get_publishing_db_service()
+        await pub_db.initialize()
+        configs = await pub_db.get_all_configurations()
+        
+        server_config = next((c for c in configs if c['config_id'] == server_id), None)
+        
+        if not server_config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Servidor {server_id} no encontrado"
+            )
+        
+        # Realizar checks
+        rtsp_ok = False
+        api_ok = None
+        paths_ok = None
+        error_msg = None
+        warnings = []
+        
+        try:
+            # Check RTSP
+            if request.check_rtsp:
+                # TODO: Implementar verificación real RTSP
+                # Por ahora simulamos
+                rtsp_ok = True
+                
+            # Check API REST
+            if request.check_api and server_config['api_enabled']:
+                api_url = server_config['api_url']
+                if api_url:
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(
+                                f"{api_url}/v3/config/global",
+                                timeout=aiohttp.ClientTimeout(total=request.timeout_seconds)
+                            ) as resp:
+                                api_ok = resp.status == 200
+                    except Exception as e:
+                        api_ok = False
+                        warnings.append(f"API check failed: {str(e)}")
+                        
+            # Check paths
+            if request.check_paths:
+                # TODO: Verificar paths configurados
+                paths_ok = True
+                
+        except Exception as e:
+            error_msg = str(e)
+            
+        # Determinar estado general
+        health_status = 'healthy'
+        if not rtsp_ok:
+            health_status = 'unhealthy'
+        elif api_ok is False or paths_ok is False:
+            health_status = 'degraded'
+            
+        # Actualizar en BD
+        await db_service.update_server_health_check(
+            server_id=server_id,
+            health_status=health_status,
+            error=error_msg
+        )
+        
+        # Obtener estado actualizado
+        server_health = await db_service.get_server_health_status(server_id)
+        
+        if not server_health:
+            # Crear respuesta manual si no hay datos
+            server_health = {
+                'server_id': server_id,
+                'server_name': server_config['config_name'],
+                'health_status': health_status,
+                'last_check_time': datetime.utcnow(),
+                'rtsp_server_ok': rtsp_ok,
+                'api_server_ok': api_ok,
+                'paths_ok': paths_ok,
+                'active_connections': 0,
+                'cpu_usage_percent': None,
+                'memory_usage_mb': None,
+                'uptime_seconds': None,
+                'error_count': 0,
+                'last_error': error_msg,
+                'warnings': warnings
+            }
+        
+        response = ServerHealthStatus(**server_health)
+        
+        logger.info(f"Health check completado para servidor {server_id}: {health_status}")
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error en health check de servidor {server_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error ejecutando health check"
+        )
+
+
+@router.get(
+    "/servers/{server_id}/status",
+    response_model=ServerHealthStatus,
+    summary="Estado detallado de servidor",
+    description="Obtiene el estado detallado de un servidor MediaMTX"
+)
+async def get_server_status(server_id: int) -> ServerHealthStatus:
+    """
+    Obtiene estado detallado de un servidor.
+    
+    Args:
+        server_id: ID del servidor
+        
+    Returns:
+        ServerHealthStatus con información completa
+    """
+    logger.debug(f"Obteniendo estado de servidor {server_id}")
+    
+    try:
+        from api.schemas.responses.mediamtx_responses import ServerHealthStatus
+        from services.database.mediamtx_db_service import get_mediamtx_db_service
+        
+        db_service = get_mediamtx_db_service()
+        await db_service.initialize()
+        
+        server_health = await db_service.get_server_health_status(server_id)
+        
+        if not server_health:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Servidor {server_id} no encontrado"
+            )
+        
+        response = ServerHealthStatus(**server_health)
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error obteniendo estado de servidor {server_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error obteniendo estado del servidor"
+        )
+
+
+@router.get(
+    "/alerts",
+    response_model=AlertsListResponse,
+    summary="Listar alertas activas",
+    description="Obtiene todas las alertas activas del sistema de publicación"
+)
+async def get_active_alerts(
+    include_acknowledged: bool = Query(
+        False,
+        description="Incluir alertas reconocidas"
+    ),
+    severity: Optional[str] = Query(
+        None,
+        regex="^(info|warning|error|critical)$",
+        description="Filtrar por severidad"
+    )
+) -> AlertsListResponse:
+    """
+    Lista las alertas activas del sistema.
+    
+    Args:
+        include_acknowledged: Si incluir alertas ya reconocidas
+        severity: Filtrar por nivel de severidad
+        
+    Returns:
+        AlertsListResponse con lista de alertas
+    """
+    logger.debug("Obteniendo alertas activas del sistema")
+    
+    try:
+        from api.schemas.responses.mediamtx_responses import (
+            AlertsListResponse, PublishingAlert
+        )
+        from datetime import datetime, timedelta
+        
+        # Por ahora generamos alertas de ejemplo
+        # TODO: Implementar sistema real de alertas
+        
+        alerts = []
+        
+        # Alerta ejemplo 1: Error de publicación
+        if not severity or severity in ['error', 'critical']:
+            alerts.append(PublishingAlert(
+                alert_id="alert-001",
+                severity="error",
+                category="connectivity",
+                title="Fallo de conexión con servidor MediaMTX",
+                message="El servidor 'MediaMTX-Prod' no responde desde hace 15 minutos",
+                affected_resources=["server-1", "cam-001", "cam-002"],
+                created_at=datetime.utcnow() - timedelta(minutes=15),
+                acknowledged=False,
+                acknowledged_by=None,
+                acknowledged_at=None,
+                auto_resolve=True,
+                resolved=False,
+                resolved_at=None
+            ))
+        
+        # Alerta ejemplo 2: Alto uso de recursos
+        if not severity or severity == 'warning':
+            alerts.append(PublishingAlert(
+                alert_id="alert-002",
+                severity="warning",
+                category="performance",
+                title="Alto uso de CPU en publicaciones",
+                message="El uso de CPU promedio supera el 80% en las últimas 2 horas",
+                affected_resources=["system"],
+                created_at=datetime.utcnow() - timedelta(hours=2),
+                acknowledged=True,
+                acknowledged_by="admin",
+                acknowledged_at=datetime.utcnow() - timedelta(hours=1),
+                auto_resolve=False,
+                resolved=False,
+                resolved_at=None
+            ))
+        
+        # Filtrar por acknowledged si es necesario
+        if not include_acknowledged:
+            alerts = [a for a in alerts if not a.acknowledged]
+        
+        # Contar por severidad y categoría
+        by_severity = {}
+        by_category = {}
+        
+        for alert in alerts:
+            by_severity[alert.severity] = by_severity.get(alert.severity, 0) + 1
+            by_category[alert.category] = by_category.get(alert.category, 0) + 1
+        
+        response = AlertsListResponse(
+            total=len(alerts),
+            active_count=sum(1 for a in alerts if not a.resolved),
+            critical_count=sum(1 for a in alerts if a.severity == 'critical'),
+            items=alerts,
+            by_severity=by_severity,
+            by_category=by_category
+        )
+        
+        logger.info(f"Alertas obtenidas: {response.total} total, "
+                   f"{response.critical_count} críticas")
+        
+        return response
+        
+    except Exception as e:
+        logger.exception("Error obteniendo alertas")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error obteniendo alertas"
+        )
+

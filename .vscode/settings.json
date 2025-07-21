@@ -54,6 +54,7 @@
         "**/__pycache__": true
     },
     "conventionalCommits.scopes": [
-        "Main"
+        "Main",
+        "api"
     ]
 }
