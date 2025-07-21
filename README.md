@@ -14,7 +14,7 @@
 
 ## 🎯 ¿Qué es Universal Camera Gateway?
 
-Universal Camera Gateway (UCG) es una herramienta profesional diseñada para resolver el problema de integrar múltiples cámaras IP de diferentes marcas en un sistema centralizado de videovigilancia. Funciona como:
+Universal Camera Gateway (UCG) es una herramienta profesional diseñada para resolver el problema de integrar múltiples cámaras IP de diferentes marcas en un sistema centralizado de video. Funciona como:
 
 1. **Explorador de Red**: Descubre automáticamente cámaras IP en la red local
 2. **Gateway de Protocolos**: Conecta con cámaras usando ONVIF, RTSP, HTTP/CGI

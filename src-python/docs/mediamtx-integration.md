@@ -3,7 +3,8 @@
 ## Estado: ✅ Funcional (Requiere FFmpeg)
 
 > **Importante**: La integración está completa pero requiere tener FFmpeg instalado en el sistema.
-> - Windows: Descargar de https://ffmpeg.org/download.html y agregar al PATH
+>
+> - Windows: Descargar de <https://ffmpeg.org/download.html> y agregar al PATH
 > - Linux: `sudo apt install ffmpeg`
 > - macOS: `brew install ffmpeg`
 
@@ -108,6 +109,7 @@ ERROR:websocket.handlers.publishing_handler:Error en loop de métricas: FFmpeg n
 ```
 
 **Estos errores son esperados** si no tienes FFmpeg. No afectan otras funcionalidades del sistema como:
+
 - Conexión directa a cámaras
 - Streaming de video en tiempo real
 - Escaneo de red
@@ -235,4 +237,3 @@ ws.onmessage = (event) => {
   }
 };
 ```
-
