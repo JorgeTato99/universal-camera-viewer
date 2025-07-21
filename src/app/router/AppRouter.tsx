@@ -30,6 +30,23 @@ const SettingsPage = React.lazy(
   () => import("../../features/settings/SettingsPage")
 );
 
+// Publishing pages
+const PublishingDashboard = React.lazy(
+  () => import("../../features/publishing/pages/PublishingDashboard")
+);
+const ActivePublications = React.lazy(
+  () => import("../../features/publishing/pages/ActivePublications")
+);
+const PublishingMetrics = React.lazy(
+  () => import("../../features/publishing/pages/PublishingMetrics")
+);
+const PublishingHistory = React.lazy(
+  () => import("../../features/publishing/pages/PublishingHistory")
+);
+const PathConfiguration = React.lazy(
+  () => import("../../features/publishing/pages/PathConfiguration")
+);
+
 // Precargar páginas críticas para mejorar la experiencia
 const preloadCriticalPages = () => {
   // Precargar LiveViewPage ya que es la página principal
@@ -212,6 +229,15 @@ export const AppRouter = memo(() => {
           {/* Statistics routes with sub-pages */}
           <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/statistics/:subpage" element={<StatisticsPage />} />
+          
+          {/* Publishing routes */}
+          <Route path="/publishing" element={<Navigate to="/publishing/dashboard" replace />} />
+          <Route path="/publishing/dashboard" element={<PublishingDashboard />} />
+          <Route path="/publishing/active" element={<ActivePublications />} />
+          <Route path="/publishing/metrics" element={<PublishingMetrics />} />
+          <Route path="/publishing/history" element={<PublishingHistory />} />
+          <Route path="/publishing/paths" element={<PathConfiguration />} />
+          
           <Route path="/settings" element={<SettingsPage />} />
 
           {/* Catch-all route for 404 */}

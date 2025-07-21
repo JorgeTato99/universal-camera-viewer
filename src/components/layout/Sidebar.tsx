@@ -31,6 +31,10 @@ import {
   Event as EventIcon,
   Speed as PerformanceIcon,
   Description as ReportIcon,
+  CloudUpload as PublishingIcon,
+  PlayCircle as PlayCircleIcon,
+  History as HistoryIcon,
+  Route as RouteIcon,
 } from "@mui/icons-material";
 import { useTheme } from "../../hooks/useTheme";
 import { colorTokens } from "../../design-system/tokens";
@@ -162,6 +166,49 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    id: "publishing",
+    icon: <PublishingIcon />,
+    label: "Publicación",
+    tooltip: "Gestión MediaMTX",
+    subItems: [
+      {
+        id: "publishing-dashboard",
+        path: "/publishing/dashboard",
+        icon: <DashboardIcon />,
+        label: "Dashboard",
+        tooltip: "Panel de control MediaMTX",
+      },
+      {
+        id: "publishing-active",
+        path: "/publishing/active",
+        icon: <PlayCircleIcon />,
+        label: "Publicaciones",
+        tooltip: "Control de publicaciones activas",
+      },
+      {
+        id: "publishing-metrics",
+        path: "/publishing/metrics",
+        icon: <AnalyticsIcon />,
+        label: "Métricas",
+        tooltip: "Estadísticas de streaming",
+      },
+      {
+        id: "publishing-history",
+        path: "/publishing/history",
+        icon: <HistoryIcon />,
+        label: "Historial",
+        tooltip: "Registro de sesiones",
+      },
+      {
+        id: "publishing-paths",
+        path: "/publishing/paths",
+        icon: <RouteIcon />,
+        label: "Configuración",
+        tooltip: "Gestión de paths MediaMTX",
+      },
+    ],
+  },
+  {
     id: "settings",
     path: "/settings",
     icon: <SettingsIcon />,
@@ -184,6 +231,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (path.startsWith("/cameras")) return ["cameras"];
     if (path.startsWith("/scanner")) return ["scanner"];
     if (path.startsWith("/statistics")) return ["statistics"];
+    if (path.startsWith("/publishing")) return ["publishing"];
     return ["cameras"];
   });
 

@@ -33,7 +33,9 @@
       "Bash(grep:*)",
       "Bash(yarn add:*)",
       "Bash(rg:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebFetch(domain:mui.com)",
+      "Bash(yarn run tsc:*)"
     ],
     "deny": []
   }

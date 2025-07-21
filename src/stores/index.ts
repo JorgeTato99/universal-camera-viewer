@@ -5,3 +5,4 @@ export { useScannerStore } from "./scannerStore";
 export { useStreamingStore } from "./streamingStore";
 export { useAppStore } from "./appStore";
 export { useNotificationStore } from "./notificationStore";
+export { usePublishingStore } from "./publishingStore";
