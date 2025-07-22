@@ -25,8 +25,8 @@ from api.routers.publishing import router as publishing_router
 from api.routers.publishing_config import router as publishing_config_router
 from routers.publishing_metrics import router as metrics_router
 from routers.publishing_history import router as history_router
-from routers.publishing_viewers import router as viewers_router
-from routers.mediamtx_paths import router as paths_router
+from api.routers.publishing_viewers import router as viewers_router
+from api.routers.publishing_paths import router as paths_router
 from services.camera_manager_service import camera_manager_service
 from websocket.handlers.publishing_handler import get_publishing_ws_handler
 

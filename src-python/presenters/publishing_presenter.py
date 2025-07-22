@@ -12,6 +12,7 @@ import logging
 from presenters.base_presenter import BasePresenter
 from services.publishing import get_publisher_service, MediaMTXClient
 from services.mediamtx_metrics_service import get_mediamtx_metrics_service
+from services.publishing.viewer_analytics_service import get_viewer_analytics_service
 from models.publishing import (
     PublishConfiguration, PublishResult, PublishStatus, PublisherProcess,
     PublishErrorType
@@ -38,6 +39,7 @@ class PublishingPresenter(BasePresenter):
         self._publisher_service = None
         self._mediamtx_client: Optional[MediaMTXClient] = None
         self._metrics_service = None
+        self._viewer_service = None
         self.logger = logging.getLogger(self.__class__.__name__)
     
     async def _initialize_presenter(self) -> None:
@@ -93,6 +95,11 @@ class PublishingPresenter(BasePresenter):
             self._metrics_service = get_mediamtx_metrics_service()
             await self._metrics_service.initialize()
             self.logger.info("Servicio de métricas inicializado")
+            
+            # Inicializar servicio de viewers analytics
+            self._viewer_service = get_viewer_analytics_service()
+            await self._viewer_service.initialize()
+            self.logger.info("Servicio de viewer analytics inicializado")
             
             self.logger.info("PublishingPresenter inicializado correctamente")
             
@@ -170,6 +177,18 @@ class PublishingPresenter(BasePresenter):
                             interval_seconds=5.0
                         )
                 
+                # Iniciar tracking de viewers
+                if self._viewer_service and result.publish_path:
+                    try:
+                        self.logger.info(f"Iniciando tracking de viewers para {camera_id}")
+                        await self._viewer_service.start_tracking(
+                            camera_id=camera_id,
+                            publish_path=result.publish_path.lstrip('/')
+                        )
+                    except Exception as e:
+                        self.logger.error(f"Error iniciando tracking de viewers: {e}")
+                        # No fallar la publicación por error en viewers
+                
                 # Verificar en MediaMTX si está configurado
                 if self._mediamtx_client and result.publish_path:
                     self.logger.debug(f"Programando verificación de path en MediaMTX para {camera_id}")
@@ -241,6 +260,11 @@ class PublishingPresenter(BasePresenter):
                 if self._metrics_service:
                     await self._metrics_service.stop_metric_collection(camera_id)
                     self.logger.info(f"Recolección de métricas detenida para {camera_id}")
+                
+                # Detener tracking de viewers
+                if self._viewer_service:
+                    await self._viewer_service.stop_tracking(camera_id)
+                    self.logger.info(f"Tracking de viewers detenido para {camera_id}")
                 
                 await self._emit_event("publishing_stopped", {
                     "camera_id": camera_id

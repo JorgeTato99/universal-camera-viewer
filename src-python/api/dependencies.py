@@ -88,6 +88,24 @@ logger = logging.getLogger(__name__)
 #     return _video_presenter
 
 
+def get_current_user() -> Dict[str, Any]:
+    """
+    Obtener usuario actual (dummy por ahora).
+    
+    TODO: Implementar autenticación real cuando sea necesario.
+    Por ahora retorna un usuario dummy para que los endpoints funcionen.
+    
+    Returns:
+        Dict con información del usuario
+    """
+    return {
+        "id": "dummy-user",
+        "username": "admin",
+        "email": "admin@example.com",
+        "is_active": True
+    }
+
+
 def create_response(
     success: bool = True,
     data: Any = None,

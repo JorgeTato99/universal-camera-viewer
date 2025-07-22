@@ -132,7 +132,20 @@ class PublishConfiguration:
         return f"http://{host}:{self.api_port}"
     
     def get_publish_path(self, camera_id: str) -> str:
-        """Genera el path de publicación para una cámara."""
+        """
+        Genera el path de publicación para una cámara.
+        
+        TODO: Este método actualmente usa una implementación simple.
+        Cuando se integre completamente con MediaMTXPathsService,
+        debería usar el sistema de plantillas completo que soporta:
+        - {instance_id}: ID único de la instancia UCV
+        - {camera_id}: ID completo de la cámara
+        - {camera_code}: Código corto (primeros 8 chars)
+        - {timestamp}: Marca de tiempo
+        - {random}: Sufijo aleatorio
+        
+        Por ahora mantiene compatibilidad con el sistema existente.
+        """
         # Tomar solo los primeros 8 caracteres del UUID
         short_id = camera_id.split('-')[0] if '-' in camera_id else camera_id[:8]
         return f"{self.publish_prefix}{short_id}"
