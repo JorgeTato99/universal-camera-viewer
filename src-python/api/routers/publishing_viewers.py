@@ -98,6 +98,14 @@ class ViewerAnalyticsResponse(BaseModel):
     data_note: str = Field(..., description="Nota sobre el origen de los datos")
 
 
+class DisconnectViewerResponse(BaseModel):
+    """Response para desconexión de viewer."""
+    success: bool = Field(..., description="Si la operación fue exitosa")
+    message: str = Field(..., description="Mensaje descriptivo")
+    viewer_id: str = Field(..., description="ID del viewer desconectado")
+    note: Optional[str] = Field(None, description="Nota adicional sobre la operación")
+    
+
 class TrackingResponse(BaseModel):
     """Response para endpoints de tracking."""
     success: bool = Field(..., description="Si la operación fue exitosa")
@@ -299,11 +307,11 @@ async def track_viewer(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/disconnect/{viewer_id}")
+@router.put("/disconnect/{viewer_id}", response_model=DisconnectViewerResponse)
 async def disconnect_viewer(
     viewer_id: str,
     current_user: dict = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> DisconnectViewerResponse:
     """
     Registra la desconexión de un viewer.
     
@@ -317,12 +325,12 @@ async def disconnect_viewer(
             "Funcionalidad pendiente de implementación completa."
         )
         
-        return {
-            "success": True,
-            "message": "Desconexión registrada",
-            "viewer_id": viewer_id,
-            "note": "Tracking individual pendiente de implementación"
-        }
+        return DisconnectViewerResponse(
+            success=True,
+            message="Desconexión registrada",
+            viewer_id=viewer_id,
+            note="Tracking individual pendiente de implementación"
+        )
         
     except Exception as e:
         logger.error(f"Error registrando desconexión: {e}")

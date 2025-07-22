@@ -4,9 +4,51 @@ Schemas de response para endpoints de protocolos.
 Modelos para estructurar las respuestas de protocolos.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+
+class ProtocolTestDetails(BaseModel):
+    """Detalles adicionales de prueba de protocolo."""
+    stream_available: Optional[bool] = Field(None, description="Si el stream está disponible")
+    codec: Optional[str] = Field(None, description="Codec detectado")
+    resolution: Optional[str] = Field(None, description="Resolución del stream")
+    fps: Optional[float] = Field(None, description="Frames por segundo")
+    bitrate: Optional[int] = Field(None, description="Bitrate en kbps")
+    audio_available: Optional[bool] = Field(None, description="Si tiene audio")
+    ptz_available: Optional[bool] = Field(None, description="Si soporta PTZ")
+    
+    class Config:
+        extra = 'allow'  # Permitir campos adicionales específicos del protocolo
+
+
+class OnvifCapabilities(BaseModel):
+    """Capacidades ONVIF de una cámara."""
+    ptz: bool = Field(..., description="Soporte PTZ")
+    audio: bool = Field(..., description="Soporte de audio")
+    events: bool = Field(..., description="Soporte de eventos")
+    analytics: bool = Field(..., description="Soporte de analytics")
+    profiles: List[str] = Field(..., description="Perfiles disponibles")
+    services: Dict[str, str] = Field(..., description="URLs de servicios ONVIF")
+    
+    class Config:
+        extra = 'allow'  # Permitir capacidades adicionales
+
+
+class ProtocolCapabilities(BaseModel):
+    """Capacidades genéricas de protocolo."""
+    ptz: Optional[bool] = Field(None, description="Soporte PTZ")
+    audio: Optional[bool] = Field(None, description="Soporte de audio")
+    events: Optional[bool] = Field(None, description="Soporte de eventos")
+    analytics: Optional[bool] = Field(None, description="Soporte de analytics")
+    streaming_profiles: Optional[List[str]] = Field(None, description="Perfiles de streaming")
+    supported_codecs: Optional[List[str]] = Field(None, description="Codecs soportados")
+    max_resolution: Optional[str] = Field(None, description="Resolución máxima")
+    protocol_specific: Optional[Dict[str, str]] = Field(None, description="Datos específicos del protocolo")
+    
+    class Config:
+        extra = 'allow'
 
 
 class ProtocolInfo(BaseModel):
@@ -77,7 +119,7 @@ class ProtocolTestResponse(BaseModel):
     path: Optional[str] = Field(None, description="Path probado")
     response_time_ms: Optional[float] = Field(None, description="Tiempo de respuesta")
     error: Optional[str] = Field(None, description="Error si falló")
-    details: Optional[Dict[str, Any]] = Field(None, description="Detalles adicionales")
+    details: Optional[ProtocolTestDetails] = Field(None, description="Detalles adicionales")
     
     class Config:
         json_schema_extra = {
@@ -102,7 +144,7 @@ class ProtocolCapabilitiesResponse(BaseModel):
     
     camera_id: str = Field(..., description="ID de la cámara")
     protocol: str = Field(..., description="Protocolo")
-    capabilities: Dict[str, Any] = Field(..., description="Capacidades detectadas")
+    capabilities: ProtocolCapabilities = Field(..., description="Capacidades detectadas")
     
     class Config:
         json_schema_extra = {

@@ -4,7 +4,7 @@ Schemas de response para endpoints de perfiles de streaming.
 Modelos para estructurar las respuestas de perfiles de stream.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
@@ -16,6 +16,34 @@ class ProfileStatus(str, Enum):
     INACTIVE = "inactive"
     TESTING = "testing"
     ERROR = "error"
+
+
+class CustomProfileSettings(BaseModel):
+    """Configuraciones personalizadas de perfil de streaming."""
+    gop: Optional[int] = Field(None, description="Group of pictures size")
+    profile: Optional[str] = Field(None, description="H264 profile (baseline, main, high)")
+    level: Optional[str] = Field(None, description="H264 level")
+    preset: Optional[str] = Field(None, description="Encoding preset")
+    tune: Optional[str] = Field(None, description="Encoding tune option")
+    keyframe_interval: Optional[int] = Field(None, description="Intervalo de keyframes")
+    b_frames: Optional[int] = Field(None, description="Número de B-frames")
+    ref_frames: Optional[int] = Field(None, description="Número de frames de referencia")
+    
+    class Config:
+        extra = 'allow'  # Permitir campos adicionales
+
+
+class ProfileTestMetrics(BaseModel):
+    """Métricas recolectadas durante la prueba de un perfil."""
+    avg_fps: float = Field(..., description="FPS promedio")
+    avg_bitrate_kbps: float = Field(..., description="Bitrate promedio en kbps")
+    dropped_frames: int = Field(..., description="Frames perdidos")
+    latency_ms: float = Field(..., description="Latencia en milisegundos")
+    cpu_usage_percent: float = Field(..., description="Uso de CPU en porcentaje")
+    memory_usage_mb: float = Field(..., description="Uso de memoria en MB")
+    packet_loss_percent: Optional[float] = Field(None, description="Porcentaje de pérdida de paquetes")
+    jitter_ms: Optional[float] = Field(None, description="Jitter en milisegundos")
+    quality_score: Optional[float] = Field(None, description="Score de calidad 0-100")
 
 
 class StreamProfileInfo(BaseModel):
@@ -58,7 +86,7 @@ class StreamProfileDetailResponse(BaseModel):
     fps: Optional[int] = Field(None, description="FPS")
     bitrate: Optional[int] = Field(None, description="Bitrate en kbps")
     audio_enabled: bool = Field(..., description="Audio habilitado")
-    custom_settings: Dict[str, Any] = Field(..., description="Configuraciones adicionales")
+    custom_settings: CustomProfileSettings = Field(..., description="Configuraciones adicionales")
     is_default: bool = Field(..., description="Si es el perfil por defecto")
     is_system: bool = Field(..., description="Si es un perfil del sistema")
     cameras_using: int = Field(..., description="Número de cámaras usando este perfil")
@@ -150,7 +178,7 @@ class ProfileTestResult(BaseModel):
     camera_id: str = Field(..., description="ID de la cámara de prueba")
     success: bool = Field(..., description="Si la prueba fue exitosa")
     duration_seconds: float = Field(..., description="Duración de la prueba")
-    metrics: Optional[Dict[str, Any]] = Field(None, description="Métricas recolectadas")
+    metrics: Optional[ProfileTestMetrics] = Field(None, description="Métricas recolectadas")
     issues: List[str] = Field(..., description="Problemas detectados")
     recommendations: List[str] = Field(..., description="Recomendaciones")
     

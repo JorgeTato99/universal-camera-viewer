@@ -4,9 +4,20 @@ Schemas de response para endpoints de conexión.
 Modelos para estructurar las respuestas de conexión.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+
+class TestConnectionDetails(BaseModel):
+    """Detalles de prueba de conexión."""
+    stream_available: Optional[bool] = Field(None, description="Si el stream está disponible")
+    auth_required: Optional[bool] = Field(None, description="Si requiere autenticación")
+    supported_protocols: Optional[List[str]] = Field(None, description="Protocolos soportados")
+    server_info: Optional[str] = Field(None, description="Información del servidor")
+    
+    class Config:
+        extra = 'allow'  # Permitir campos adicionales
 
 
 class ConnectionStatusResponse(BaseModel):
@@ -40,7 +51,7 @@ class TestConnectionResponse(BaseModel):
     protocol: str = Field(..., description="Protocolo probado")
     response_time_ms: Optional[float] = Field(None, description="Tiempo de respuesta en ms")
     error: Optional[str] = Field(None, description="Error si falló")
-    details: Optional[Dict[str, Any]] = Field(None, description="Detalles adicionales")
+    details: Optional[TestConnectionDetails] = Field(None, description="Detalles adicionales")
     
     class Config:
         json_schema_extra = {

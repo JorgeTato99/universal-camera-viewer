@@ -4,9 +4,20 @@ Schemas de response para endpoints de credenciales.
 Modelos para estructurar las respuestas de credenciales.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+
+class TestCredentialDetails(BaseModel):
+    """Detalles de prueba de credenciales."""
+    status_code: Optional[int] = Field(None, description="Código de estado HTTP")
+    headers_received: Optional[bool] = Field(None, description="Si se recibieron headers")
+    auth_method: Optional[str] = Field(None, description="Método de autenticación usado")
+    server_info: Optional[str] = Field(None, description="Información del servidor")
+    
+    class Config:
+        extra = 'allow'  # Permitir campos adicionales
 
 
 class CredentialBasicInfo(BaseModel):
@@ -110,7 +121,7 @@ class TestCredentialResponse(BaseModel):
     test_url: Optional[str] = Field(None, description="URL probada")
     response_time_ms: Optional[float] = Field(None, description="Tiempo de respuesta")
     error: Optional[str] = Field(None, description="Error si falló")
-    details: Optional[Dict[str, Any]] = Field(None, description="Detalles adicionales")
+    details: Optional[TestCredentialDetails] = Field(None, description="Detalles adicionales")
     
     class Config:
         json_schema_extra = {

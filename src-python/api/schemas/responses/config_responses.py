@@ -4,9 +4,53 @@ Schemas de response para endpoints de configuración.
 Modelos para estructurar las respuestas de configuración.
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+
+class ConfigUpdateInfo(BaseModel):
+    """Información de actualización de configuración."""
+    key: str = Field(..., description="Clave actualizada")
+    value: Any = Field(..., description="Nuevo valor")
+    previous_value: Any = Field(..., description="Valor anterior")
+
+
+class ConfigError(BaseModel):
+    """Error en actualización de configuración."""
+    key: str = Field(..., description="Clave con error")
+    error: str = Field(..., description="Mensaje de error")
+
+
+class ConfigSettings(BaseModel):
+    """Configuración general de la aplicación."""
+    app_name: str = Field("Universal Camera Viewer", description="Nombre de la aplicación")
+    theme: str = Field("light", description="Tema de la UI")
+    language: str = Field("es", description="Idioma")
+    default_quality: str = Field("medium", description="Calidad por defecto")
+    grid_columns: int = Field(3, description="Columnas en la grilla")
+    show_fps_overlay: bool = Field(True, description="Mostrar overlay de FPS")
+    auto_connect: bool = Field(False, description="Conexión automática")
+    recording_path: Optional[str] = Field(None, description="Ruta de grabaciones")
+    
+    class Config:
+        extra = 'allow'  # Permitir configuraciones adicionales
+
+
+class ConfigSchema(BaseModel):
+    """Esquema JSON Schema de configuración."""
+    title: str = Field(..., description="Título del esquema")
+    type: str = Field(..., description="Tipo de esquema")
+    properties: Dict[str, Dict[str, Any]] = Field(..., description="Propiedades del esquema")
+    required: Optional[List[str]] = Field(None, description="Campos requeridos")
+    
+
+class ConfigDifference(BaseModel):
+    """Diferencia entre configuraciones."""
+    key: str = Field(..., description="Clave modificada")
+    current_value: Any = Field(..., description="Valor actual")
+    default_value: Any = Field(..., description="Valor por defecto")
+    type: str = Field(..., description="Tipo de dato")
 
 
 class ConfigValueResponse(BaseModel):
@@ -48,8 +92,8 @@ class ConfigUpdateResponse(BaseModel):
 class BatchConfigUpdateResponse(BaseModel):
     """Respuesta para actualización batch de configuración."""
     
-    updated: List[Dict[str, Any]] = Field(..., description="Configuraciones actualizadas")
-    errors: List[Dict[str, str]] = Field(..., description="Errores encontrados")
+    updated: List[ConfigUpdateInfo] = Field(..., description="Configuraciones actualizadas")
+    errors: List[ConfigError] = Field(..., description="Errores encontrados")
     message: str = Field(..., description="Resumen de la operación")
     
     class Config:
@@ -73,7 +117,7 @@ class ConfigCategoryResponse(BaseModel):
     name: str = Field(..., description="Nombre de la categoría")
     display_name: str = Field(..., description="Nombre para mostrar")
     description: str = Field(..., description="Descripción de la categoría")
-    settings: Dict[str, Any] = Field(..., description="Valores de configuración")
+    settings: ConfigSettings = Field(..., description="Valores de configuración")
     
     class Config:
         json_schema_extra = {
@@ -95,7 +139,7 @@ class ConfigExportResponse(BaseModel):
     
     version: str = Field(..., description="Versión de la aplicación")
     exported_at: str = Field(..., description="Fecha de exportación")
-    config: Dict[str, Any] = Field(..., description="Configuración completa")
+    config: ConfigSettings = Field(..., description="Configuración completa")
     
     class Config:
         json_schema_extra = {
@@ -172,7 +216,7 @@ class ConfigValidationResponse(BaseModel):
 class ConfigSchemaResponse(BaseModel):
     """Respuesta con esquema de configuración."""
     
-    config_schema: Dict[str, Any] = Field(..., description="JSON Schema de configuración")
+    config_schema: ConfigSchema = Field(..., description="JSON Schema de configuración")
     categories: Dict[str, List[str]] = Field(..., description="Campos por categoría")
     
     class Config:
@@ -201,7 +245,7 @@ class ConfigDiffResponse(BaseModel):
     
     total_settings: int = Field(..., description="Total de configuraciones")
     modified_count: int = Field(..., description="Configuraciones modificadas")
-    differences: List[Dict[str, Any]] = Field(..., description="Lista de diferencias")
+    differences: List[ConfigDifference] = Field(..., description="Lista de diferencias")
     
     class Config:
         json_schema_extra = {

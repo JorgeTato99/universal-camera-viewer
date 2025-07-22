@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
 
+# Importar clases base
+from api.schemas.base import PaginatedResponse
+
 
 # Reutilizar enums del módulo de requests
 from api.schemas.requests.mediamtx_requests import (
@@ -145,12 +148,10 @@ class MediaMTXServerResponse(BaseModel):
         }
 
 
-class MediaMTXServerListResponse(BaseModel):
+class MediaMTXServerListResponse(PaginatedResponse[MediaMTXServerResponse]):
     """Lista paginada de servidores MediaMTX."""
-    total: int = Field(..., description="Total de servidores")
-    items: List[MediaMTXServerResponse] = Field(..., description="Servidores en esta página")
-    page: int = Field(1, description="Página actual")
-    page_size: int = Field(50, description="Tamaño de página")
+    # Los campos de paginación vienen del genérico
+    # No se necesitan campos adicionales
     
     class Config:
         from_attributes = True
@@ -247,7 +248,7 @@ class PublicationMetricsResponse(BaseModel):
         from_attributes = True
 
 
-class PaginatedMetricsResponse(BaseModel):
+class PaginatedMetricsResponse(PaginatedResponse[PublishMetricsSnapshot]):
     """
     Respuesta paginada para historial de métricas.
     
@@ -255,10 +256,7 @@ class PaginatedMetricsResponse(BaseModel):
     una lista de PublishMetrics para gráficos temporales.
     """
     camera_id: str = Field(..., description="ID de la cámara")
-    total: int = Field(..., description="Total de registros disponibles")
-    page: int = Field(..., description="Página actual (1-indexed)")
-    page_size: int = Field(..., description="Tamaño de página")
-    metrics: List[PublishMetricsSnapshot] = Field(..., description="Lista de métricas")
+    # Los campos de paginación (total, page, page_size, items) vienen del genérico
     time_range: Dict[str, str] = Field(
         ...,
         description="Rango de tiempo de los datos",
@@ -273,7 +271,10 @@ class PaginatedMetricsResponse(BaseModel):
                 "total": 1440,
                 "page": 1,
                 "page_size": 100,
-                "metrics": [
+                "has_next": True,
+                "has_previous": False,
+                "total_pages": 15,
+                "items": [
                     {
                         "camera_id": "cam_001",
                         "timestamp": "2024-01-15T10:30:00Z",
@@ -281,7 +282,9 @@ class PaginatedMetricsResponse(BaseModel):
                         "bitrate_kbps": 2048.5,
                         "viewers": 3,
                         "frames_sent": 150000,
-                        "bytes_sent": 31457280
+                        "bytes_sent": 31457280,
+                        "quality_score": 95.5,
+                        "status": "optimal"
                     }
                 ],
                 "time_range": {
@@ -347,13 +350,9 @@ class PublicationHistoryItem(BaseModel):
         from_attributes = True
 
 
-class PublicationHistoryResponse(BaseModel):
+class PublicationHistoryResponse(PaginatedResponse[PublicationHistoryItem]):
     """Respuesta con historial de publicaciones."""
-    
-    total: int = Field(..., description="Total de registros")
-    page: int = Field(..., description="Página actual")
-    page_size: int = Field(..., description="Tamaño de página")
-    items: List[PublicationHistoryItem] = Field(..., description="Items del historial")
+    # Los campos de paginación vienen del genérico
     filters_applied: Dict[str, str] = Field(..., description="Filtros aplicados como clave-valor")
     
     class Config:
@@ -406,14 +405,10 @@ class ActiveViewer(BaseModel):
         from_attributes = True
 
 
-class ViewersListResponse(BaseModel):
+class ViewersListResponse(PaginatedResponse[ActiveViewer]):
     """Respuesta con lista de viewers."""
-    
-    total: int = Field(..., description="Total de viewers")
+    # Los campos de paginación vienen del genérico
     active_count: int = Field(..., description="Viewers activos")
-    page: int = Field(..., description="Página actual")
-    page_size: int = Field(..., description="Tamaño de página")
-    items: List[ActiveViewer] = Field(..., description="Lista de viewers")
     protocol_breakdown: Dict[str, int] = Field(..., description="Viewers por protocolo")
     
     class Config:
@@ -698,13 +693,11 @@ class SystemHealthResponse(BaseModel):
 # Eliminada definición duplicada - movida antes de SystemHealthResponse
 
 
-class AlertsListResponse(BaseModel):
+class AlertsListResponse(PaginatedResponse[PublishingAlertResponse]):
     """Respuesta con lista de alertas."""
-    
-    total: int = Field(..., description="Total de alertas")
+    # Los campos de paginación vienen del genérico
     active_count: int = Field(..., description="Alertas activas")
     critical_count: int = Field(..., description="Alertas críticas")
-    items: List[PublishingAlertResponse] = Field(..., description="Lista de alertas")
     by_severity: Dict[str, int] = Field(..., description="Conteo por severidad")
     by_alert_type: Dict[str, int] = Field(..., description="Conteo por tipo de alerta")
     

@@ -25,6 +25,23 @@ router = APIRouter(prefix="/publishing/paths", tags=["publishing-paths"])
 
 # ==================== Modelos de Request/Response ====================
 
+class PathMetadata(BaseModel):
+    """Metadata estructurada para paths de publicación."""
+    description: Optional[str] = Field(None, description="Descripción del path")
+    created_by: Optional[str] = Field(None, description="Usuario que creó el path")
+    tags: Optional[List[str]] = Field(None, description="Etiquetas asociadas")
+    custom_properties: Optional[Dict[str, str]] = Field(None, description="Propiedades personalizadas")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "description": "Path principal para cámara de entrada",
+                "created_by": "admin",
+                "tags": ["entrada", "principal"],
+                "custom_properties": {"location": "lobby", "priority": "high"}
+            }
+        }
+
 class PathCreateRequest(BaseModel):
     """Request para crear un path."""
     path_name: str = Field(..., description="Nombre del path", min_length=3, max_length=50)
@@ -35,7 +52,7 @@ class PathCreateRequest(BaseModel):
     auth_password: Optional[str] = Field(None, description="Contraseña para autenticación")
     recording_enabled: bool = Field(False, description="Si la grabación está habilitada")
     recording_path: Optional[str] = Field(None, description="Ruta para grabaciones")
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Metadata adicional")
+    metadata: Optional[PathMetadata] = Field(None, description="Metadata estructurada del path")
 
 
 class PathUpdateRequest(BaseModel):
@@ -46,7 +63,7 @@ class PathUpdateRequest(BaseModel):
     recording_enabled: Optional[bool] = Field(None, description="Si la grabación está habilitada")
     recording_path: Optional[str] = Field(None, description="Ruta para grabaciones")
     is_active: Optional[bool] = Field(None, description="Si el path está activo")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata adicional")
+    metadata: Optional[PathMetadata] = Field(None, description="Metadata estructurada del path")
 
 
 class PathTestRequest(BaseModel):
@@ -81,7 +98,7 @@ class PathResponse(BaseModel):
     created_at: str = Field(..., description="Fecha de creación ISO 8601")
     updated_at: Optional[str] = Field(None, description="Fecha de última actualización ISO 8601")
     last_used_at: Optional[str] = Field(None, description="Fecha de último uso ISO 8601")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata adicional")
+    metadata: PathMetadata = Field(default_factory=PathMetadata, description="Metadata estructurada del path")
 
 
 class PathTemplateResponse(BaseModel):
@@ -101,13 +118,31 @@ class PathAvailabilityResponse(BaseModel):
     suggestions: List[str] = Field(default_factory=list, description="Paths alternativos sugeridos")
 
 
+class PathDeleteResponse(BaseModel):
+    """Response para eliminación de path."""
+    success: bool = Field(..., description="Si la operación fue exitosa")
+    message: str = Field(..., description="Mensaje descriptivo")
+    path_id: str = Field(..., description="ID del path eliminado")
+    
+
+class PathTestDetails(BaseModel):
+    """Detalles de una prueba de path."""
+    availability_check: Optional[bool] = Field(None, description="Resultado de verificación de disponibilidad")
+    format_validation: Optional[bool] = Field(None, description="Resultado de validación de formato")
+    connectivity_test: Optional[bool] = Field(None, description="Resultado de prueba de conectividad")
+    publish_test: Optional[bool] = Field(None, description="Resultado de prueba de publicación")
+    response_time_ms: Optional[float] = Field(None, description="Tiempo de respuesta en milisegundos")
+    error_details: Optional[str] = Field(None, description="Detalles del error si hubo")
+    warnings: Optional[List[str]] = Field(None, description="Advertencias encontradas")
+    
+
 class PathTestResponse(BaseModel):
     """Response de prueba de path."""
     path_id: str = Field(..., description="ID o nombre del path probado")
     test_type: str = Field(..., description="Tipo de prueba ejecutada")
     success: bool = Field(..., description="Si la prueba fue exitosa")
     message: str = Field(..., description="Mensaje del resultado")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Detalles adicionales")
+    details: PathTestDetails = Field(..., description="Detalles de la prueba")
     timestamp: str = Field(..., description="Timestamp de la prueba ISO 8601")
 
 
@@ -278,11 +313,11 @@ async def update_path(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{path_id}")
+@router.delete("/{path_id}", response_model=PathDeleteResponse)
 async def delete_path(
     path_id: str,
     current_user: dict = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> PathDeleteResponse:
     """
     Elimina un path de publicación.
     
@@ -293,10 +328,11 @@ async def delete_path(
         # Verificar que no está en uso actualmente
         # Verificar que no es permanente
         
-        return {
-            "success": True,
-            "message": f"Path {path_id} eliminado correctamente"
-        }
+        return PathDeleteResponse(
+            success=True,
+            message=f"Path {path_id} eliminado correctamente",
+            path_id=path_id
+        )
         
     except Exception as e:
         logger.error(f"Error eliminando path {path_id}: {e}")
@@ -329,7 +365,15 @@ async def test_path(
             test_type=request.test_type,
             success=result["success"],
             message=result["message"],
-            details=result.get("details", {}),
+            details=PathTestDetails(
+                availability_check=result.get("details", {}).get("availability_check"),
+                format_validation=result.get("details", {}).get("format_validation"),
+                connectivity_test=result.get("details", {}).get("connectivity_test"),
+                publish_test=result.get("details", {}).get("publish_test"),
+                response_time_ms=result.get("details", {}).get("response_time_ms"),
+                error_details=result.get("details", {}).get("error_details"),
+                warnings=result.get("details", {}).get("warnings", [])
+            ),
             timestamp=datetime.now().isoformat()
         )
         

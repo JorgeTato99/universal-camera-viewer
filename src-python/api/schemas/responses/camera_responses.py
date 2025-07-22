@@ -5,9 +5,20 @@ Estos modelos definen la estructura de las respuestas
 que devuelve la API para operaciones con cámaras.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+
+class CameraOperationDetails(BaseModel):
+    """Detalles adicionales de operación de cámara."""
+    action: Optional[str] = Field(None, description="Acción realizada")
+    target: Optional[str] = Field(None, description="Objetivo de la operación")
+    result: Optional[str] = Field(None, description="Resultado de la operación")
+    metadata: Optional[Dict[str, str]] = Field(None, description="Metadata adicional")
+    
+    class Config:
+        extra = 'allow'  # Permitir campos adicionales
 
 
 class CameraBasicInfo(BaseModel):
@@ -183,7 +194,7 @@ class CameraOperationResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Momento de la operación")
     
     # Datos adicionales según la operación
-    details: Optional[Dict[str, Any]] = Field(None, description="Detalles adicionales")
+    details: Optional[CameraOperationDetails] = Field(None, description="Detalles adicionales")
 
 
 class BatchOperationResponse(BaseModel):
