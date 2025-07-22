@@ -17,7 +17,7 @@ from asyncio import Lock
 from services.base_service import BaseService
 from services.database.mediamtx_db_service import get_mediamtx_db_service
 from utils.exceptions import ServiceError, MediaMTXAPIError
-from models.mediamtx_models import PublicationStatus
+from models.publishing import PublishStatus
 
 
 logger = logging.getLogger(__name__)

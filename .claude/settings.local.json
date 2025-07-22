@@ -35,7 +35,8 @@
       "Bash(rg:*)",
       "Bash(node:*)",
       "WebFetch(domain:mui.com)",
-      "Bash(yarn run tsc:*)"
+      "Bash(yarn run tsc:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": []
   }

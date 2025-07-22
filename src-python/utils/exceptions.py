@@ -356,6 +356,35 @@ class ServiceError(CameraViewerError):
     pass
 
 
+class MediaMTXAPIError(ServiceError):
+    """Error al comunicarse con la API de MediaMTX."""
+    
+    def __init__(self, endpoint: str, status_code: Optional[int] = None, reason: str = ""):
+        """
+        Inicializa error de API MediaMTX.
+        
+        Args:
+            endpoint: Endpoint de la API que falló
+            status_code: Código HTTP de respuesta si aplica
+            reason: Razón adicional del error
+        """
+        message = f"Error en API MediaMTX endpoint {endpoint}"
+        if status_code:
+            message += f" (HTTP {status_code})"
+        if reason:
+            message += f": {reason}"
+            
+        super().__init__(
+            message=message,
+            error_code="MEDIAMTX_API_ERROR",
+            context={
+                'endpoint': endpoint,
+                'status_code': status_code,
+                'reason': reason
+            }
+        )
+
+
 # === Excepciones de Streaming ===
 
 class StreamingError(CameraViewerError):
@@ -559,6 +588,7 @@ __all__ = [
     
     # Servicio
     'ServiceError',
+    'MediaMTXAPIError',
     
     # Streaming
     'StreamingError',
