@@ -11,6 +11,7 @@ import logging
 
 from presenters.base_presenter import BasePresenter
 from services.publishing import get_publisher_service, MediaMTXClient
+from services.mediamtx_metrics_service import get_mediamtx_metrics_service
 from models.publishing import (
     PublishConfiguration, PublishResult, PublishStatus, PublisherProcess,
     PublishErrorType
@@ -36,6 +37,7 @@ class PublishingPresenter(BasePresenter):
         self._config: Optional[PublishConfiguration] = None
         self._publisher_service = None
         self._mediamtx_client: Optional[MediaMTXClient] = None
+        self._metrics_service = None
         self.logger = logging.getLogger(self.__class__.__name__)
     
     async def _initialize_presenter(self) -> None:
@@ -86,6 +88,11 @@ class PublishingPresenter(BasePresenter):
                 
             # Inicializar servicio de publicación
             await self._publisher_service.initialize()
+            
+            # Inicializar servicio de métricas
+            self._metrics_service = get_mediamtx_metrics_service()
+            await self._metrics_service.initialize()
+            self.logger.info("Servicio de métricas inicializado")
             
             self.logger.info("PublishingPresenter inicializado correctamente")
             
@@ -150,6 +157,18 @@ class PublishingPresenter(BasePresenter):
                     "publish_path": result.publish_path,
                     "process_id": result.process_id
                 })
+                
+                # Iniciar recolección de métricas
+                if self._metrics_service and self._config:
+                    api_url = self._config.get_api_url() if self._config.api_enabled else None
+                    if api_url and result.publish_path:
+                        self.logger.info(f"Iniciando recolección de métricas para {camera_id}")
+                        await self._metrics_service.start_metric_collection(
+                            camera_id=camera_id,
+                            mediamtx_api_url=api_url,
+                            publish_path=result.publish_path.lstrip('/'),
+                            interval_seconds=5.0
+                        )
                 
                 # Verificar en MediaMTX si está configurado
                 if self._mediamtx_client and result.publish_path:
@@ -217,6 +236,12 @@ class PublishingPresenter(BasePresenter):
             
             if success:
                 self.logger.info(f"Publicación detenida exitosamente para {camera_id}")
+                
+                # Detener recolección de métricas
+                if self._metrics_service:
+                    await self._metrics_service.stop_metric_collection(camera_id)
+                    self.logger.info(f"Recolección de métricas detenida para {camera_id}")
+                
                 await self._emit_event("publishing_stopped", {
                     "camera_id": camera_id
                 })
@@ -338,6 +363,12 @@ class PublishingPresenter(BasePresenter):
                 self.logger.debug("Cerrando conexión con MediaMTX API")
                 await self._mediamtx_client.close()
                 self._mediamtx_client = None
+                
+            # Limpiar servicio de métricas
+            if self._metrics_service:
+                self.logger.debug("Limpiando servicio de métricas")
+                await self._metrics_service.shutdown()
+                self._metrics_service = None
                 
             # Limpiar servicio de publicación
             if self._publisher_service:

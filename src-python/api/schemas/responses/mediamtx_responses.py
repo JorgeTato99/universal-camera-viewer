@@ -97,6 +97,48 @@ class MediaMTXServerListResponse(BaseModel):
 
 # === Responses de Métricas ===
 
+class PublishMetricsSnapshot(BaseModel):
+    """
+    Snapshot de métricas en tiempo real para dashboard.
+    
+    Compatible con el tipo PublishMetrics del frontend.
+    Proporciona la métrica más reciente de una publicación.
+    """
+    camera_id: str = Field(..., description="ID de la cámara")
+    timestamp: str = Field(..., description="Timestamp ISO 8601")
+    fps: float = Field(..., description="Frames por segundo actual")
+    bitrate_kbps: float = Field(..., description="Bitrate en kilobits por segundo")
+    viewers: int = Field(..., description="Número de viewers conectados")
+    frames_sent: int = Field(..., description="Total de frames enviados")
+    bytes_sent: int = Field(..., description="Total de bytes enviados")
+    quality_score: Optional[float] = Field(
+        None, 
+        ge=0, 
+        le=100,
+        description="Score de calidad de la transmisión (0-100)"
+    )
+    status: Optional[Literal["optimal", "degraded", "poor"]] = Field(
+        None,
+        description="Estado de la transmisión basado en quality_score"
+    )
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "camera_id": "cam_001",
+                "timestamp": "2024-01-15T10:30:00Z",
+                "fps": 25.0,
+                "bitrate_kbps": 2048.5,
+                "viewers": 3,
+                "frames_sent": 150000,
+                "bytes_sent": 31457280,
+                "quality_score": 95.5,
+                "status": "optimal"
+            }
+        }
+
+
 class MetricPoint(BaseModel):
     """Punto de métrica individual."""
     
@@ -142,6 +184,51 @@ class PublicationMetricsResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class PaginatedMetricsResponse(BaseModel):
+    """
+    Respuesta paginada para historial de métricas.
+    
+    Diseñada para ser compatible con el frontend que espera
+    una lista de PublishMetrics para gráficos temporales.
+    """
+    camera_id: str = Field(..., description="ID de la cámara")
+    total: int = Field(..., description="Total de registros disponibles")
+    page: int = Field(..., description="Página actual (1-indexed)")
+    page_size: int = Field(..., description="Tamaño de página")
+    metrics: List[PublishMetricsSnapshot] = Field(..., description="Lista de métricas")
+    time_range: Dict[str, str] = Field(
+        ...,
+        description="Rango de tiempo de los datos",
+        example={"start": "2024-01-15T00:00:00Z", "end": "2024-01-15T23:59:59Z"}
+    )
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "camera_id": "cam_001",
+                "total": 1440,
+                "page": 1,
+                "page_size": 100,
+                "metrics": [
+                    {
+                        "camera_id": "cam_001",
+                        "timestamp": "2024-01-15T10:30:00Z",
+                        "fps": 25.0,
+                        "bitrate_kbps": 2048.5,
+                        "viewers": 3,
+                        "frames_sent": 150000,
+                        "bytes_sent": 31457280
+                    }
+                ],
+                "time_range": {
+                    "start": "2024-01-15T00:00:00Z",
+                    "end": "2024-01-15T23:59:59Z"
+                }
+            }
+        }
 
 
 class MetricsExportResponse(BaseModel):

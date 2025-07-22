@@ -21,7 +21,8 @@ from api.schemas.requests.mediamtx_requests import (
 )
 from api.schemas.responses.mediamtx_responses import (
     PublicationMetricsResponse, MetricsExportResponse,
-    GlobalMetricsSummaryResponse
+    GlobalMetricsSummaryResponse, PublishMetricsSnapshot,
+    PaginatedMetricsResponse
 )
 from api.dependencies import create_response
 from services.database.mediamtx_db_service import get_mediamtx_db_service
@@ -40,6 +41,114 @@ router = APIRouter(
     tags=["publishing-metrics"],
     responses={404: {"description": "Not found"}},
 )
+
+
+@router.get(
+    "/current/{camera_id}",
+    response_model=PublishMetricsSnapshot,
+    summary="Obtener métricas actuales",
+    description="""
+    Obtiene la métrica más reciente de una cámara en publicación.
+    
+    Este endpoint está optimizado para dashboards en tiempo real
+    y retorna un objeto simple compatible con el frontend.
+    """
+)
+async def get_current_metrics(camera_id: str) -> PublishMetricsSnapshot:
+    """
+    Obtiene las métricas más recientes de una cámara.
+    
+    Args:
+        camera_id: Identificador único de la cámara
+        
+    Returns:
+        PublishMetricsSnapshot con la métrica más reciente
+        
+    Raises:
+        HTTPException: Si la cámara no existe o no está publicando
+    """
+    logger.debug(f"Obteniendo métricas actuales para cámara {camera_id}")
+    
+    try:
+        # Validar que la cámara existe
+        camera = await camera_manager_service.get_camera(camera_id)
+        if not camera:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Cámara {camera_id} no encontrada"
+            )
+        
+        # Obtener servicio de BD
+        db_service = get_mediamtx_db_service()
+        await db_service.initialize()
+        
+        # Intentar obtener métricas del servicio en tiempo real primero
+        metric_snapshot = None
+        
+        try:
+            from services.mediamtx_metrics_service import get_mediamtx_metrics_service
+            metrics_service = get_mediamtx_metrics_service()
+            
+            current_metrics = metrics_service.get_current_metrics(camera_id)
+            if current_metrics:
+                # Calcular quality score
+                quality_score = metrics_service.calculate_quality_score(current_metrics)
+                
+                # Crear snapshot desde métricas en tiempo real
+                metric_snapshot = PublishMetricsSnapshot(
+                    camera_id=camera_id,
+                    timestamp=current_metrics.timestamp.isoformat(),
+                    fps=current_metrics.fps,
+                    bitrate_kbps=current_metrics.bitrate_kbps,
+                    viewers=current_metrics.viewer_count,
+                    frames_sent=current_metrics.frames,
+                    bytes_sent=int(current_metrics.size_kb * 1024),
+                    quality_score=quality_score,
+                    status=_determine_stream_status(quality_score)
+                )
+                logger.debug(f"Métricas obtenidas del servicio en tiempo real para {camera_id}")
+        except Exception as e:
+            logger.warning(f"No se pudieron obtener métricas del servicio: {e}")
+        
+        # Si no hay métricas en tiempo real, obtener de la BD
+        if not metric_snapshot:
+            latest_metric = await db_service.get_latest_publication_metric(camera_id)
+            
+            if not latest_metric:
+                logger.warning(f"Cámara {camera_id} no tiene métricas recientes")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "error": "No hay métricas disponibles para esta cámara",
+                        "camera_id": camera_id
+                    }
+                )
+            
+            # Mapear campos del backend al formato esperado por el frontend
+            metric_snapshot = PublishMetricsSnapshot(
+                camera_id=camera_id,
+                timestamp=latest_metric['timestamp'].isoformat() if latest_metric.get('timestamp') else datetime.utcnow().isoformat(),
+                fps=latest_metric.get('fps', 0.0),
+                bitrate_kbps=latest_metric.get('bitrate_kbps', 0.0),
+                viewers=latest_metric.get('viewer_count', 0),  # Mapeo: viewer_count → viewers
+                frames_sent=latest_metric.get('frames', 0),    # Mapeo: frames → frames_sent
+                bytes_sent=int(latest_metric.get('size_kb', 0) * 1024),  # Conversión: KB → bytes
+                quality_score=latest_metric.get('quality_score'),
+                status=_determine_stream_status(latest_metric.get('quality_score'))
+            )
+        
+        logger.info(f"Métricas actuales obtenidas para {camera_id}: FPS={metric_snapshot.fps}, viewers={metric_snapshot.viewers}")
+        
+        return metric_snapshot
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error obteniendo métricas actuales para {camera_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error obteniendo métricas actuales"
+        )
 
 
 @router.get(
@@ -176,15 +285,20 @@ async def get_camera_metrics(
 
 @router.get(
     "/{camera_id}/history",
-    response_model=PublicationMetricsResponse,
-    summary="Historial de métricas",
-    description="Obtiene el historial de métricas con opciones avanzadas de filtrado"
+    response_model=PaginatedMetricsResponse,
+    summary="Historial de métricas paginado",
+    description="Obtiene el historial de métricas con paginación para gráficos temporales"
 )
 async def get_metrics_history(
     camera_id: str,
-    time_range: MetricTimeRange = Query(..., description="Rango de tiempo"),
+    time_range: MetricTimeRange = Query(
+        MetricTimeRange.LAST_HOUR,
+        description="Rango de tiempo predefinido"
+    ),
     start_time: Optional[datetime] = Query(None),
     end_time: Optional[datetime] = Query(None),
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(100, ge=10, le=1000, description="Tamaño de página"),
     min_quality_score: Optional[float] = Query(
         None,
         ge=0,
@@ -197,46 +311,126 @@ async def get_metrics_history(
         le=100,
         description="Tasa de error máxima %"
     )
-) -> PublicationMetricsResponse:
+) -> PaginatedMetricsResponse:
     """
-    Obtiene historial detallado de métricas con filtros adicionales.
+    Obtiene historial paginado de métricas para gráficos temporales.
     
-    Permite filtrar por calidad y tasa de errores para identificar
-    períodos problemáticos en el streaming.
+    Retorna las métricas en formato simplificado compatible con el frontend.
     """
-    # Similar a get_camera_metrics pero con filtros adicionales
-    # Por simplicidad, reutilizamos la lógica base
-    response = await get_camera_metrics(
-        camera_id=camera_id,
-        time_range=time_range,
-        start_time=start_time,
-        end_time=end_time,
-        include_viewers=True,
-        aggregate_interval=None
-    )
+    logger.debug(f"Obteniendo historial de métricas para {camera_id}, página {page}")
     
-    # Aplicar filtros adicionales si se especifican
-    if min_quality_score is not None or max_error_rate is not None:
-        filtered_points = []
-        for point in response.data_points:
-            # Filtrar por calidad
-            if min_quality_score and point.quality_score:
-                if point.quality_score < min_quality_score:
-                    continue
-            
-            # Filtrar por tasa de error (basado en dropped frames)
-            if max_error_rate and point.frames and point.dropped_frames:
-                error_rate = (point.dropped_frames / point.frames) * 100
-                if error_rate > max_error_rate:
-                    continue
-            
-            filtered_points.append(point)
+    try:
+        # Validar que la cámara existe
+        camera = await camera_manager_service.get_camera(camera_id)
+        if not camera:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Cámara {camera_id} no encontrada"
+            )
         
-        response.data_points = filtered_points
-        # Recalcular resumen con puntos filtrados
-        # TODO: Implementar recálculo de resumen
-    
-    return response
+        # Validar rango de tiempo personalizado
+        if time_range == MetricTimeRange.CUSTOM:
+            if not start_time or not end_time:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="start_time y end_time son requeridos para rango CUSTOM"
+                )
+            start_time, end_time = validate_metric_time_range(start_time, end_time)
+        
+        # Crear request object
+        request = GetMetricsRequest(
+            time_range=time_range,
+            start_time=start_time,
+            end_time=end_time,
+            include_viewers=False,
+            aggregate_interval=None
+        )
+        
+        # Obtener servicio de BD
+        db_service = get_mediamtx_db_service()
+        await db_service.initialize()
+        
+        # Obtener métricas con paginación
+        metrics_data = await db_service.get_publication_metrics(camera_id, request)
+        
+        if not metrics_data['publication_id']:
+            logger.warning(f"Cámara {camera_id} no tiene publicación activa")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "La cámara no está publicando actualmente",
+                    "camera_id": camera_id
+                }
+            )
+        
+        # Filtrar datos si es necesario
+        data_points = metrics_data['data_points']
+        if min_quality_score is not None or max_error_rate is not None:
+            filtered_points = []
+            for point in data_points:
+                # Filtrar por calidad
+                if min_quality_score and point.get('quality_score'):
+                    if point['quality_score'] < min_quality_score:
+                        continue
+                
+                # Filtrar por tasa de error
+                if max_error_rate and point.get('frames') and point.get('dropped_frames'):
+                    error_rate = (point['dropped_frames'] / point['frames']) * 100
+                    if error_rate > max_error_rate:
+                        continue
+                
+                filtered_points.append(point)
+            data_points = filtered_points
+        
+        # Paginar resultados
+        total = len(data_points)
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_points = data_points[start_idx:end_idx]
+        
+        # Convertir a PublishMetricsSnapshot
+        metrics_snapshots = []
+        for point in paginated_points:
+            snapshot = PublishMetricsSnapshot(
+                camera_id=camera_id,
+                timestamp=point.get('timestamp').isoformat() if point.get('timestamp') else "",
+                fps=point.get('fps', 0.0),
+                bitrate_kbps=point.get('bitrate_kbps', 0.0),
+                viewers=point.get('viewer_count', 0),
+                frames_sent=point.get('frames', 0),
+                bytes_sent=int(point.get('size_kb', 0) * 1024) if point.get('size_kb') else 0,
+                quality_score=point.get('quality_score'),
+                status=_determine_stream_status(point.get('quality_score'))
+            )
+            metrics_snapshots.append(snapshot)
+        
+        # Determinar rango de tiempo
+        time_range_dict = {
+            "start": start_time.isoformat() if start_time else (data_points[0]['timestamp'].isoformat() if data_points else ""),
+            "end": end_time.isoformat() if end_time else (data_points[-1]['timestamp'].isoformat() if data_points else "")
+        }
+        
+        response = PaginatedMetricsResponse(
+            camera_id=camera_id,
+            total=total,
+            page=page,
+            page_size=page_size,
+            metrics=metrics_snapshots,
+            time_range=time_range_dict
+        )
+        
+        logger.info(f"Historial obtenido para {camera_id}: {len(metrics_snapshots)} métricas, página {page}/{(total + page_size - 1) // page_size}")
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error obteniendo historial de métricas para {camera_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error obteniendo historial de métricas"
+        )
 
 
 @router.post(
@@ -407,8 +601,31 @@ async def get_global_statistics() -> GlobalMetricsSummaryResponse:
         db_service = get_mediamtx_db_service()
         await db_service.initialize()
         
-        # Obtener resumen global
+        # Obtener resumen global de la BD
         summary_data = await db_service.get_global_metrics_summary()
+        
+        # Enriquecer con datos del servicio de métricas si está disponible
+        try:
+            from services.mediamtx_metrics_service import get_mediamtx_metrics_service
+            metrics_service = get_mediamtx_metrics_service()
+            
+            # Actualizar con métricas en tiempo real si hay publicaciones activas
+            if summary_data.get('total_cameras_publishing', 0) > 0:
+                # Obtener quality score promedio de cámaras activas
+                active_scores = []
+                for camera_info in summary_data.get('top_cameras', []):
+                    camera_id = camera_info.get('camera_id')
+                    if camera_id:
+                        current_metrics = metrics_service.get_current_metrics(camera_id)
+                        if current_metrics:
+                            quality_score = metrics_service.calculate_quality_score(current_metrics)
+                            active_scores.append(quality_score)
+                
+                if active_scores:
+                    summary_data['avg_quality_score'] = sum(active_scores) / len(active_scores)
+                    
+        except Exception as e:
+            logger.warning(f"No se pudieron obtener métricas en tiempo real: {e}")
         
         # Construir respuesta
         response = GlobalMetricsSummaryResponse(**summary_data)
@@ -427,6 +644,27 @@ async def get_global_statistics() -> GlobalMetricsSummaryResponse:
 
 
 # === Funciones auxiliares ===
+
+def _determine_stream_status(quality_score: Optional[float]) -> Optional[str]:
+    """
+    Determina el estado del stream basado en el quality score.
+    
+    Args:
+        quality_score: Score de calidad (0-100)
+        
+    Returns:
+        Estado: 'optimal', 'degraded', 'poor' o None
+    """
+    if quality_score is None:
+        return None
+        
+    if quality_score >= 80:
+        return "optimal"
+    elif quality_score >= 50:
+        return "degraded"
+    else:
+        return "poor"
+
 
 def _aggregate_metrics(
     data_points: list,

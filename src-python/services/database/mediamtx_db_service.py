@@ -129,6 +129,54 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 
         return await asyncio.get_event_loop().run_in_executor(None, _fetch)
     
+    async def get_latest_publication_metric(self, camera_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene la métrica más reciente de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara
+            
+        Returns:
+            Dict con la métrica más reciente o None si no hay
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Obtener publication_id activa
+                cursor.execute("""
+                    SELECT publication_id FROM camera_publications
+                    WHERE camera_id = ? AND is_active = 1
+                    LIMIT 1
+                """, (camera_id,))
+                
+                pub_row = cursor.fetchone()
+                if not pub_row:
+                    return None
+                
+                publication_id = pub_row['publication_id']
+                
+                # Obtener la métrica más reciente
+                cursor.execute("""
+                    SELECT 
+                        metric_time as timestamp,
+                        fps, bitrate_kbps, frames, dropped_frames,
+                        quality_score, viewer_count, cpu_usage_percent,
+                        memory_usage_mb, size_kb
+                    FROM publication_metrics
+                    WHERE publication_id = ?
+                    ORDER BY metric_time DESC
+                    LIMIT 1
+                """, (publication_id,))
+                
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                    
+                return dict(row)
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
     async def save_publication_metrics(
         self,
         publication_id: int,
