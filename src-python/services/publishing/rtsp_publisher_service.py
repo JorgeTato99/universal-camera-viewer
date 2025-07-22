@@ -16,6 +16,7 @@ from models.publishing import (
     PublisherProcess, PublishStatus, PublishResult,
     PublishConfiguration, PublishErrorType
 )
+from api.schemas.requests.mediamtx_requests import TerminationReason
 from services.camera_manager_service import camera_manager_service
 from services.publishing.ffmpeg_manager import FFmpegManager
 from utils.exceptions import ServiceError
@@ -300,15 +301,27 @@ class RTSPPublisherService(BaseService):
         process.status = PublishStatus.STOPPED
         self._processes.pop(camera_id)
         
-        # Actualizar estado en BD
+        # Mover a historial y actualizar estado en BD
         if self._db_service:
             try:
+                # Determinar razón de terminación
+                termination_reason = TerminationReason.USER_STOPPED
+                if process.error_count > 0:
+                    termination_reason = TerminationReason.ERROR
+                
+                # Mover publicación al historial
+                await self._db_service.move_publication_to_history(
+                    camera_id=camera_id,
+                    termination_reason=termination_reason
+                )
+                
+                # Actualizar estado final
                 await self._db_service.update_publishing_state(
                     camera_id=camera_id,
                     status=PublishStatus.STOPPED
                 )
             except Exception as e:
-                self.logger.error(f"Error actualizando estado en BD: {e}")
+                self.logger.error(f"Error actualizando BD al detener: {e}")
         
         self.logger.info(f"Publicación detenida exitosamente para cámara {camera_id}")
         return True

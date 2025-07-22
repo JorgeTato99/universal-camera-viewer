@@ -515,15 +515,24 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
         dry_run: bool = True
     ) -> Dict[str, Any]:
         """
-        Limpia registros antiguos del historial.
+        Limpia registros antiguos del historial con opciones avanzadas.
+        
+        Este método elimina de forma segura registros antiguos del historial
+        junto con sus datos relacionados (métricas, viewers). Por defecto
+        opera en modo dry_run para previsualizar cambios.
         
         Args:
             older_than_days: Eliminar registros más antiguos que N días
-            keep_errors: Si mantener registros con errores
-            dry_run: Si solo simular sin eliminar
+            keep_errors: Si mantener registros con errores (recomendado)
+            dry_run: Si solo simular sin eliminar (default True)
             
         Returns:
-            Dict con información sobre registros afectados
+            Dict con información detallada:
+            - records_affected: número de registros a eliminar
+            - space_freed_mb: espacio estimado a liberar
+            - oldest_record_date: fecha del registro más antiguo
+            - dry_run: si fue simulación
+            - details: desglose por razón de terminación y cámara
         """
         def _cleanup():
             with self._get_connection() as conn:
@@ -532,86 +541,543 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
                 
                 # Construir condiciones
-                conditions = ["start_time < ?"]
+                conditions = ["ph.start_time < ?"]
                 params = [cutoff_date]
                 
                 if keep_errors:
-                    conditions.append("(error_count = 0 OR error_count IS NULL)")
+                    conditions.append("(ph.error_count = 0 OR ph.error_count IS NULL)")
+                
+                # También mantener sesiones largas (>24 horas) como casos especiales
+                conditions.append("ph.duration_seconds < 86400")  # 24 horas
                 
                 where_clause = " AND ".join(conditions)
                 
-                # Contar registros a eliminar
+                # Contar registros a eliminar con información detallada
                 cursor.execute(f"""
                     SELECT 
                         COUNT(*) as total_records,
-                        SUM(total_data_mb) as total_data_mb,
-                        MIN(start_time) as oldest_date
-                    FROM publication_history
+                        SUM(ph.total_data_mb) as total_data_mb,
+                        MIN(ph.start_time) as oldest_date,
+                        AVG(ph.duration_seconds) as avg_duration
+                    FROM publication_history ph
                     WHERE {where_clause}
                 """, params)
                 
                 stats = cursor.fetchone()
                 
-                # Desglose por categoría
+                # Desglose por razón de terminación
                 cursor.execute(f"""
                     SELECT 
-                        termination_reason,
-                        COUNT(*) as count
-                    FROM publication_history
+                        ph.termination_reason,
+                        COUNT(*) as count,
+                        SUM(ph.total_data_mb) as data_mb
+                    FROM publication_history ph
                     WHERE {where_clause}
-                    GROUP BY termination_reason
+                    GROUP BY ph.termination_reason
                 """, params)
                 
-                details = {}
+                details = {
+                    'by_termination_reason': {},
+                    'by_camera': {}
+                }
+                
                 for row in cursor.fetchall():
                     reason = row['termination_reason'] or 'unknown'
-                    details[reason] = row['count']
+                    details['by_termination_reason'][reason] = {
+                        'count': row['count'],
+                        'data_mb': round(row['data_mb'] or 0, 2)
+                    }
+                
+                # Desglose por cámara (top 10)
+                cursor.execute(f"""
+                    SELECT 
+                        ph.camera_id,
+                        c.name as camera_name,
+                        COUNT(*) as count,
+                        SUM(ph.total_data_mb) as data_mb
+                    FROM publication_history ph
+                    LEFT JOIN cameras c ON ph.camera_id = c.camera_id
+                    WHERE {where_clause}
+                    GROUP BY ph.camera_id
+                    ORDER BY count DESC
+                    LIMIT 10
+                """, params)
+                
+                for row in cursor.fetchall():
+                    details['by_camera'][row['camera_id']] = {
+                        'name': row['camera_name'] or row['camera_id'],
+                        'count': row['count'],
+                        'data_mb': round(row['data_mb'] or 0, 2)
+                    }
+                
+                # Calcular espacio total incluyendo métricas y viewers
+                if stats['total_records'] > 0:
+                    # Estimar espacio de métricas (aprox 100 bytes por registro)
+                    cursor.execute(f"""
+                        SELECT COUNT(*) * 0.0001 as metrics_mb
+                        FROM publication_metrics pm
+                        WHERE pm.publication_id IN (
+                            SELECT cp.publication_id 
+                            FROM camera_publications cp
+                            JOIN publication_history ph ON cp.session_id = ph.session_id
+                            WHERE {where_clause}
+                        )
+                    """, params)
+                    
+                    metrics_space = cursor.fetchone()
+                    total_space_mb = (stats['total_data_mb'] or 0) + (metrics_space['metrics_mb'] or 0)
+                else:
+                    total_space_mb = 0
                 
                 # Ejecutar eliminación si no es dry run
                 if not dry_run and stats['total_records'] > 0:
-                    # También eliminar métricas asociadas
-                    cursor.execute(f"""
-                        DELETE FROM publication_metrics
-                        WHERE publication_id IN (
-                            SELECT publication_id 
-                            FROM camera_publications
-                            WHERE session_id IN (
+                    conn.execute("BEGIN TRANSACTION")
+                    try:
+                        # Obtener publication_ids a eliminar
+                        cursor.execute(f"""
+                            SELECT cp.publication_id
+                            FROM camera_publications cp
+                            JOIN publication_history ph ON cp.session_id = ph.session_id
+                            WHERE {where_clause}
+                        """, params)
+                        
+                        pub_ids = [row['publication_id'] for row in cursor.fetchall()]
+                        
+                        if pub_ids:
+                            # Eliminar métricas
+                            placeholders = ','.join('?' * len(pub_ids))
+                            cursor.execute(f"""
+                                DELETE FROM publication_metrics
+                                WHERE publication_id IN ({placeholders})
+                            """, pub_ids)
+                            
+                            # Eliminar viewers
+                            cursor.execute(f"""
+                                DELETE FROM publication_viewers
+                                WHERE publication_id IN ({placeholders})
+                            """, pub_ids)
+                        
+                        # Eliminar historial
+                        cursor.execute(f"""
+                            DELETE FROM publication_history ph
+                            WHERE {where_clause}
+                        """, params)
+                        
+                        # Limpiar camera_publications huérfanas
+                        cursor.execute("""
+                            DELETE FROM camera_publications
+                            WHERE is_active = 0 
+                            AND session_id NOT IN (
                                 SELECT session_id FROM publication_history
-                                WHERE {where_clause}
                             )
+                        """)
+                        
+                        conn.commit()
+                        self.logger.info(
+                            f"Limpieza completada: {stats['total_records']} registros eliminados, "
+                            f"{round(total_space_mb, 2)} MB liberados"
                         )
-                    """, params)
-                    
-                    # Eliminar viewers asociados
-                    cursor.execute(f"""
-                        DELETE FROM publication_viewers
-                        WHERE publication_id IN (
-                            SELECT publication_id 
-                            FROM camera_publications
-                            WHERE session_id IN (
-                                SELECT session_id FROM publication_history
-                                WHERE {where_clause}
-                            )
-                        )
-                    """, params)
-                    
-                    # Eliminar historial
-                    cursor.execute(f"""
-                        DELETE FROM publication_history
-                        WHERE {where_clause}
-                    """, params)
-                    
-                    self.logger.info(f"Eliminados {stats['total_records']} registros de historial")
+                        
+                    except Exception as e:
+                        conn.rollback()
+                        self.logger.error(f"Error durante limpieza: {e}")
+                        raise
                 
                 return {
                     'records_affected': stats['total_records'] or 0,
-                    'space_freed_mb': round(stats['total_data_mb'] or 0, 2),
+                    'space_freed_mb': round(total_space_mb, 2),
                     'oldest_record_date': stats['oldest_date'],
                     'dry_run': dry_run,
                     'details': details
                 }
                 
         return await asyncio.get_event_loop().run_in_executor(None, _cleanup)
+    
+    # === Métodos de Historial ===
+    
+    async def get_publication_history(
+        self,
+        request: GetHistoryRequest
+    ) -> Dict[str, Any]:
+        """
+        Obtiene historial de publicaciones con filtros y paginación.
+        
+        Args:
+            request: Parámetros de búsqueda con filtros
+            
+        Returns:
+            Dict con:
+            - total: número total de registros
+            - page: página actual
+            - page_size: tamaño de página
+            - items: lista de PublicationHistoryItem
+            - filters_applied: filtros aplicados
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Construir condiciones WHERE
+                conditions = []
+                params = []
+                
+                if request.camera_id:
+                    conditions.append("ph.camera_id = ?")
+                    params.append(request.camera_id)
+                    
+                if request.server_id is not None:
+                    conditions.append("ph.server_id = ?")
+                    params.append(request.server_id)
+                    
+                if request.termination_reason:
+                    conditions.append("ph.termination_reason = ?")
+                    params.append(request.termination_reason.value)
+                    
+                if request.start_date:
+                    conditions.append("ph.start_time >= ?")
+                    params.append(request.start_date)
+                    
+                if request.end_date:
+                    conditions.append("ph.start_time <= ?")
+                    params.append(request.end_date)
+                    
+                if request.min_duration_seconds is not None:
+                    conditions.append("ph.duration_seconds >= ?")
+                    params.append(request.min_duration_seconds)
+                
+                where_clause = " AND ".join(conditions) if conditions else "1=1"
+                
+                # Contar total de registros
+                count_query = f"""
+                    SELECT COUNT(*) as total
+                    FROM publication_history ph
+                    WHERE {where_clause}
+                """
+                cursor.execute(count_query, params)
+                total = cursor.fetchone()['total']
+                
+                # Query principal con paginación
+                offset = (request.page - 1) * request.page_size
+                order_direction = "DESC" if request.order_desc else "ASC"
+                
+                query = f"""
+                    SELECT 
+                        ph.history_id,
+                        ph.camera_id,
+                        ph.server_id,
+                        ph.session_id,
+                        ph.publish_path,
+                        ph.start_time,
+                        ph.end_time,
+                        ph.duration_seconds,
+                        ph.total_frames,
+                        ph.average_fps,
+                        ph.average_bitrate_kbps,
+                        ph.total_data_mb,
+                        ph.max_viewers,
+                        ph.error_count,
+                        ph.termination_reason,
+                        ph.last_error,
+                        ph.metadata,
+                        c.name as camera_name,
+                        ms.server_name
+                    FROM publication_history ph
+                    LEFT JOIN cameras c ON ph.camera_id = c.camera_id
+                    LEFT JOIN mediamtx_servers ms ON ph.server_id = ms.server_id
+                    WHERE {where_clause}
+                    ORDER BY ph.{request.order_by} {order_direction}
+                    LIMIT ? OFFSET ?
+                """
+                
+                cursor.execute(query, params + [request.page_size, offset])
+                
+                items = []
+                for row in cursor.fetchall():
+                    item = dict(row)
+                    # Parsear metadata JSON si existe
+                    if item.get('metadata'):
+                        try:
+                            item['metadata'] = json.loads(item['metadata'])
+                        except:
+                            item['metadata'] = None
+                    items.append(item)
+                
+                # Construir respuesta
+                return {
+                    'total': total,
+                    'page': request.page,
+                    'page_size': request.page_size,
+                    'items': items,
+                    'filters_applied': {
+                        'camera_id': request.camera_id,
+                        'server_id': request.server_id,
+                        'termination_reason': request.termination_reason.value if request.termination_reason else None,
+                        'start_date': request.start_date.isoformat() if request.start_date else None,
+                        'end_date': request.end_date.isoformat() if request.end_date else None,
+                        'min_duration_seconds': request.min_duration_seconds
+                    }
+                }
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
+    async def get_session_detail(
+        self,
+        session_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene el detalle completo de una sesión de publicación.
+        
+        Incluye:
+        - Información básica de la sesión
+        - Resumen de métricas agregadas
+        - Timeline de errores
+        - Estadísticas de viewers
+        - Comando FFmpeg usado
+        
+        Args:
+            session_id: ID único de la sesión
+            
+        Returns:
+            Dict con PublicationSessionDetailResponse o None si no existe
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Obtener información básica de la sesión
+                cursor.execute("""
+                    SELECT 
+                        ph.*,
+                        c.name as camera_name,
+                        ms.server_name
+                    FROM publication_history ph
+                    LEFT JOIN cameras c ON ph.camera_id = c.camera_id
+                    LEFT JOIN mediamtx_servers ms ON ph.server_id = ms.server_id
+                    WHERE ph.session_id = ?
+                """, (session_id,))
+                
+                session_row = cursor.fetchone()
+                if not session_row:
+                    return None
+                
+                session_info = dict(session_row)
+                
+                # Parsear metadata para obtener ffmpeg_command
+                ffmpeg_command = None
+                if session_info.get('metadata'):
+                    try:
+                        metadata = json.loads(session_info['metadata'])
+                        ffmpeg_command = metadata.get('ffmpeg_command')
+                    except:
+                        pass
+                
+                # Obtener publication_id para consultar métricas
+                cursor.execute("""
+                    SELECT publication_id 
+                    FROM camera_publications 
+                    WHERE session_id = ?
+                    LIMIT 1
+                """, (session_id,))
+                
+                pub_row = cursor.fetchone()
+                publication_id = pub_row['publication_id'] if pub_row else None
+                
+                # Calcular resumen de métricas si tenemos publication_id
+                metrics_summary = self._empty_metrics_summary()
+                if publication_id:
+                    cursor.execute("""
+                        SELECT 
+                            AVG(fps) as avg_fps,
+                            MIN(fps) as min_fps,
+                            MAX(fps) as max_fps,
+                            AVG(bitrate_kbps) as avg_bitrate_kbps,
+                            SUM(frames) as total_frames,
+                            SUM(dropped_frames) as total_dropped_frames,
+                            AVG(quality_score) as avg_quality_score,
+                            MAX(viewer_count) as peak_viewers,
+                            AVG(viewer_count) as avg_viewers,
+                            SUM(size_kb) / 1024.0 as total_data_mb,
+                            COUNT(*) as metric_count
+                        FROM publication_metrics
+                        WHERE publication_id = ?
+                    """, (publication_id,))
+                    
+                    metrics_row = cursor.fetchone()
+                    if metrics_row and metrics_row['metric_count'] > 0:
+                        metrics_summary = {
+                            'avg_fps': round(metrics_row['avg_fps'] or 0, 2),
+                            'min_fps': round(metrics_row['min_fps'] or 0, 2),
+                            'max_fps': round(metrics_row['max_fps'] or 0, 2),
+                            'avg_bitrate_kbps': round(metrics_row['avg_bitrate_kbps'] or 0, 2),
+                            'total_frames': int(metrics_row['total_frames'] or 0),
+                            'total_dropped_frames': int(metrics_row['total_dropped_frames'] or 0),
+                            'avg_quality_score': round(metrics_row['avg_quality_score'] or 0, 2),
+                            'peak_viewers': int(metrics_row['peak_viewers'] or 0),
+                            'avg_viewers': round(metrics_row['avg_viewers'] or 0, 2),
+                            'total_data_mb': round(metrics_row['total_data_mb'] or 0, 2),
+                            'uptime_percent': 100.0  # TODO: Calcular basado en duración esperada
+                        }
+                
+                # Obtener timeline de errores (simulado por ahora)
+                error_timeline = []
+                if session_info.get('error_count', 0) > 0:
+                    # TODO: Implementar tabla de eventos/errores
+                    error_timeline.append({
+                        'timestamp': session_info.get('end_time', session_info['start_time']),
+                        'error_type': 'termination',
+                        'message': session_info.get('last_error', 'Unknown error'),
+                        'severity': 'error'
+                    })
+                
+                # Obtener estadísticas de viewers
+                viewer_summary = {
+                    'total_unique_viewers': 0,
+                    'total_viewer_time_seconds': session_info.get('total_viewer_time_seconds', 0),
+                    'peak_concurrent': session_info.get('max_viewers', 0),
+                    'protocol_breakdown': {}
+                }
+                
+                if publication_id:
+                    # Contar viewers únicos
+                    cursor.execute("""
+                        SELECT 
+                            COUNT(DISTINCT viewer_ip) as unique_viewers,
+                            protocol_used,
+                            COUNT(*) as count
+                        FROM publication_viewers
+                        WHERE publication_id = ?
+                        GROUP BY protocol_used
+                    """, (publication_id,))
+                    
+                    for row in cursor.fetchall():
+                        if row['unique_viewers'] > viewer_summary['total_unique_viewers']:
+                            viewer_summary['total_unique_viewers'] = row['unique_viewers']
+                        if row['protocol_used']:
+                            viewer_summary['protocol_breakdown'][row['protocol_used']] = row['count']
+                
+                # Construir respuesta completa
+                return {
+                    'session_info': session_info,
+                    'metrics_summary': metrics_summary,
+                    'error_timeline': error_timeline,
+                    'viewer_summary': viewer_summary,
+                    'ffmpeg_command': ffmpeg_command,
+                    'metadata': session_info.get('metadata')
+                }
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
+    async def move_publication_to_history(
+        self,
+        camera_id: str,
+        termination_reason: TerminationReason = TerminationReason.COMPLETED
+    ) -> bool:
+        """
+        Mueve una publicación activa al historial.
+        
+        Este método se llama cuando se detiene una publicación para:
+        1. Calcular métricas agregadas finales
+        2. Mover datos de camera_publications a publication_history
+        3. Limpiar registros temporales
+        
+        Args:
+            camera_id: ID de la cámara
+            termination_reason: Razón de terminación
+            
+        Returns:
+            True si se movió exitosamente, False si no había publicación activa
+        """
+        def _move():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Obtener publicación activa
+                cursor.execute("""
+                    SELECT * FROM camera_publications
+                    WHERE camera_id = ? AND is_active = 1
+                    LIMIT 1
+                """, (camera_id,))
+                
+                pub_row = cursor.fetchone()
+                if not pub_row:
+                    return False
+                
+                publication_id = pub_row['publication_id']
+                
+                # Calcular métricas agregadas
+                cursor.execute("""
+                    SELECT 
+                        COUNT(*) as metric_count,
+                        AVG(fps) as avg_fps,
+                        AVG(bitrate_kbps) as avg_bitrate,
+                        SUM(frames) as total_frames,
+                        SUM(size_kb) / 1024.0 as total_data_mb,
+                        MAX(viewer_count) as max_viewers
+                    FROM publication_metrics
+                    WHERE publication_id = ?
+                """, (publication_id,))
+                
+                metrics = cursor.fetchone()
+                
+                # Calcular duración
+                end_time = datetime.utcnow()
+                start_time = pub_row['start_time']
+                if isinstance(start_time, str):
+                    start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                duration_seconds = int((end_time - start_time).total_seconds())
+                
+                # Preparar metadata
+                metadata = {
+                    'process_pid': pub_row.get('process_pid'),
+                    'ffmpeg_command': pub_row.get('ffmpeg_command'),
+                    'final_error_count': pub_row.get('error_count', 0)
+                }
+                
+                # Insertar en historial
+                cursor.execute("""
+                    INSERT INTO publication_history (
+                        camera_id, server_id, session_id, publish_path,
+                        start_time, end_time, duration_seconds,
+                        total_frames, average_fps, average_bitrate_kbps,
+                        total_data_mb, max_viewers, error_count,
+                        termination_reason, last_error, metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    pub_row['camera_id'],
+                    pub_row['server_id'],
+                    pub_row['session_id'],
+                    pub_row['publish_path'],
+                    pub_row['start_time'],
+                    end_time,
+                    duration_seconds,
+                    int(metrics['total_frames'] or 0) if metrics else 0,
+                    round(metrics['avg_fps'] or 0, 2) if metrics else 0,
+                    round(metrics['avg_bitrate'] or 0, 2) if metrics else 0,
+                    round(metrics['total_data_mb'] or 0, 2) if metrics else 0,
+                    int(metrics['max_viewers'] or 0) if metrics else 0,
+                    pub_row.get('error_count', 0),
+                    termination_reason.value,
+                    pub_row.get('last_error'),
+                    json.dumps(metadata)
+                ))
+                
+                # Marcar publicación como inactiva
+                cursor.execute("""
+                    UPDATE camera_publications
+                    SET is_active = 0, stop_time = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE publication_id = ?
+                """, (end_time, publication_id))
+                
+                conn.commit()
+                
+                self.logger.info(
+                    f"Publicación {pub_row['session_id']} movida a historial. "
+                    f"Duración: {duration_seconds}s, Frames: {metrics['total_frames'] if metrics else 0}"
+                )
+                
+                return True
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _move)
     
     # === Métodos de Viewers ===
     
