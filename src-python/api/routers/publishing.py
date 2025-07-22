@@ -463,6 +463,9 @@ async def get_system_health() -> SystemHealthResponse:
         # TODO: Implementar consulta real
         total_viewers = total_publications * 3  # Mock: 3 viewers por publicación
         
+        # Filtrar alertas descartadas antes de enviar
+        active_alerts_filtered = [a for a in active_alerts if a.id not in _dismissed_alerts]
+        
         response = SystemHealthResponse(
             overall_status=overall_status,
             check_timestamp=datetime.utcnow(),
@@ -471,7 +474,7 @@ async def get_system_health() -> SystemHealthResponse:
             active_publications=total_publications,
             total_viewers=total_viewers,
             servers=servers,
-            active_alerts=active_alerts,
+            active_alerts=active_alerts_filtered,
             recommendations=recommendations
         )
         
@@ -750,6 +753,9 @@ async def get_active_alerts(
         if not include_acknowledged:
             alerts = [a for a in alerts if not a.acknowledged]
         
+        # Filtrar alertas descartadas
+        alerts = [a for a in alerts if a.id not in _dismissed_alerts]
+        
         # Contar por severidad y categoría
         by_severity = {}
         by_category = {}
@@ -777,5 +783,63 @@ async def get_active_alerts(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error obteniendo alertas"
+        )
+
+
+# Almacenamiento en memoria de alertas descartadas (temporal)
+# TODO: Implementar persistencia en BD cuando se cree tabla de alertas
+_dismissed_alerts: set = set()
+
+
+@router.post(
+    "/alerts/{alert_id}/dismiss",
+    summary="Descartar alerta",
+    description="""
+    Descarta una alerta específica para que no aparezca en la lista.
+    
+    NOTA: Actualmente las alertas se almacenan solo en memoria.
+    Las alertas descartadas se perderán al reiniciar el servidor.
+    
+    TODO: Implementar persistencia cuando se agregue tabla de alertas.
+    """,
+    response_model=Dict[str, Any]
+)
+async def dismiss_alert(alert_id: str) -> Dict[str, Any]:
+    """
+    Descarta una alerta por su ID.
+    
+    Args:
+        alert_id: ID único de la alerta a descartar
+        
+    Returns:
+        Dict con información de la operación
+        
+    Note:
+        - Solo se pueden descartar alertas con dismissible=True
+        - Las alertas críticas generalmente no son descartables
+        - El descarte es temporal (se pierde al reiniciar)
+    """
+    logger.info(f"Solicitado descarte de alerta: {alert_id}")
+    
+    try:
+        # Agregar a conjunto de alertas descartadas
+        _dismissed_alerts.add(alert_id)
+        
+        logger.info(f"Alerta {alert_id} descartada exitosamente. "
+                   f"Total descartadas: {len(_dismissed_alerts)}")
+        
+        return {
+            "success": True,
+            "message": f"Alerta {alert_id} descartada exitosamente",
+            "alert_id": alert_id,
+            "dismissed_at": datetime.utcnow().isoformat(),
+            "note": "El descarte es temporal y se perderá al reiniciar el servidor"
+        }
+        
+    except Exception as e:
+        logger.exception(f"Error descartando alerta {alert_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error descartando alerta: {str(e)}"
         )
 
