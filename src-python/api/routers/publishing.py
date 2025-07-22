@@ -372,9 +372,10 @@ async def get_system_health() -> SystemHealthResponse:
     
     try:
         from api.schemas.responses.mediamtx_responses import (
-            SystemHealthResponse, ServerHealthStatus
+            SystemHealthResponse, ServerHealthStatus, PublishingAlertResponse
         )
         from services.database.mediamtx_db_service import get_mediamtx_db_service
+        from datetime import timedelta
         
         db_service = get_mediamtx_db_service()
         await db_service.initialize()
@@ -407,19 +408,39 @@ async def get_system_health() -> SystemHealthResponse:
                 
                 # Agregar alertas si hay problemas
                 if server_health['health_status'] == 'unhealthy':
-                    active_alerts.append({
-                        'severity': 'error',
-                        'title': f"Servidor {server_health['server_name']} no responde",
-                        'message': server_health.get('last_error', 'Sin conexión'),
-                        'server_id': server_id
-                    })
+                    active_alerts.append(PublishingAlertResponse(
+                        id=f"srv_alert_{server_id}_unhealthy",
+                        severity="error",
+                        alert_type="connectivity",
+                        title=f"Servidor {server_health['server_name']} no responde",
+                        message=server_health.get('last_error', 'Sin conexión con el servidor'),
+                        affected_resources=[f"mediamtx_server_{server_id}"],
+                        created_at=datetime.utcnow(),
+                        acknowledged=False,
+                        acknowledged_by=None,
+                        acknowledged_at=None,
+                        auto_resolve=True,
+                        dismissible=False,  # Errores críticos no son descartables
+                        resolved=False,
+                        resolved_at=None
+                    ))
                 elif server_health['error_count'] > 5:
-                    active_alerts.append({
-                        'severity': 'warning',
-                        'title': f"Errores frecuentes en {server_health['server_name']}",
-                        'message': f"{server_health['error_count']} errores en la última hora",
-                        'server_id': server_id
-                    })
+                    active_alerts.append(PublishingAlertResponse(
+                        id=f"srv_alert_{server_id}_errors",
+                        severity="warning",
+                        alert_type="performance",
+                        title=f"Errores frecuentes en {server_health['server_name']}",
+                        message=f"{server_health['error_count']} errores en la última hora",
+                        affected_resources=[f"mediamtx_server_{server_id}"],
+                        created_at=datetime.utcnow() - timedelta(minutes=30),
+                        acknowledged=False,
+                        acknowledged_by=None,
+                        acknowledged_at=None,
+                        auto_resolve=True,
+                        dismissible=True,  # Warnings pueden ser descartados
+                        resolved=False,
+                        resolved_at=None
+                    ))
         
         # Determinar estado general
         overall_status = 'healthy'
@@ -678,7 +699,7 @@ async def get_active_alerts(
     
     try:
         from api.schemas.responses.mediamtx_responses import (
-            AlertsListResponse, PublishingAlert
+            AlertsListResponse, PublishingAlertResponse
         )
         from datetime import datetime, timedelta
         
@@ -689,10 +710,10 @@ async def get_active_alerts(
         
         # Alerta ejemplo 1: Error de publicación
         if not severity or severity in ['error', 'critical']:
-            alerts.append(PublishingAlert(
-                alert_id="alert-001",
+            alerts.append(PublishingAlertResponse(
+                id="alert-001",
                 severity="error",
-                category="connectivity",
+                alert_type="connectivity",
                 title="Fallo de conexión con servidor MediaMTX",
                 message="El servidor 'MediaMTX-Prod' no responde desde hace 15 minutos",
                 affected_resources=["server-1", "cam-001", "cam-002"],
@@ -701,16 +722,17 @@ async def get_active_alerts(
                 acknowledged_by=None,
                 acknowledged_at=None,
                 auto_resolve=True,
+                dismissible=True,
                 resolved=False,
                 resolved_at=None
             ))
         
         # Alerta ejemplo 2: Alto uso de recursos
         if not severity or severity == 'warning':
-            alerts.append(PublishingAlert(
-                alert_id="alert-002",
+            alerts.append(PublishingAlertResponse(
+                id="alert-002",
                 severity="warning",
-                category="performance",
+                alert_type="performance",
                 title="Alto uso de CPU en publicaciones",
                 message="El uso de CPU promedio supera el 80% en las últimas 2 horas",
                 affected_resources=["system"],
@@ -719,6 +741,7 @@ async def get_active_alerts(
                 acknowledged_by="admin",
                 acknowledged_at=datetime.utcnow() - timedelta(hours=1),
                 auto_resolve=False,
+                dismissible=True,
                 resolved=False,
                 resolved_at=None
             ))
@@ -733,7 +756,7 @@ async def get_active_alerts(
         
         for alert in alerts:
             by_severity[alert.severity] = by_severity.get(alert.severity, 0) + 1
-            by_category[alert.category] = by_category.get(alert.category, 0) + 1
+            by_category[alert.alert_type] = by_category.get(alert.alert_type, 0) + 1
         
         response = AlertsListResponse(
             total=len(alerts),

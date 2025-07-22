@@ -5,7 +5,7 @@ Estos modelos definen la estructura de las respuestas
 que devuelve la API para operaciones con MediaMTX.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
@@ -392,29 +392,6 @@ class ServerHealthStatus(BaseModel):
         from_attributes = True
 
 
-class SystemHealthResponse(BaseModel):
-    """Respuesta de salud global del sistema de publicación."""
-    
-    overall_status: str = Field(..., description="Estado general: healthy, degraded, critical")
-    check_timestamp: datetime = Field(..., description="Momento del chequeo")
-    
-    # Resumen
-    total_servers: int = Field(..., description="Total de servidores")
-    healthy_servers: int = Field(..., description="Servidores saludables")
-    active_publications: int = Field(..., description="Publicaciones activas")
-    total_viewers: int = Field(..., description="Viewers totales")
-    
-    # Detalles por servidor
-    servers: List[ServerHealthStatus] = Field(..., description="Estado de cada servidor")
-    
-    # Alertas
-    active_alerts: List[Dict[str, Any]] = Field(..., description="Alertas activas")
-    recommendations: List[str] = Field(..., description="Recomendaciones")
-    
-    class Config:
-        from_attributes = True
-
-
 class PublishingAlertResponse(BaseModel):
     """
     Respuesta de alerta del sistema de publicación.
@@ -460,6 +437,117 @@ class PublishingAlertResponse(BaseModel):
                 "resolved_at": None
             }
         }
+
+
+class SystemHealthResponse(BaseModel):
+    """
+    Respuesta de salud global del sistema de publicación.
+    
+    Estados del sistema:
+    - healthy: Todo funcionando correctamente
+    - degraded: Funcionando con problemas menores
+    - critical: Problemas graves que requieren atención inmediata
+    """
+    
+    overall_status: Literal["healthy", "degraded", "critical"] = Field(
+        ..., 
+        description="Estado general del sistema de publicación"
+    )
+    check_timestamp: datetime = Field(..., description="Momento del chequeo")
+    
+    # Resumen
+    total_servers: int = Field(..., description="Total de servidores MediaMTX")
+    healthy_servers: int = Field(..., description="Servidores funcionando correctamente")
+    active_publications: int = Field(..., description="Publicaciones activas en este momento")
+    total_viewers: int = Field(..., description="Viewers totales conectados")
+    
+    # Detalles por servidor
+    servers: List[ServerHealthStatus] = Field(
+        ..., 
+        description="Estado detallado de cada servidor MediaMTX"
+    )
+    
+    # Alertas - Usando tipo específico
+    active_alerts: List[PublishingAlertResponse] = Field(
+        default_factory=list,
+        description="Alertas activas del sistema de publicación"
+    )
+    recommendations: List[str] = Field(
+        default_factory=list,
+        description="Recomendaciones de optimización basadas en el estado actual"
+    )
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "overall_status": "degraded",
+                "check_timestamp": "2024-01-15T10:30:00Z",
+                "total_servers": 2,
+                "healthy_servers": 1,
+                "active_publications": 5,
+                "total_viewers": 23,
+                "servers": [
+                    {
+                        "server_id": 1,
+                        "server_name": "MediaMTX Principal",
+                        "health_status": "healthy",
+                        "last_check_time": "2024-01-15T10:28:00Z",
+                        "rtsp_server_ok": True,
+                        "api_server_ok": True,
+                        "paths_ok": True,
+                        "active_connections": 5,
+                        "cpu_usage_percent": 45.2,
+                        "memory_usage_mb": 512.5,
+                        "uptime_seconds": 86400,
+                        "error_count": 0,
+                        "last_error": None,
+                        "warnings": []
+                    },
+                    {
+                        "server_id": 2,
+                        "server_name": "MediaMTX Backup",
+                        "health_status": "unhealthy",
+                        "last_check_time": "2024-01-15T10:28:00Z",
+                        "rtsp_server_ok": False,
+                        "api_server_ok": True,
+                        "paths_ok": False,
+                        "active_connections": 0,
+                        "cpu_usage_percent": 0,
+                        "memory_usage_mb": 0,
+                        "uptime_seconds": 0,
+                        "error_count": 5,
+                        "last_error": "Connection refused",
+                        "warnings": ["RTSP server not responding"]
+                    }
+                ],
+                "active_alerts": [
+                    {
+                        "id": "alert_123456",
+                        "severity": "warning",
+                        "alert_type": "connectivity",
+                        "title": "Servidor MediaMTX Backup sin conexión",
+                        "message": "El servidor MediaMTX Backup no responde a las verificaciones de salud",
+                        "affected_resources": ["mediamtx_server_2"],
+                        "created_at": "2024-01-15T10:25:00Z",
+                        "acknowledged": False,
+                        "acknowledged_by": None,
+                        "acknowledged_at": None,
+                        "auto_resolve": True,
+                        "dismissible": True,
+                        "resolved": False,
+                        "resolved_at": None
+                    }
+                ],
+                "recommendations": [
+                    "Revisar conectividad del servidor MediaMTX Backup",
+                    "Considerar reiniciar el servicio RTSP en el servidor 2"
+                ]
+            }
+        }
+
+
+# Eliminada definición duplicada - movida antes de SystemHealthResponse
 
 
 class AlertsListResponse(BaseModel):
