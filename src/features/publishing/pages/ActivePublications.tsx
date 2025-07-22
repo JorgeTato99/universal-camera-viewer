@@ -235,8 +235,9 @@ const ActivePublications = memo(() => {
                     const publication = getPublicationByCameraId(camera.camera_id);
                     const isTransitioning = isPublishing.get(camera.camera_id) || false;
                     const isActive = publication && (
-                      publication.status === PublishingStatus.RUNNING ||
-                      publication.status === PublishingStatus.STARTING
+                      publication.status === PublishingStatus.PUBLISHING ||
+                      publication.status === PublishingStatus.STARTING ||
+                      publication.status === PublishingStatus.RECONNECTING
                     );
 
                     return (

@@ -20,6 +20,81 @@ from api.schemas.requests.mediamtx_requests import (
 )
 
 
+# === Responses de Configuración ===
+
+class MediaMTXServerResponse(BaseModel):
+    """
+    Respuesta de configuración de servidor MediaMTX.
+    
+    Sigue las mejores prácticas REST:
+    - Usa 'id' como identificador principal
+    - Usa 'name' en lugar de prefijos redundantes
+    - Nombres descriptivos y consistentes
+    """
+    id: int = Field(..., description="ID único del servidor")
+    name: str = Field(..., description="Nombre descriptivo del servidor")
+    server_url: str = Field(..., description="URL base del servidor MediaMTX")
+    rtsp_port: int = Field(554, description="Puerto RTSP")
+    api_url: Optional[str] = Field(None, description="URL de la API MediaMTX")
+    api_port: int = Field(9997, description="Puerto de la API")
+    api_enabled: bool = Field(True, description="Si la API está habilitada")
+    username: Optional[str] = Field(None, description="Usuario para autenticación")
+    # password se omite en responses por seguridad
+    auth_required: bool = Field(False, description="Si requiere autenticación")
+    use_tcp: bool = Field(True, description="Forzar transporte TCP")
+    is_active: bool = Field(False, description="Si está activa")
+    is_default: bool = Field(False, description="Si es la configuración por defecto")
+    max_reconnect_attempts: int = Field(10, description="Máximo de intentos de reconexión")
+    reconnect_delay_seconds: float = Field(5.0, description="Segundos entre reconexiones")
+    publish_path_template: str = Field(
+        "cam_{camera_id}",
+        description="Template para generar paths de publicación"
+    )
+    health_status: Optional[str] = Field(None, description="Estado de salud actual")
+    last_health_check: Optional[datetime] = Field(None, description="Última verificación de salud")
+    created_at: datetime = Field(..., description="Fecha de creación")
+    updated_at: datetime = Field(..., description="Última actualización")
+    created_by: str = Field("system", description="Usuario que creó la configuración")
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "MediaMTX Principal",
+                "server_url": "rtsp://192.168.1.100:8554",
+                "rtsp_port": 8554,
+                "api_url": "http://192.168.1.100:9997",
+                "api_port": 9997,
+                "api_enabled": True,
+                "username": "admin",
+                "auth_required": True,
+                "use_tcp": True,
+                "is_active": True,
+                "is_default": True,
+                "max_reconnect_attempts": 10,
+                "reconnect_delay_seconds": 5.0,
+                "publish_path_template": "cam_{camera_id}",
+                "health_status": "healthy",
+                "last_health_check": "2024-01-15T10:30:00Z",
+                "created_at": "2024-01-01T00:00:00Z",
+                "updated_at": "2024-01-15T10:30:00Z",
+                "created_by": "admin"
+            }
+        }
+
+
+class MediaMTXServerListResponse(BaseModel):
+    """Lista paginada de servidores MediaMTX."""
+    total: int = Field(..., description="Total de servidores")
+    items: List[MediaMTXServerResponse] = Field(..., description="Servidores en esta página")
+    page: int = Field(1, description="Página actual")
+    page_size: int = Field(50, description="Tamaño de página")
+    
+    class Config:
+        from_attributes = True
+
+
 # === Responses de Métricas ===
 
 class MetricPoint(BaseModel):
@@ -36,7 +111,7 @@ class MetricPoint(BaseModel):
     memory_usage_mb: Optional[float] = Field(None, description="Uso de memoria MB")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MetricsSummary(BaseModel):
@@ -66,7 +141,7 @@ class PublicationMetricsResponse(BaseModel):
     viewer_stats: Optional[Dict[str, Any]] = Field(None, description="Estadísticas de viewers")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MetricsExportResponse(BaseModel):
@@ -93,7 +168,7 @@ class GlobalMetricsSummaryResponse(BaseModel):
     alerts_count: int = Field(..., description="Número de alertas activas")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # === Responses de Historial ===
@@ -121,7 +196,7 @@ class PublicationHistoryItem(BaseModel):
     last_error: Optional[str] = Field(None, description="Último error registrado")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PublicationHistoryResponse(BaseModel):
@@ -134,7 +209,7 @@ class PublicationHistoryResponse(BaseModel):
     filters_applied: Dict[str, Any] = Field(..., description="Filtros aplicados")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PublicationSessionDetailResponse(BaseModel):
@@ -148,7 +223,7 @@ class PublicationSessionDetailResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata adicional")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class HistoryCleanupResponse(BaseModel):
@@ -180,7 +255,7 @@ class ActiveViewer(BaseModel):
     buffer_events: int = Field(..., description="Eventos de buffer")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ViewersListResponse(BaseModel):
@@ -194,7 +269,7 @@ class ViewersListResponse(BaseModel):
     protocol_breakdown: Dict[str, int] = Field(..., description="Viewers por protocolo")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ViewerAnalyticsResponse(BaseModel):
@@ -220,7 +295,7 @@ class ViewerAnalyticsResponse(BaseModel):
     buffer_event_rate: float = Field(..., description="Tasa de eventos de buffer")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # === Responses de Paths ===
@@ -252,7 +327,7 @@ class MediaMTXPath(BaseModel):
     last_used: Optional[datetime] = Field(None, description="Último uso")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PathsListResponse(BaseModel):
@@ -264,7 +339,7 @@ class PathsListResponse(BaseModel):
     server_summary: Dict[int, int] = Field(..., description="Paths por servidor")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PathTestResponse(BaseModel):
@@ -284,7 +359,7 @@ class PathTestResponse(BaseModel):
     warnings: List[str] = Field(..., description="Advertencias encontradas")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # === Responses de Health/Monitoreo ===
@@ -314,7 +389,7 @@ class ServerHealthStatus(BaseModel):
     warnings: List[str] = Field(..., description="Advertencias actuales")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class SystemHealthResponse(BaseModel):
@@ -337,15 +412,22 @@ class SystemHealthResponse(BaseModel):
     recommendations: List[str] = Field(..., description="Recomendaciones")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
-class PublishingAlert(BaseModel):
-    """Alerta del sistema de publicación."""
+class PublishingAlertResponse(BaseModel):
+    """
+    Respuesta de alerta del sistema de publicación.
     
-    alert_id: str = Field(..., description="ID único de la alerta")
+    Sigue las mejores prácticas REST:
+    - Usa 'id' como identificador principal
+    - Usa 'alert_type' en lugar de 'category'
+    - Separa 'auto_resolve' (comportamiento del sistema) de 'user_dismissible' (permisos del usuario)
+    - Usa 'dismissible' para indicar si el usuario puede descartar la alerta
+    """
+    id: str = Field(..., description="ID único de la alerta")
     severity: str = Field(..., description="Severidad: info, warning, error, critical")
-    category: str = Field(..., description="Categoría: performance, connectivity, resource, security")
+    alert_type: str = Field(..., description="Tipo de alerta: performance, connectivity, resource, security")
     title: str = Field(..., description="Título de la alerta")
     message: str = Field(..., description="Mensaje detallado")
     affected_resources: List[str] = Field(..., description="Recursos afectados")
@@ -353,12 +435,31 @@ class PublishingAlert(BaseModel):
     acknowledged: bool = Field(..., description="Si fue reconocida")
     acknowledged_by: Optional[str] = Field(None, description="Usuario que reconoció")
     acknowledged_at: Optional[datetime] = Field(None, description="Fecha de reconocimiento")
-    auto_resolve: bool = Field(..., description="Si se resuelve automáticamente")
+    auto_resolve: bool = Field(..., description="Si se resuelve automáticamente por el sistema")
+    dismissible: bool = Field(..., description="Si el usuario puede descartar manualmente la alerta")
     resolved: bool = Field(..., description="Si está resuelta")
     resolved_at: Optional[datetime] = Field(None, description="Fecha de resolución")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "id": "alert_123456",
+                "severity": "warning",
+                "alert_type": "performance",
+                "title": "Alto uso de CPU en publicación",
+                "message": "La publicación de camera_001 está usando más del 80% de CPU",
+                "affected_resources": ["camera_001", "mediamtx_server_1"],
+                "created_at": "2024-01-15T10:30:00Z",
+                "acknowledged": False,
+                "acknowledged_by": None,
+                "acknowledged_at": None,
+                "auto_resolve": True,
+                "dismissible": True,
+                "resolved": False,
+                "resolved_at": None
+            }
+        }
 
 
 class AlertsListResponse(BaseModel):
@@ -367,9 +468,9 @@ class AlertsListResponse(BaseModel):
     total: int = Field(..., description="Total de alertas")
     active_count: int = Field(..., description="Alertas activas")
     critical_count: int = Field(..., description="Alertas críticas")
-    items: List[PublishingAlert] = Field(..., description="Lista de alertas")
+    items: List[PublishingAlertResponse] = Field(..., description="Lista de alertas")
     by_severity: Dict[str, int] = Field(..., description="Conteo por severidad")
-    by_category: Dict[str, int] = Field(..., description="Conteo por categoría")
+    by_alert_type: Dict[str, int] = Field(..., description="Conteo por tipo de alerta")
     
     class Config:
-        orm_mode = True
+        from_attributes = True

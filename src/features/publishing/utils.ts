@@ -164,7 +164,9 @@ export function generatePublishPath(template: string, cameraId: string): string 
  * Convierte estado a booleano para indicar si está activo
  */
 export function isPublishingActive(status: PublishingStatus): boolean {
-  return status === PublishingStatus.RUNNING || status === PublishingStatus.STARTING;
+  return status === PublishingStatus.PUBLISHING || 
+         status === PublishingStatus.STARTING ||
+         status === PublishingStatus.RECONNECTING;  // Estado transitorio frontend
 }
 
 /**

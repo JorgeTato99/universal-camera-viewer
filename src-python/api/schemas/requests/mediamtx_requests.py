@@ -102,7 +102,7 @@ class ExportMetricsRequest(BaseModel):
     
     format: str = Field(
         "csv",
-        regex="^(csv|json|excel)$",
+        pattern="^(csv|json|excel)$",
         description="Formato de exportación"
     )
     time_range: MetricTimeRange = Field(
@@ -138,7 +138,7 @@ class GetHistoryRequest(BaseModel):
     page_size: int = Field(50, ge=1, le=200, description="Tamaño de página")
     order_by: str = Field(
         "start_time",
-        regex="^(start_time|end_time|duration_seconds|total_frames|error_count)$",
+        pattern="^(start_time|end_time|duration_seconds|total_frames|error_count)$",
         description="Campo para ordenar"
     )
     order_desc: bool = Field(True, description="Orden descendente")
@@ -185,7 +185,7 @@ class ViewerAnalyticsRequest(BaseModel):
     )
     group_by: str = Field(
         "hour",
-        regex="^(hour|day|week|protocol|camera)$",
+        pattern="^(hour|day|week|protocol|camera)$",
         description="Agrupar resultados por"
     )
     include_geographic: bool = Field(
@@ -204,7 +204,7 @@ class CreatePathRequest(BaseModel):
         ...,
         min_length=1,
         max_length=100,
-        regex="^[a-zA-Z0-9_-]+$",
+        pattern="^[a-zA-Z0-9_-]+$",
         description="Nombre del path (sin espacios)"
     )
     source_type: PathSourceType = Field(..., description="Tipo de fuente")
@@ -215,7 +215,7 @@ class CreatePathRequest(BaseModel):
     record_path: Optional[str] = Field(None, description="Ruta de grabación")
     record_format: Optional[str] = Field(
         "fmp4",
-        regex="^(fmp4|mpegts)$",
+        pattern="^(fmp4|mpegts)$",
         description="Formato de grabación"
     )
     record_segment_duration: int = Field(

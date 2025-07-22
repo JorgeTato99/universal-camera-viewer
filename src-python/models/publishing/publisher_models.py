@@ -13,14 +13,17 @@ import asyncio
 
 
 class PublishStatus(Enum):
-    """Estados posibles de un proceso de publicación."""
-    IDLE = "idle"
-    STARTING = "starting"
-    PUBLISHING = "publishing"
-    ERROR = "error"
-    STOPPING = "stopping"
-    STOPPED = "stopped"
-    RECONNECTING = "reconnecting"
+    """
+    Estados posibles de un proceso de publicación.
+    
+    NOTA: Los estados STOPPING y RECONNECTING se manejan solo en el frontend
+    para mejorar la UX sin agregar complejidad al backend.
+    """
+    IDLE = "idle"           # Sin actividad
+    STARTING = "starting"   # Iniciando proceso de publicación
+    PUBLISHING = "publishing"  # Publicando activamente
+    ERROR = "error"         # Error en la publicación
+    STOPPED = "stopped"     # Detenido (para historial)
 
 
 class PublishErrorType(Enum):
@@ -61,8 +64,7 @@ class PublisherProcess:
         """Verifica si el proceso está activo."""
         return self.status in [
             PublishStatus.STARTING,
-            PublishStatus.PUBLISHING,
-            PublishStatus.RECONNECTING
+            PublishStatus.PUBLISHING
         ]
     
     @property

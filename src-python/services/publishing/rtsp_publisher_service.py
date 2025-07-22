@@ -270,7 +270,8 @@ class RTSPPublisherService(BaseService):
         self.logger.info(f"Deteniendo publicación para cámara {camera_id}")
         
         process = self._processes[camera_id]
-        process.status = PublishStatus.STOPPING
+        # Nota: STOPPING se maneja solo en frontend, aquí pasamos directo a STOPPED
+        process.status = PublishStatus.STOPPED
         
         if process.process and process.process.returncode is None:
             try:
@@ -464,20 +465,30 @@ class RTSPPublisherService(BaseService):
             
         # Intentar reconectar si no se ha excedido el límite
         if process.error_count <= self._config.max_reconnects:
-            process.status = PublishStatus.RECONNECTING
+            # Nota: RECONNECTING se maneja solo en frontend
+            # Backend mantiene ERROR pero con metadata indicando reconexión
+            process.status = PublishStatus.ERROR
+            process.metrics['is_reconnecting'] = True
+            process.metrics['reconnect_attempt'] = process.error_count
+            process.metrics['max_reconnects'] = self._config.max_reconnects
+            
             self.logger.info(
                 f"Reintentando publicación para {camera_id} "
                 f"(intento {process.error_count}/{self._config.max_reconnects})"
             )
             
-            # Actualizar estado en BD
+            # Actualizar estado en BD con metadata de reconexión
             if self._db_service:
                 try:
                     await self._db_service.update_publishing_state(
                         camera_id=camera_id,
-                        status=PublishStatus.RECONNECTING,
-                        error=error_desc,
-                        increment_error=True
+                        status=PublishStatus.ERROR,
+                        error=f"{error_desc} (reconectando...)",
+                        increment_error=True,
+                        metrics={
+                            'is_reconnecting': True,
+                            'reconnect_attempt': process.error_count
+                        }
                     )
                 except Exception as e:
                     self.logger.error(f"Error actualizando estado en BD: {e}")
@@ -492,11 +503,13 @@ class RTSPPublisherService(BaseService):
             if not result.success:
                 process.status = PublishStatus.ERROR
                 process.last_error = result.error
+                process.metrics['is_reconnecting'] = False
                 self.logger.error(f"Fallo al reintentar publicación: {result.error}")
         else:
             # Máximo de reintentos alcanzado
             process.status = PublishStatus.ERROR
             process.last_error = f"Máximo de reintentos alcanzado ({self._config.max_reconnects})"
+            process.metrics['is_reconnecting'] = False
             self.logger.error(
                 f"Publicación fallida definitivamente para {camera_id}: "
                 f"{process.last_error}"

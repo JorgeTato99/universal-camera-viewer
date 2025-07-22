@@ -16,6 +16,7 @@ import {
 } from "../features/publishing/types";
 import { publishingService } from "../services/publishing";
 import { notificationStore } from "./notificationStore";
+import { mapBackendToFrontendPublishingStatus } from "../utils/statusLabels";
 
 interface PublishingState {
   // === ESTADO PRINCIPAL ===
@@ -199,11 +200,22 @@ export const usePublishingStore = create<PublishingState>()(
     },
 
     stopPublishing: async (cameraId) => {
-      // Marcar como deteniendo
-      set((state) => ({
-        isPublishing: new Map(state.isPublishing).set(cameraId, true),
-        error: null,
-      }));
+      // Estado STOPPING local para mejor UX
+      set((state) => {
+        const newPublications = new Map(state.activePublications);
+        const publication = newPublications.get(cameraId);
+        
+        if (publication) {
+          // Estado transitorio solo en frontend
+          publication.status = PublishingStatus.STOPPING;
+        }
+        
+        return {
+          activePublications: newPublications,
+          isPublishing: new Map(state.isPublishing).set(cameraId, true),
+          error: null,
+        };
+      });
 
       try {
         const response = await publishingService.stopPublishing({
@@ -266,7 +278,22 @@ export const usePublishingStore = create<PublishingState>()(
         if (response.success && response.data) {
           const newPublications = new Map<string, PublishStatus>();
           response.data.forEach((pub) => {
-            newPublications.set(pub.camera_id, pub);
+            // Mapear estado del backend al frontend
+            const context = {
+              isReconnecting: pub.metrics?.is_reconnecting || false,
+              isStopping: false // El backend no envía STOPPING
+            };
+            
+            const mappedStatus = mapBackendToFrontendPublishingStatus(
+              pub.status,
+              context
+            );
+            
+            // Actualizar el estado con el mapeado
+            newPublications.set(pub.camera_id, {
+              ...pub,
+              status: mappedStatus as PublishingStatus
+            });
           });
 
           set({
@@ -689,7 +716,7 @@ export const usePublishingStore = create<PublishingState>()(
       return {
         total: publications.length,
         running: publications.filter(
-          (p) => p.status === PublishingStatus.RUNNING
+          (p) => p.status === PublishingStatus.PUBLISHING
         ).length,
         error: publications.filter((p) => p.status === PublishingStatus.ERROR)
           .length,
@@ -710,7 +737,7 @@ export const usePublishingStore = create<PublishingState>()(
     isPublishingActive: (cameraId) => {
       const publication = get().activePublications.get(cameraId);
       return publication
-        ? publication.status === PublishingStatus.RUNNING ||
+        ? publication.status === PublishingStatus.PUBLISHING ||
             publication.status === PublishingStatus.STARTING
         : false;
     },

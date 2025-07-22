@@ -7,12 +7,13 @@ Permite crear, modificar y eliminar configuraciones de publicación.
 import logging
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List, Optional
+from datetime import datetime
 
 from api.models.publishing_models import MediaMTXConfigRequest
 from models.publishing import PublishConfiguration
 from services.database import get_publishing_db_service
 from utils.exceptions import ServiceError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger(__name__)
@@ -20,20 +21,29 @@ logger = logging.getLogger(__name__)
 
 # Modelos de respuesta
 class ConfigurationResponse(BaseModel):
-    """Respuesta con configuración MediaMTX."""
-    config_name: str
-    mediamtx_url: str
-    api_url: Optional[str] = None
-    api_enabled: bool = False
-    username: Optional[str] = None
-    auth_enabled: bool = False
-    use_tcp: bool = True
-    max_reconnects: int = 3
-    reconnect_delay: float = 5.0
-    publish_path_template: str = "camera_{camera_id}"
-    is_active: bool = False
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    """
+    Respuesta con configuración MediaMTX.
+    
+    Temporalmente mantiene compatibilidad con frontend.
+    TODO: Migrar a usar MediaMTXServerResponse de mediamtx_responses.py
+    """
+    id: int = Field(..., description="ID único de la configuración")
+    name: str = Field(..., description="Nombre de la configuración", alias="config_name")
+    mediamtx_url: str = Field(..., description="URL del servidor MediaMTX")
+    api_url: Optional[str] = Field(None, description="URL de la API MediaMTX")
+    api_enabled: bool = Field(False, description="Si la API está habilitada")
+    username: Optional[str] = Field(None, description="Usuario para autenticación")
+    auth_enabled: bool = Field(False, description="Si requiere autenticación")
+    use_tcp: bool = Field(True, description="Forzar transporte TCP")
+    max_reconnects: int = Field(3, description="Máximo de intentos de reconexión")
+    reconnect_delay: float = Field(5.0, description="Segundos entre reconexiones")
+    publish_path_template: str = Field("camera_{camera_id}", description="Template para paths")
+    is_active: bool = Field(False, description="Si está activa")
+    created_at: Optional[str] = Field(None, description="Fecha de creación")
+    updated_at: Optional[str] = Field(None, description="Última actualización")
+    
+    class Config:
+        populate_by_name = True  # Permite usar tanto 'name' como 'config_name'
 
 
 class ConfigurationListResponse(BaseModel):
@@ -73,7 +83,8 @@ async def list_configurations():
         items = []
         for config_data in all_configs:
             items.append(ConfigurationResponse(
-                config_name=config_data['config_name'],
+                id=config_data['config_id'],
+                name=config_data['config_name'],  # Se mapeará a 'config_name' por el alias
                 mediamtx_url=config_data['mediamtx_url'],
                 api_url=config_data['api_url'],
                 api_enabled=config_data['api_enabled'],
@@ -132,7 +143,8 @@ async def get_active_configuration():
             
         config = config_data['config']
         return ConfigurationResponse(
-            config_name=config_data['config_name'],
+            id=config_data['config_id'],
+            name=config_data['config_name'],
             mediamtx_url=config.mediamtx_url,
             api_url=config.get_api_url(),
             api_enabled=config.api_enabled,
@@ -219,7 +231,8 @@ async def create_configuration(
         logger.info(f"Configuración '{request.name}' creada con ID {config_id}")
         
         return ConfigurationResponse(
-            config_name=request.name,
+            id=config_id,
+            name=request.name,
             mediamtx_url=config.mediamtx_url,
             api_url=config.api_url,
             api_enabled=config.api_enabled,
@@ -229,7 +242,9 @@ async def create_configuration(
             max_reconnects=config.max_reconnects,
             reconnect_delay=config.reconnect_delay,
             publish_path_template=config.publish_path_template,
-            is_active=set_active
+            is_active=set_active,
+            created_at=datetime.utcnow().isoformat(),
+            updated_at=datetime.utcnow().isoformat()
         )
         
     except HTTPException:
@@ -270,9 +285,15 @@ async def update_configuration(
         db_service = get_publishing_db_service()
         await db_service.initialize()
         
-        # Verificar que existe
-        existing = await db_service.get_configuration_by_name(config_name)
-        if not existing:
+        # Obtener configuración completa con metadatos
+        all_configs = await db_service.get_all_configurations()
+        existing_config = None
+        for cfg in all_configs:
+            if cfg['config_name'] == config_name:
+                existing_config = cfg
+                break
+                
+        if not existing_config:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"No existe configuración con nombre '{config_name}'"
@@ -303,7 +324,8 @@ async def update_configuration(
         logger.info(f"Configuración '{config_name}' actualizada")
         
         return ConfigurationResponse(
-            config_name=config_name,
+            id=existing_config['config_id'],
+            name=config_name,
             mediamtx_url=config.mediamtx_url,
             api_url=config.api_url,
             api_enabled=config.api_enabled,
@@ -313,7 +335,9 @@ async def update_configuration(
             max_reconnects=config.max_reconnects,
             reconnect_delay=config.reconnect_delay,
             publish_path_template=config.publish_path_template,
-            is_active=False  # TODO: Obtener estado real
+            is_active=existing_config['is_active'],
+            created_at=existing_config['created_at'],
+            updated_at=datetime.utcnow().isoformat()
         )
         
     except HTTPException:
@@ -404,16 +428,25 @@ async def activate_configuration(config_name: str):
         db_service = get_publishing_db_service()
         await db_service.initialize()
         
-        # Obtener configuración
-        config = await db_service.get_configuration_by_name(config_name)
-        if not config:
+        # Obtener configuración completa con metadatos
+        all_configs = await db_service.get_all_configurations()
+        existing_config = None
+        for cfg in all_configs:
+            if cfg['config_name'] == config_name:
+                existing_config = cfg
+                break
+                
+        if not existing_config:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"No existe configuración con nombre '{config_name}'"
             )
             
-        # Reactivar con set_active=True
-        await db_service.save_configuration(
+        # Obtener la configuración actual
+        config = await db_service.get_configuration_by_name(config_name)
+        
+        # Reactivar con set_active=True y obtener el ID actualizado
+        config_id = await db_service.save_configuration(
             config,
             name=config_name,
             set_active=True,
@@ -423,7 +456,8 @@ async def activate_configuration(config_name: str):
         logger.info(f"Configuración '{config_name}' activada")
         
         return ConfigurationResponse(
-            config_name=config_name,
+            id=config_id,
+            name=config_name,
             mediamtx_url=config.mediamtx_url,
             api_url=config.api_url,
             api_enabled=config.api_enabled,
@@ -433,7 +467,9 @@ async def activate_configuration(config_name: str):
             max_reconnects=config.max_reconnects,
             reconnect_delay=config.reconnect_delay,
             publish_path_template=config.publish_path_template,
-            is_active=True
+            is_active=True,
+            created_at=existing_config['created_at'],
+            updated_at=datetime.utcnow().isoformat()
         )
         
     except HTTPException:

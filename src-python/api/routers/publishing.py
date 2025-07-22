@@ -19,7 +19,7 @@ from api.models.publishing_models import (
 )
 from api.schemas.requests.mediamtx_requests import HealthCheckRequest
 from api.schemas.responses.mediamtx_responses import (
-    SystemHealthResponse, ServerHealthStatus, AlertsListResponse, PublishingAlert
+    SystemHealthResponse, ServerHealthStatus, AlertsListResponse, PublishingAlertResponse
 )
 from presenters.publishing_presenter import get_publishing_presenter
 from models.publishing import PublishConfiguration, PublisherProcess, PublishErrorType

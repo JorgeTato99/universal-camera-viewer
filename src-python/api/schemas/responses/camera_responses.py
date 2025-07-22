@@ -23,7 +23,7 @@ class CameraBasicInfo(BaseModel):
     is_connected: bool = Field(..., description="Si está conectada")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class CameraConnectionInfo(BaseModel):
@@ -89,7 +89,7 @@ class CameraDetailResponse(BaseModel):
     snapshot_url: Optional[str] = Field(None, description="URL para snapshots")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         json_schema_extra = {
             "example": {
                 "basic_info": {

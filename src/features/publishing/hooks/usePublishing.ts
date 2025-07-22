@@ -36,8 +36,9 @@ export function usePublishing(cameraId?: string) {
     const currentPublication = getPublicationByCameraId(id);
     
     if (currentPublication && 
-        (currentPublication.status === PublishingStatus.RUNNING || 
-         currentPublication.status === PublishingStatus.STARTING)) {
+        (currentPublication.status === PublishingStatus.PUBLISHING || 
+         currentPublication.status === PublishingStatus.STARTING ||
+         currentPublication.status === PublishingStatus.RECONNECTING)) {
       await stopPublishing(id);
     } else {
       await startPublishing(id);

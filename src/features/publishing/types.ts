@@ -41,13 +41,22 @@ export interface PublishStatus {
 
 /**
  * Estados posibles de publicación
+ * 
+ * IMPORTANTE: Estados híbridos backend/frontend
+ * - Backend maneja: IDLE, STARTING, PUBLISHING, ERROR, STOPPED
+ * - Frontend agrega: STOPPING, RECONNECTING (estados transitorios locales)
+ * 
+ * Los estados STOPPING y RECONNECTING son manejados localmente en el frontend
+ * para proporcionar mejor feedback al usuario durante operaciones asíncronas.
  */
 export enum PublishingStatus {
-  IDLE = 'idle',
-  STARTING = 'starting',
-  RUNNING = 'running',
-  STOPPING = 'stopping',
-  ERROR = 'error'
+  IDLE = 'IDLE',
+  STARTING = 'STARTING', 
+  PUBLISHING = 'PUBLISHING',  // Antes era RUNNING
+  STOPPING = 'STOPPING',      // Solo frontend - transitorio
+  STOPPED = 'STOPPED',        // Nuevo - del backend
+  ERROR = 'ERROR',
+  RECONNECTING = 'RECONNECTING' // Solo frontend - transitorio
 }
 
 /**
@@ -248,24 +257,30 @@ export interface MetricsFilters {
 
 /**
  * Colores de estado para UI
+ * @deprecated Usar getPublishingStatusColor() desde utils/statusLabels
  */
 export const STATUS_COLORS = {
-  [PublishingStatus.IDLE]: '#9e9e9e',      // Gris
-  [PublishingStatus.STARTING]: '#ff9800',   // Naranja
-  [PublishingStatus.RUNNING]: '#4caf50',    // Verde
-  [PublishingStatus.STOPPING]: '#ff9800',   // Naranja
-  [PublishingStatus.ERROR]: '#f44336'       // Rojo
+  [PublishingStatus.IDLE]: '#9e9e9e',         // Gris
+  [PublishingStatus.STARTING]: '#ff9800',     // Naranja
+  [PublishingStatus.PUBLISHING]: '#4caf50',   // Verde (antes RUNNING)
+  [PublishingStatus.STOPPING]: '#ff9800',     // Naranja
+  [PublishingStatus.STOPPED]: '#757575',      // Gris oscuro
+  [PublishingStatus.ERROR]: '#f44336',        // Rojo
+  [PublishingStatus.RECONNECTING]: '#2196f3'  // Azul
 } as const;
 
 /**
  * Labels de estado para UI
+ * @deprecated Usar getPublishingStatusLabel() desde utils/statusLabels
  */
 export const STATUS_LABELS = {
   [PublishingStatus.IDLE]: 'Inactivo',
   [PublishingStatus.STARTING]: 'Iniciando',
-  [PublishingStatus.RUNNING]: 'Publicando',
+  [PublishingStatus.PUBLISHING]: 'Publicando',  // Antes RUNNING
   [PublishingStatus.STOPPING]: 'Deteniendo',
-  [PublishingStatus.ERROR]: 'Error'
+  [PublishingStatus.STOPPED]: 'Detenido',
+  [PublishingStatus.ERROR]: 'Error',
+  [PublishingStatus.RECONNECTING]: 'Reconectando'
 } as const;
 
 /**

@@ -48,7 +48,7 @@ CAMERA_PUBLICATIONS_TABLE = """
         server_id INTEGER NOT NULL,
         session_id TEXT NOT NULL UNIQUE,
         publish_path TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('idle', 'starting', 'publishing', 'stopping', 'stopped', 'error', 'reconnecting')),
+        status TEXT NOT NULL CHECK (status IN ('idle', 'starting', 'publishing', 'stopped', 'error')),
         process_pid INTEGER,
         ffmpeg_command TEXT,
         start_time TIMESTAMP,

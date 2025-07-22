@@ -10,7 +10,7 @@ from typing import Optional, List, Any
 from datetime import datetime, timedelta
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
-from api.validators.common_validators import ValidationError
+from utils.exceptions import ValidationError
 
 
 def validate_session_id(value: str) -> str:
