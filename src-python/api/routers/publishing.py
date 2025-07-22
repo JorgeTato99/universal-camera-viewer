@@ -19,7 +19,8 @@ from api.models.publishing_models import (
 )
 from api.schemas.requests.mediamtx_requests import HealthCheckRequest
 from api.schemas.responses.mediamtx_responses import (
-    SystemHealthResponse, ServerHealthStatus, AlertsListResponse, PublishingAlertResponse
+    SystemHealthResponse, ServerHealthStatus, AlertsListResponse, PublishingAlertResponse,
+    DismissAlertResponse
 )
 from presenters.publishing_presenter import get_publishing_presenter
 from models.publishing import PublishConfiguration, PublisherProcess, PublishErrorType
@@ -802,9 +803,9 @@ _dismissed_alerts: set = set()
     
     TODO: Implementar persistencia cuando se agregue tabla de alertas.
     """,
-    response_model=Dict[str, Any]
+    response_model=DismissAlertResponse
 )
-async def dismiss_alert(alert_id: str) -> Dict[str, Any]:
+async def dismiss_alert(alert_id: str) -> DismissAlertResponse:
     """
     Descarta una alerta por su ID.
     
@@ -828,13 +829,13 @@ async def dismiss_alert(alert_id: str) -> Dict[str, Any]:
         logger.info(f"Alerta {alert_id} descartada exitosamente. "
                    f"Total descartadas: {len(_dismissed_alerts)}")
         
-        return {
-            "success": True,
-            "message": f"Alerta {alert_id} descartada exitosamente",
-            "alert_id": alert_id,
-            "dismissed_at": datetime.utcnow().isoformat(),
-            "note": "El descarte es temporal y se perderá al reiniciar el servidor"
-        }
+        return DismissAlertResponse(
+            success=True,
+            message=f"Alerta {alert_id} descartada exitosamente",
+            alert_id=alert_id,
+            dismissed_at=datetime.utcnow(),
+            note="El descarte es temporal y se perderá al reiniciar el servidor"
+        )
         
     except Exception as e:
         logger.exception(f"Error descartando alerta {alert_id}")

@@ -11,6 +11,8 @@ from enum import Enum
 from typing import Optional, Dict, Any
 import asyncio
 
+from models.publishing.metrics_models import PublishMetrics
+
 
 class PublishStatus(Enum):
     """
@@ -57,7 +59,7 @@ class PublisherProcess:
     error_count: int = 0
     last_error: Optional[str] = None
     error_type: Optional[PublishErrorType] = None
-    metrics: Dict[str, Any] = field(default_factory=dict)
+    metrics: Optional[PublishMetrics] = None
     
     @property
     def is_active(self) -> bool:
@@ -74,10 +76,9 @@ class PublisherProcess:
             return 0.0
         return (datetime.utcnow() - self.start_time).total_seconds()
     
-    def update_metrics(self, **kwargs) -> None:
+    def update_metrics(self, metrics: PublishMetrics) -> None:
         """Actualiza métricas del proceso."""
-        self.metrics.update(kwargs)
-        self.metrics['updated_at'] = datetime.utcnow().isoformat()
+        self.metrics = metrics
 
 
 @dataclass

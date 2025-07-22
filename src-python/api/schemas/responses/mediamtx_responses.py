@@ -20,6 +20,67 @@ from api.schemas.requests.mediamtx_requests import (
 )
 
 
+# === Modelos auxiliares para evitar Dict[str, Any] ===
+
+class ViewerStats(BaseModel):
+    """Estadísticas detalladas de viewers."""
+    total_viewers: int = Field(..., description="Total de viewers únicos")
+    current_viewers: int = Field(..., description="Viewers actuales")
+    peak_viewers: int = Field(..., description="Pico máximo de viewers")
+    average_session_duration: float = Field(..., description="Duración promedio en minutos")
+    bounce_rate: float = Field(..., description="Tasa de rebote (% sesiones < 10s)")
+    
+    class Config:
+        from_attributes = True
+
+
+class ErrorEvent(BaseModel):
+    """Evento de error en el timeline."""
+    timestamp: datetime = Field(..., description="Momento del error")
+    error_type: str = Field(..., description="Tipo de error")
+    message: str = Field(..., description="Mensaje de error")
+    severity: str = Field(..., description="Severidad: low, medium, high")
+    affected_viewers: Optional[int] = Field(None, description="Viewers afectados")
+    
+    class Config:
+        from_attributes = True
+
+
+class ViewerSummary(BaseModel):
+    """Resumen de información de viewers."""
+    total_unique: int = Field(..., description="Viewers únicos totales")
+    total_sessions: int = Field(..., description="Total de sesiones")
+    total_viewing_minutes: float = Field(..., description="Minutos totales de visualización")
+    by_protocol: Dict[str, int] = Field(..., description="Distribución por protocolo")
+    by_location: Dict[str, int] = Field(..., description="Distribución por ubicación")
+    
+    class Config:
+        from_attributes = True
+
+
+class TopCamera(BaseModel):
+    """Información de cámara más vista."""
+    camera_id: str = Field(..., description="ID de la cámara")
+    camera_name: str = Field(..., description="Nombre de la cámara")
+    viewer_count: int = Field(..., description="Número de viewers")
+    total_minutes: float = Field(..., description="Minutos totales visualizados")
+    average_viewers: float = Field(..., description="Promedio de viewers")
+    
+    class Config:
+        from_attributes = True
+
+
+class ViewerTrend(BaseModel):
+    """Tendencia de viewers en un período."""
+    timestamp: datetime = Field(..., description="Momento del dato")
+    viewer_count: int = Field(..., description="Número de viewers")
+    trend_direction: str = Field(..., description="Dirección: up, down, stable")
+    change_percentage: float = Field(..., description="Cambio porcentual")
+    
+    class Config:
+        from_attributes = True
+
+
 # === Responses de Configuración ===
 
 class MediaMTXServerResponse(BaseModel):
@@ -180,7 +241,7 @@ class PublicationMetricsResponse(BaseModel):
     time_range: str = Field(..., description="Rango de tiempo consultado")
     data_points: List[MetricPoint] = Field(..., description="Puntos de métrica")
     summary: MetricsSummary = Field(..., description="Resumen estadístico")
-    viewer_stats: Optional[Dict[str, Any]] = Field(None, description="Estadísticas de viewers")
+    viewer_stats: Optional[ViewerStats] = Field(None, description="Estadísticas de viewers")
     
     class Config:
         from_attributes = True
@@ -251,7 +312,7 @@ class GlobalMetricsSummaryResponse(BaseModel):
     avg_quality_score: float = Field(..., description="Score de calidad promedio global")
     system_cpu_percent: float = Field(..., description="CPU del sistema %")
     system_memory_percent: float = Field(..., description="Memoria del sistema %")
-    top_cameras: List[Dict[str, Any]] = Field(..., description="Top cámaras por viewers")
+    top_cameras: List[TopCamera] = Field(..., description="Top cámaras por viewers")
     alerts_count: int = Field(..., description="Número de alertas activas")
     
     class Config:
@@ -293,7 +354,7 @@ class PublicationHistoryResponse(BaseModel):
     page: int = Field(..., description="Página actual")
     page_size: int = Field(..., description="Tamaño de página")
     items: List[PublicationHistoryItem] = Field(..., description="Items del historial")
-    filters_applied: Dict[str, Any] = Field(..., description="Filtros aplicados")
+    filters_applied: Dict[str, str] = Field(..., description="Filtros aplicados como clave-valor")
     
     class Config:
         from_attributes = True
@@ -304,10 +365,10 @@ class PublicationSessionDetailResponse(BaseModel):
     
     session_info: PublicationHistoryItem = Field(..., description="Información de la sesión")
     metrics_summary: MetricsSummary = Field(..., description="Resumen de métricas")
-    error_timeline: List[Dict[str, Any]] = Field(..., description="Timeline de errores")
-    viewer_summary: Dict[str, Any] = Field(..., description="Resumen de viewers")
+    error_timeline: List[ErrorEvent] = Field(..., description="Timeline de errores")
+    viewer_summary: ViewerSummary = Field(..., description="Resumen de viewers")
     ffmpeg_command: Optional[str] = Field(None, description="Comando FFmpeg usado")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata adicional")
+    metadata: Optional[Dict[str, str]] = Field(None, description="Metadata adicional como clave-valor")
     
     class Config:
         from_attributes = True
@@ -370,9 +431,9 @@ class ViewerAnalyticsResponse(BaseModel):
     peak_time: datetime = Field(..., description="Momento del pico")
     
     # Análisis por agrupación
-    viewer_trends: List[Dict[str, Any]] = Field(..., description="Tendencias por período")
+    viewer_trends: List[ViewerTrend] = Field(..., description="Tendencias por período")
     protocol_distribution: Dict[str, float] = Field(..., description="Distribución por protocolo %")
-    top_cameras: List[Dict[str, Any]] = Field(..., description="Cámaras más vistas")
+    top_cameras: List[TopCamera] = Field(..., description="Cámaras más vistas")
     
     # Análisis geográfico opcional
     geographic_distribution: Optional[Dict[str, int]] = Field(None, description="Viewers por país")
@@ -649,3 +710,25 @@ class AlertsListResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class DismissAlertResponse(BaseModel):
+    """Respuesta al descartar una alerta."""
+    
+    success: bool = Field(..., description="Si la operación fue exitosa")
+    message: str = Field(..., description="Mensaje de confirmación")
+    alert_id: str = Field(..., description="ID de la alerta descartada")
+    dismissed_at: datetime = Field(..., description="Momento del descarte")
+    note: Optional[str] = Field(None, description="Nota adicional")
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Alerta alert_123456 descartada exitosamente",
+                "alert_id": "alert_123456",
+                "dismissed_at": "2024-01-15T10:30:00Z",
+                "note": "El descarte es temporal y se perderá al reiniciar el servidor"
+            }
+        }

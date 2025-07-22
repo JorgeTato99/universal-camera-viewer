@@ -9,6 +9,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from models.publishing import PublishStatus, PublishErrorType
+from models.publishing.metrics_models import PublishMetrics
 
 
 class StartPublishRequest(BaseModel):
@@ -33,7 +34,7 @@ class PublishStatusResponse(BaseModel):
     uptime_seconds: float = 0.0
     error_count: int = 0
     last_error: Optional[str] = None
-    metrics: Dict[str, Any] = Field(default_factory=dict)
+    metrics: Optional[PublishMetrics] = Field(None, description="Métricas actuales de la publicación")
 
 
 class PublishListResponse(BaseModel):

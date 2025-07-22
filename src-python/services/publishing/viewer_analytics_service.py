@@ -392,18 +392,44 @@ class ViewerAnalyticsService(BaseService):
         # Tendencias
         trends = await self._calculate_viewer_trends(camera_id, start_time)
         
+        # Convertir distribución geográfica a lista
+        geo_items = []
+        if isinstance(geo_distribution, dict) and "states" in geo_distribution:
+            for state_code, state_data in geo_distribution["states"].items():
+                geo_items.append({
+                    "location": state_data["name"],
+                    "viewers": state_data["viewers"],
+                    "percentage": state_data["percentage"]
+                })
+        
+        # Convertir distribución de protocolo a lista
+        protocol_items = []
+        viewer_count = geo_distribution.get("total_viewers", 0)
+        for protocol, percentage in protocol_stats.items():
+            protocol_items.append({
+                "protocol": protocol,
+                "viewers": int(viewer_count * percentage / 100),
+                "percentage": percentage
+            })
+        
         return {
             "time_range": time_range,
             "camera_id": camera_id,
             "summary": {
                 "total_unique_viewers": geo_distribution["total_viewers"],
-                "avg_viewers": trends.get("average", 0),
-                "peak_viewers": trends.get("peak", 0),
+                "total_viewing_hours": geo_distribution["total_viewers"] * 0.5,  # Mock: 30 min promedio
+                "average_session_duration_minutes": 30.0,
+                "peak_concurrent_viewers": trends.get("peak", 0),
                 "peak_time": trends.get("peak_time", now.isoformat())
             },
-            "geographic_distribution": geo_distribution,
-            "protocol_distribution": protocol_stats,
-            "trends": trends,
+            "geographic_distribution": geo_items,
+            "protocol_distribution": protocol_items,
+            "trends": {
+                "growth_rate": trends.get("growth_rate", 0.0),
+                "peak_hours": trends.get("peak_hours", [14, 15, 20, 21]),
+                "most_popular_protocol": trends.get("most_popular", "RTSP"),
+                "average_quality_score": trends.get("quality_score", 85.0)
+            },
             "data_note": "IMPORTANTE: Datos geográficos son MOCK. MediaMTX actualmente no proporciona IPs de viewers."
         }
     

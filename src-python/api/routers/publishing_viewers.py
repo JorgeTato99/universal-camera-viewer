@@ -32,7 +32,7 @@ class ViewerInfo(BaseModel):
     start_time: str = Field(..., description="Hora de inicio ISO 8601")
     duration_seconds: int = Field(..., description="Duración de la sesión en segundos")
     ip_address: Optional[str] = Field(None, description="IP del viewer (cuando esté disponible)")
-    location: Optional[Dict[str, Any]] = Field(None, description="Ubicación geográfica")
+    location: Optional[Dict[str, str]] = Field(None, description="Ubicación geográfica como país, estado, ciudad")
 
 
 class CurrentViewersResponse(BaseModel):
@@ -44,6 +44,37 @@ class CurrentViewersResponse(BaseModel):
         default_factory=dict,
         description="Viewers por protocolo"
     )
+
+
+class AnalyticsSummary(BaseModel):
+    """Resumen de estadísticas para analytics."""
+    total_unique_viewers: int = Field(..., description="Viewers únicos totales")
+    total_viewing_hours: float = Field(..., description="Horas totales de visualización")
+    average_session_duration_minutes: float = Field(..., description="Duración promedio de sesión")
+    peak_concurrent_viewers: int = Field(..., description="Pico de viewers concurrentes")
+    peak_time: Optional[str] = Field(None, description="Momento del pico ISO 8601")
+
+
+class GeographicDistributionItem(BaseModel):
+    """Item de distribución geográfica."""
+    location: str = Field(..., description="Nombre de la ubicación")
+    viewers: int = Field(..., description="Número de viewers")
+    percentage: float = Field(..., description="Porcentaje del total")
+
+
+class ProtocolDistributionItem(BaseModel):
+    """Item de distribución por protocolo."""
+    protocol: str = Field(..., description="Nombre del protocolo")
+    viewers: int = Field(..., description="Número de viewers")
+    percentage: float = Field(..., description="Porcentaje del total")
+
+
+class AnalyticsTrends(BaseModel):
+    """Tendencias identificadas en analytics."""
+    growth_rate: float = Field(..., description="Tasa de crecimiento en porcentaje")
+    peak_hours: List[int] = Field(..., description="Horas pico del día (0-23)")
+    most_popular_protocol: str = Field(..., description="Protocolo más usado")
+    average_quality_score: float = Field(..., description="Score de calidad promedio")
 
 
 class ViewerHistoryPoint(BaseModel):
@@ -60,12 +91,19 @@ class ViewerAnalyticsResponse(BaseModel):
     """Response con analytics completos."""
     time_range: str = Field(..., description="Rango de tiempo analizado")
     camera_id: Optional[str] = Field(None, description="ID de cámara o null para todas")
-    summary: Dict[str, Any] = Field(..., description="Resumen de estadísticas")
-    geographic_distribution: Dict[str, Any] = Field(..., description="Distribución geográfica")
-    protocol_distribution: Dict[str, Any] = Field(..., description="Distribución por protocolo")
-    trends: Dict[str, Any] = Field(..., description="Tendencias identificadas")
+    summary: AnalyticsSummary = Field(..., description="Resumen de estadísticas")
+    geographic_distribution: List[GeographicDistributionItem] = Field(..., description="Distribución geográfica")
+    protocol_distribution: List[ProtocolDistributionItem] = Field(..., description="Distribución por protocolo")
+    trends: AnalyticsTrends = Field(..., description="Tendencias identificadas")
     data_note: str = Field(..., description="Nota sobre el origen de los datos")
 
+
+class TrackingResponse(BaseModel):
+    """Response para endpoints de tracking."""
+    success: bool = Field(..., description="Si la operación fue exitosa")
+    message: str = Field(..., description="Mensaje descriptivo")
+    tracking_id: Optional[str] = Field(None, description="ID de tracking si aplica")
+    
 
 class ProtocolStatistics(BaseModel):
     """Estadísticas por protocolo."""
@@ -235,12 +273,12 @@ async def get_protocol_statistics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/track", response_model=Dict[str, Any])
+@router.post("/track", response_model=TrackingResponse)
 async def track_viewer(
     camera_id: str = Query(..., description="ID de la cámara"),
     publish_path: str = Query(..., description="Path de publicación en MediaMTX"),
     current_user: dict = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> TrackingResponse:
     """
     Inicia el tracking de viewers para una cámara.
     
@@ -250,12 +288,11 @@ async def track_viewer(
         viewer_service = get_viewer_analytics_service()
         await viewer_service.start_tracking(camera_id, publish_path)
         
-        return {
-            "success": True,
-            "message": f"Tracking iniciado para {camera_id}",
-            "camera_id": camera_id,
-            "publish_path": publish_path
-        }
+        return TrackingResponse(
+            success=True,
+            message=f"Tracking iniciado para {camera_id}",
+            tracking_id=camera_id
+        )
         
     except Exception as e:
         logger.error(f"Error iniciando tracking: {e}")
