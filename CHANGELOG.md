@@ -12,6 +12,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 ### 🔒 Security - Implementaciones Críticas Completadas
 
 #### 📊 Rate Limiting (Fase 1.2) ✅
+
 - **Sistema completo de protección DoS** con SlowAPI
 - **Configuración externa** en `config/rate_limit_settings.yaml`
 - **Límites diferenciados**: Lectura (100/min), Escritura (10/min), Escaneo (1/min)
@@ -19,6 +20,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 - **100% cobertura**: Todos los endpoints protegidos
 
 #### 🔐 Encriptación v2 (Fase 1.3) ✅
+
 - **Versionado de claves** con formato `v{version}:{encrypted_base64}`
 - **Sistema de rotación** preparado para rotación periódica de claves
 - **Migración automática** desde v1 sin pérdida de datos
@@ -26,12 +28,14 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 - **103 test cases** cubriendo todos los escenarios
 
 #### 🪵 Sanitización de Logs (Fase 1.4) ✅
+
 - **Filtros inteligentes** para URLs, comandos, IPs y headers
 - **Contexto automático** con reglas específicas por módulo
 - **27 servicios migrados** usando `get_secure_logger()`
 - **Tests exhaustivos** para sanitizadores, filtros y servicio
 
 #### 📈 ELK Stack Integration ✅
+
 - **Formateadores JSON**: Estándar, ECS y streaming-específico
 - **Handlers flexibles**: Filebeat (producción) y Elasticsearch (desarrollo)
 - **Contexto enriquecido**: Correlation IDs, metadata de cámaras/streams
@@ -40,6 +44,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 ### 🐛 Fixed - Problema de Rutas de Archivos
 
 #### 🗂️ Creación Incorrecta de Carpeta `data`
+
 - **Problema**: Se creaba `D:\universal-camera-viewer\data\` en lugar de `D:\universal-camera-viewer\src-python\data\`
 - **Causa**: Múltiples servicios usaban rutas relativas o `Path(__file__).parent.parent.parent`
 - **Archivos corregidos** (11 archivos):
