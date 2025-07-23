@@ -21,9 +21,10 @@ __author__ = "AI Agent"
 __description__ = "Universal Multi-Brand Camera Viewer - MVP Architecture"
 
 # Imports principales para acceso rápido
-from .models import *
-from .services import *
-from .utils import *
+# TODO: Estos imports causan problemas con pytest, revisar estructura
+# from .models import *
+# from .services import *
+# from .utils import *
 
 __all__ = [
     "__version__",
