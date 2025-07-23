@@ -21,7 +21,22 @@ make check-all
 git checkout -b feature/nueva-funcionalidad
 ```
 
-### 2. **Desarrollo Local**
+### 2. **Setup Base de Datos**
+
+```bash
+# Recrear base de datos con datos de ejemplo (recomendado)
+python src-python/migrate_database.py --force --no-backup
+
+# Verificar que se creó correctamente
+python src-python/seed_database.py --verify-only
+```
+
+**Scripts de Base de Datos:**
+- `migrate_database.py`: Recrea la DB completa desde cero + seeds
+- `create_database.py`: Solo crea estructura de tablas (vacía)  
+- `seed_database.py`: Inserta/actualiza datos de ejemplo
+
+### 3. **Desarrollo Local**
 
 ```bash
 # Aplicación completa (Tauri + React + Python)

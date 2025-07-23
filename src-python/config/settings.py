@@ -55,8 +55,9 @@ class Settings:
         'generic': os.getenv("GENERIC_RTSP_PATH", "/stream1")
     }
     
-    # Configuración de base de datos (futuro)
+    # Configuración de base de datos
     DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
+    DATABASE_PATH: str = os.getenv("DATABASE_PATH", "data/camera_data.db")
     
     # Configuración de caché
     CACHE_TTL: int = int(os.getenv("CACHE_TTL", "300"))  # 5 minutos

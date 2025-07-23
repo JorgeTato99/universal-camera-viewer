@@ -94,10 +94,11 @@ class EncryptionServiceV2(BaseService):
         super().__init__()
         
         # Configuración
-        project_root = Path(__file__).parent.parent.parent
-        self._key_store_dir = project_root / "data" / ".encryption"
+        # Path(__file__).parent = services/, parent.parent = src-python/
+        src_python_root = Path(__file__).parent.parent
+        self._key_store_dir = src_python_root / "data" / ".encryption"
         self._key_store_file = self._key_store_dir / "keystore.json"
-        self._legacy_key_file = project_root / "data" / ".encryption_key"
+        self._legacy_key_file = src_python_root / "data" / ".encryption_key"
         
         # Estado interno
         self._keys: Dict[int, KeyVersion] = {}

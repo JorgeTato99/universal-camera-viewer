@@ -102,15 +102,21 @@ pip install -r requirements.txt
 ### Configuración de Base de Datos
 
 ```bash
-# Crear base de datos inicial
-python src-python/services/create_database.py
+# OPCIÓN 1: Recrear TODO desde cero (DB + Seeds) - Recomendado para desarrollo
+python src-python/migrate_database.py --force --no-backup
 
-# Poblar con cámaras de ejemplo
-python src-python/seed_database.py
+# OPCIÓN 2: Crear base de datos vacía
+python src-python/services/create_database.py --force
 
-# Recrear con datos limpios
-python src-python/seed_database.py --clear
+# OPCIÓN 3: Solo insertar/actualizar seeds
+python src-python/seed_database.py              # Agrega datos si no existen
+python src-python/seed_database.py --clear --force  # Limpia todo y reinserta
+
+# Verificar datos existentes
+python src-python/seed_database.py --verify-only
 ```
+
+**Nota**: En desarrollo se puede recrear la DB sin problemas. Las contraseñas se encriptan automáticamente con el sistema v2.
 
 ### Ejecución
 
@@ -244,7 +250,7 @@ ws.onmessage = (event) => {
 
 ## 📁 Estructura del Proyecto
 
-```
+```bash
 universal-camera-gateway/
 ├── src/                    # Frontend React
 │   ├── features/          # Componentes por función

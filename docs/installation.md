@@ -114,7 +114,19 @@ cp .env.example .env
 # DAHUA_IP=192.168.1.172
 # DAHUA_USER=admin
 # DAHUA_PASSWORD=tu_password
+
+# Crear base de datos inicial con datos de ejemplo
+python src-python/migrate_database.py --force --no-backup
+
+# Verificar instalación
+python src-python/seed_database.py --verify-only
 ```
+
+**Base de Datos:**
+- Se crea automáticamente en `src-python/data/camera_data.db`
+- Incluye 6 cámaras de ejemplo de diferentes marcas
+- Las contraseñas se encriptan automáticamente (formato v2)
+- En desarrollo se puede recrear sin problemas
 
 ### 4. **Verificar Instalación**
 
