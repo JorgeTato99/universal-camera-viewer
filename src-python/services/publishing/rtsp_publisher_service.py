@@ -18,6 +18,7 @@ from models.publishing import (
 )
 from api.schemas.requests.mediamtx_requests import TerminationReason
 from services.camera_manager_service import camera_manager_service
+from utils.sanitizers import sanitize_command, sanitize_url
 from services.publishing.ffmpeg_manager import FFmpegManager
 from utils.exceptions import ServiceError
 
@@ -192,7 +193,7 @@ class RTSPPublisherService(BaseService):
             
             # Iniciar proceso
             self.logger.info(f"Iniciando proceso FFmpeg para cámara {camera_id}")
-            self.logger.debug(f"Comando FFmpeg: {' '.join(cmd)}")
+            self.logger.debug(f"Comando FFmpeg: {sanitize_command(' '.join(cmd))}")
             
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -604,7 +605,7 @@ class RTSPPublisherService(BaseService):
             base_url = urlunparse(parsed._replace(netloc=netloc))
             
         target_url = f"{base_url}/{path}"
-        self.logger.debug(f"URL destino construida: {target_url}")
+        self.logger.debug(f"URL destino construida: {sanitize_url(target_url)}")
         return target_url
     
     def _build_ffmpeg_command(

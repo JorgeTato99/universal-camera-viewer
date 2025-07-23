@@ -12,6 +12,7 @@ import time
 
 from services.video.stream_manager import StreamManager
 from models.streaming import StreamStatus
+from utils.sanitizers import sanitize_url
 
 
 class RTSPStreamManager(StreamManager):
@@ -28,7 +29,7 @@ class RTSPStreamManager(StreamManager):
             # Construir URL RTSP
             rtsp_url = self._build_rtsp_url()
             
-            self.logger.info(f"Conectando a RTSP: {self._sanitize_url(rtsp_url)}")
+            self.logger.info(f"Conectando a RTSP: {sanitize_url(rtsp_url)}")
             
             # Crear VideoCapture
             self._connection = cv2.VideoCapture(rtsp_url)
@@ -153,7 +154,7 @@ class RTSPStreamManager(StreamManager):
         # Construir URL completa
         rtsp_url = f"rtsp://{auth}{config.ip}:{port}{path}"
         
-        self.logger.debug(f"URL RTSP construida: {self._sanitize_url(rtsp_url)}")
+        self.logger.debug(f"URL RTSP construida: {sanitize_url(rtsp_url)}")
         self.logger.debug(f"  - IP: {config.ip}")
         self.logger.debug(f"  - Puerto: {port}")
         self.logger.debug(f"  - Path: {path}")
@@ -161,23 +162,7 @@ class RTSPStreamManager(StreamManager):
         
         return rtsp_url
     
-    def _sanitize_url(self, url: str) -> str:
-        """
-        Sanitiza la URL para logging (oculta credenciales).
-        
-        Args:
-            url: URL completa
-            
-        Returns:
-            URL sin credenciales
-        """
-        if '@' in url:
-            # Ocultar credenciales
-            parts = url.split('@')
-            protocol_part = parts[0].split('://')
-            if len(protocol_part) > 1:
-                return f"{protocol_part[0]}://***:***@{parts[1]}"
-        return url
+    # Método _sanitize_url removido - ahora usamos utils.sanitizers.sanitize_url
     
     def _get_codec_info(self) -> str:
         """Obtiene información del codec del stream."""

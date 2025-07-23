@@ -21,6 +21,7 @@ from enum import Enum
 from typing import Optional, Dict, Any, List, Tuple, Union, Callable
 import threading
 import time
+from utils.sanitizers import sanitize_url
 
 # Importaciones opcionales para protocolos específicos
 try:
@@ -630,7 +631,7 @@ class RTSPProtocolHandler(BaseProtocolHandler):
                 test_cap.release()
                 self._connection_handle = rtsp_url
                 self._set_state(ConnectionState.CONNECTED)
-                self.logger.info(f"Conectado RTSP: {rtsp_url}")
+                self.logger.info(f"Conectado RTSP: {sanitize_url(rtsp_url)}")
                 return True
             else:
                 raise ConnectionError("No se pudo abrir stream RTSP")

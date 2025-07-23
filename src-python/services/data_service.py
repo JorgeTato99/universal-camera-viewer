@@ -1044,7 +1044,7 @@ class DataService:
                 
                 # 2. Guardar credenciales encriptadas
                 if credentials:
-                    from .encryption_service import encryption_service
+                    from .encryption_service_v2 import encryption_service_v2
                     
                     cursor.execute("""
                         INSERT OR REPLACE INTO camera_credentials (
@@ -1055,7 +1055,7 @@ class DataService:
                         camera.camera_id,
                         'Credencial Principal',  # Nombre por defecto
                         credentials.get('username', 'admin'),
-                        encryption_service.encrypt(credentials.get('password', '')),
+                        encryption_service_v2.encrypt(credentials.get('password', '')),
                         'basic',
                         True
                     ))
@@ -1168,10 +1168,10 @@ class DataService:
                 cred_row = cursor.fetchone()
                 
                 if cred_row:
-                    from .encryption_service import encryption_service
+                    from .encryption_service_v2 import encryption_service_v2
                     camera_data['credentials'] = {
                         'username': cred_row[0],
-                        'password': encryption_service.decrypt(cred_row[1]) if cred_row[1] else ''
+                        'password': encryption_service_v2.decrypt(cred_row[1]) if cred_row[1] else ''
                     }
                 
                 # Obtener protocolos
@@ -1552,7 +1552,7 @@ class DataService:
         credential_id = None
         try:
             # Encriptar contraseña
-            password_encrypted = self._encryption_service.encrypt(
+            password_encrypted = encryption_service_v2_v2.encrypt(
                 credential_data['password']
             )
             
@@ -1633,7 +1633,7 @@ class DataService:
                 
             if 'password' in updates:
                 set_clauses.append("password_encrypted = ?")
-                params.append(self._encryption_service.encrypt(updates['password']))
+                params.append(encryption_service_v2_v2.encrypt(updates['password']))
                 
             if 'auth_type' in updates:
                 set_clauses.append("auth_type = ?")

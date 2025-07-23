@@ -30,17 +30,16 @@ from api.routers.publishing_paths import router as paths_router
 from services.camera_manager_service import camera_manager_service
 from websocket.handlers.publishing_handler import get_publishing_ws_handler
 
-# Configurar logging
-logging.basicConfig(
-    level=getattr(logging, settings.log_level),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(settings.log_file) if settings.log_file else logging.NullHandler()
-    ]
-)
+# Configurar logging seguro
+from services.logging_service import get_secure_logger, logging_service
 
-logger = logging.getLogger(__name__)
+# Configurar el servicio de logging según el ambiente
+import os
+environment = os.getenv('ENVIRONMENT', 'production')
+logging_service.set_environment(environment)
+
+# Obtener logger seguro para este módulo
+logger = get_secure_logger(__name__)
 
 
 @asynccontextmanager
