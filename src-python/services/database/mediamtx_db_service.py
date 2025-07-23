@@ -232,7 +232,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 cursor.execute("""
                     SELECT COUNT(DISTINCT camera_id) as total_cameras
                     FROM camera_publications
-                    WHERE status = 'publishing' AND is_active = 1
+                    WHERE status = 'PUBLISHING' AND is_active = 1
                 """)
                 total_cameras = cursor.fetchone()['total_cameras']
                 
@@ -1556,7 +1556,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 cursor.execute("""
                     SELECT COUNT(*) as active_pubs
                     FROM camera_publications
-                    WHERE server_id = ? AND status = 'publishing' AND is_active = 1
+                    WHERE server_id = ? AND status = 'PUBLISHING' AND is_active = 1
                 """, (server_id,))
                 active_pubs = cursor.fetchone()['active_pubs']
                 

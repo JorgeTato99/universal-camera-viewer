@@ -38,7 +38,8 @@
       "Bash(yarn run tsc:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(PYTHONPATH=. python -m pytest tests/models/test_metrics_models.py::TestPublishMetrics::test_create_metrics_basic -v)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(wc:*)"
     ],
     "deny": []
   }

@@ -20,12 +20,15 @@ class PublishStatus(Enum):
     
     NOTA: Los estados STOPPING y RECONNECTING se manejan solo en el frontend
     para mejorar la UX sin agregar complejidad al backend.
+    
+    IMPORTANTE: Los valores usan MAYÚSCULAS para mantener consistencia
+    con el enum PublishingStatus del frontend TypeScript.
     """
-    IDLE = "idle"           # Sin actividad
-    STARTING = "starting"   # Iniciando proceso de publicación
-    PUBLISHING = "publishing"  # Publicando activamente
-    ERROR = "error"         # Error en la publicación
-    STOPPED = "stopped"     # Detenido (para historial)
+    IDLE = "IDLE"           # Sin actividad
+    STARTING = "STARTING"   # Iniciando proceso de publicación
+    PUBLISHING = "PUBLISHING"  # Publicando activamente
+    ERROR = "ERROR"         # Error en la publicación
+    STOPPED = "STOPPED"     # Detenido (para historial)
 
 
 class PublishErrorType(Enum):

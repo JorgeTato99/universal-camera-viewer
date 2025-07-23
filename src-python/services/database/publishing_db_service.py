@@ -147,7 +147,7 @@ class PublishingDatabaseService:
                     state_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     camera_id TEXT NOT NULL,
                     config_id INTEGER NOT NULL,
-                    status TEXT NOT NULL CHECK (status IN ('idle', 'starting', 'publishing', 'stopped', 'error')),
+                    status TEXT NOT NULL CHECK (status IN ('IDLE', 'STARTING', 'PUBLISHING', 'STOPPED', 'ERROR')),
                     publish_path TEXT NOT NULL,
                     process_pid INTEGER,
                     start_time TIMESTAMP,

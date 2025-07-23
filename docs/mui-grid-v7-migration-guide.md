@@ -8,6 +8,10 @@ Muchos modelos de IA (incluido yo mismo) suelen confundirse con la sintaxis de M
 2. **Los datos de entrenamiento** de los modelos suelen contener más ejemplos de v5 que v7
 3. **La migración fue significativa** y cambió la API completamente
 
+> **Nota**: La inconsistencia MediaMTXPath `id` vs `path_id` mencionada anteriormente en este documento ha sido resuelta mediante el uso de alias en Pydantic. Ver `docs/mediamtx-id-inconsistency-solution.md` para más detalles.
+
+---
+
 ## ❌ Sintaxis Antigua (v5)
 
 ```jsx

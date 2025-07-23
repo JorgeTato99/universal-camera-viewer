@@ -6,7 +6,7 @@ que devuelve la API para operaciones con MediaMTX.
 """
 
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from enum import Enum
 
@@ -444,9 +444,16 @@ class ViewerAnalyticsResponse(BaseModel):
 # === Responses de Paths ===
 
 class MediaMTXPath(BaseModel):
-    """Información de un path MediaMTX."""
+    """
+    Información de un path MediaMTX.
     
-    path_id: int = Field(..., description="ID del path")
+    NOTA: El campo path_id se serializa como 'id' para compatibilidad con el frontend.
+    El frontend espera 'id' pero la base de datos usa 'path_id'.
+    
+    TODO: Considerar actualizar el frontend para usar 'path_id' consistentemente.
+    """
+    
+    path_id: int = Field(..., alias="id", description="ID del path")
     server_id: int = Field(..., description="ID del servidor")
     server_name: Optional[str] = Field(None, description="Nombre del servidor")
     path_name: str = Field(..., description="Nombre del path")
@@ -471,6 +478,7 @@ class MediaMTXPath(BaseModel):
     
     class Config:
         from_attributes = True
+        populate_by_name = True  # Permite recibir tanto 'id' como 'path_id'
 
 
 class PathsListResponse(BaseModel):
@@ -588,14 +596,34 @@ class SystemHealthResponse(BaseModel):
     
     Estados del sistema:
     - healthy: Todo funcionando correctamente
-    - degraded: Funcionando con problemas menores
-    - critical: Problemas graves que requieren atención inmediata
+    - degraded: Funcionando con problemas menores (mapeado a 'warning' para frontend)
+    - critical: Problemas graves que requieren atención inmediata (mapeado a 'error' para frontend)
+    
+    NOTA: El backend usa 'degraded' y 'critical' internamente, pero se mapean
+    a 'warning' y 'error' respectivamente para compatibilidad con el frontend.
     """
     
-    overall_status: Literal["healthy", "degraded", "critical"] = Field(
+    overall_status: Literal["healthy", "warning", "error"] = Field(
         ..., 
         description="Estado general del sistema de publicación"
     )
+    
+    @validator('overall_status', pre=True)
+    def map_health_status(cls, v):
+        """
+        Mapea los valores del backend a los esperados por el frontend.
+        
+        Backend -> Frontend:
+        - healthy -> healthy (sin cambio)
+        - degraded -> warning
+        - critical -> error
+        """
+        status_mapping = {
+            'healthy': 'healthy',
+            'degraded': 'warning',
+            'critical': 'error'
+        }
+        return status_mapping.get(v, v)
     check_timestamp: datetime = Field(..., description="Momento del chequeo")
     
     # Resumen
@@ -624,7 +652,7 @@ class SystemHealthResponse(BaseModel):
         from_attributes = True
         json_schema_extra = {
             "example": {
-                "overall_status": "degraded",
+                "overall_status": "warning",
                 "check_timestamp": "2024-01-15T10:30:00Z",
                 "total_servers": 2,
                 "healthy_servers": 1,
