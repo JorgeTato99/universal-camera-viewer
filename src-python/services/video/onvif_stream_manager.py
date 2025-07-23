@@ -11,6 +11,7 @@ from typing import Optional
 from services.video.rtsp_stream_manager import RTSPStreamManager
 from services.protocol_handlers.onvif_handler import ONVIFHandler
 from models.streaming import StreamStatus
+from utils.sanitizers import sanitize_url
 
 
 class ONVIFStreamManager(RTSPStreamManager):
@@ -90,7 +91,7 @@ class ONVIFStreamManager(RTSPStreamManager):
             # Guardar URL RTSP para uso posterior
             self._rtsp_url = stream_url_result
             
-            self.logger.info(f"URL RTSP obtenida via ONVIF: {self._sanitize_url(stream_url_result)}")
+            self.logger.info(f"URL RTSP obtenida via ONVIF: {sanitize_url(stream_url_result)}")
             
             # La implementación base de RTSP usará _build_rtsp_url que sobrescribimos
             await super()._initialize_connection()
@@ -117,7 +118,7 @@ class ONVIFStreamManager(RTSPStreamManager):
                 self.logger.info("Cámara Dahua detectada, usando URL RTSP estándar")
                 rtsp_url = self._build_fallback_rtsp_url()
                 if rtsp_url:
-                    self.logger.info(f"URL RTSP para Dahua: {self._sanitize_url(rtsp_url)}")
+                    self.logger.info(f"URL RTSP para Dahua: {sanitize_url(rtsp_url)}")
                     return rtsp_url
             
             # Para otras marcas, intentar obtener perfiles ONVIF
@@ -179,7 +180,7 @@ class ONVIFStreamManager(RTSPStreamManager):
                                     'video_resolution': main_profile.get('video_encoder', {}).get('resolution')
                                 })
                                 
-                                self.logger.info(f"URL RTSP obtenida desde ONVIF: {self._sanitize_url(stream_url)}")
+                                self.logger.info(f"URL RTSP obtenida desde ONVIF: {sanitize_url(stream_url)}")
                                 return stream_url
                             else:
                                 self.logger.error(f"Error obteniendo stream URI: {stream_result.get('error')}")
@@ -192,7 +193,7 @@ class ONVIFStreamManager(RTSPStreamManager):
             # Construir URL RTSP manual basado en la marca
             rtsp_url = self._build_fallback_rtsp_url()
             if rtsp_url:
-                self.logger.info(f"URL RTSP fallback: {self._sanitize_url(rtsp_url)}")
+                self.logger.info(f"URL RTSP fallback: {sanitize_url(rtsp_url)}")
                 return rtsp_url
             
             return None

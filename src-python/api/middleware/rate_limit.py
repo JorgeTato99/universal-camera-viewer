@@ -636,6 +636,12 @@ def setup_rate_limiting(app: FastAPI) -> None:
     """
     logger.info("Configurando rate limiting...")
     
+    # Importar el limiter desde deps
+    from api.deps.rate_limit import limiter
+    
+    # Asignar el limiter al estado de la aplicación
+    app.state.limiter = limiter
+    
     # Registrar manejador de errores 429
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     
