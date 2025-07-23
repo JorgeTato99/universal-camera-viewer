@@ -56,6 +56,12 @@ CAMERA_PUBLICATIONS_TABLE = """
         error_count INTEGER DEFAULT 0,
         last_error TEXT,
         last_error_time TIMESTAMP,
+        -- Campos para integración remota
+        remote_camera_id TEXT,
+        publish_url TEXT,
+        webrtc_url TEXT,
+        publish_token TEXT,
+        is_remote BOOLEAN DEFAULT 0,
         is_active BOOLEAN DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -134,6 +140,28 @@ PUBLICATION_VIEWERS_TABLE = """
     )
 """
 
+# Tokens de autenticación para servidores MediaMTX remotos
+MEDIAMTX_AUTH_TOKENS_TABLE = """
+    CREATE TABLE mediamtx_auth_tokens (
+        token_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
+        access_token TEXT NOT NULL,
+        token_type TEXT DEFAULT 'bearer',
+        expires_at TIMESTAMP,
+        refresh_token TEXT,
+        refresh_expires_at TIMESTAMP,
+        username TEXT,
+        role TEXT,
+        user_id TEXT,
+        last_used_at TIMESTAMP,
+        is_active BOOLEAN DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (server_id) REFERENCES mediamtx_servers (server_id) ON DELETE CASCADE,
+        UNIQUE(server_id, is_active)
+    )
+"""
+
 # Configuración de paths MediaMTX
 MEDIAMTX_PATHS_TABLE = """
     CREATE TABLE mediamtx_paths (
@@ -172,6 +200,7 @@ def get_mediamtx_tables():
         ('publication_history', PUBLICATION_HISTORY_TABLE),
         ('publication_metrics', PUBLICATION_METRICS_TABLE),
         ('publication_viewers', PUBLICATION_VIEWERS_TABLE),
+        ('mediamtx_auth_tokens', MEDIAMTX_AUTH_TOKENS_TABLE),
         ('mediamtx_paths', MEDIAMTX_PATHS_TABLE)
     ]
 

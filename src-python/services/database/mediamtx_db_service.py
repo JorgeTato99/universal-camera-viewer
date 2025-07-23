@@ -1644,6 +1644,178 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 
         await asyncio.get_event_loop().run_in_executor(None, _update)
     
+    # === Métodos de Auth Tokens ===
+    
+    async def save_auth_token(self, token_data: Dict[str, Any]) -> int:
+        """
+        Guarda o actualiza un token de autenticación.
+        
+        Args:
+            token_data: Datos del token incluyendo server_id
+            
+        Returns:
+            ID del token guardado
+        """
+        def _save():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Desactivar tokens previos del servidor
+                cursor.execute("""
+                    UPDATE mediamtx_auth_tokens
+                    SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+                    WHERE server_id = ? AND is_active = 1
+                """, (token_data['server_id'],))
+                
+                # Insertar nuevo token
+                cursor.execute("""
+                    INSERT INTO mediamtx_auth_tokens (
+                        server_id, access_token, token_type, expires_at,
+                        refresh_token, refresh_expires_at, username, role,
+                        user_id, is_active
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                """, (
+                    token_data['server_id'],
+                    token_data['access_token'],
+                    token_data.get('token_type', 'bearer'),
+                    token_data.get('expires_at'),
+                    token_data.get('refresh_token'),
+                    token_data.get('refresh_expires_at'),
+                    token_data.get('username'),
+                    token_data.get('role'),
+                    token_data.get('user_id')
+                ))
+                
+                return cursor.lastrowid
+                
+        token_id = await asyncio.get_event_loop().run_in_executor(None, _save)
+        self.logger.info(f"Token guardado con ID {token_id} para servidor {token_data['server_id']}")
+        return token_id
+    
+    async def get_auth_token(self, server_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene el token activo de un servidor.
+        
+        Args:
+            server_id: ID del servidor
+            
+        Returns:
+            Dict con datos del token o None
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM mediamtx_auth_tokens
+                    WHERE server_id = ? AND is_active = 1
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, (server_id,))
+                
+                row = cursor.fetchone()
+                return dict(row) if row else None
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
+    async def get_server_by_id(self, server_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene un servidor MediaMTX por su ID.
+        
+        Args:
+            server_id: ID del servidor
+            
+        Returns:
+            Dict con datos del servidor o None
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM mediamtx_servers
+                    WHERE server_id = ?
+                """, (server_id,))
+                
+                row = cursor.fetchone()
+                return dict(row) if row else None
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
+    async def get_all_servers(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene todos los servidores MediaMTX configurados.
+        
+        Returns:
+            Lista de servidores
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM mediamtx_servers
+                    ORDER BY is_default DESC, server_name
+                """)
+                
+                return [dict(row) for row in cursor.fetchall()]
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
+    async def get_active_auth_tokens(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene todos los tokens activos.
+        
+        Returns:
+            Lista de tokens activos
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM mediamtx_auth_tokens
+                    WHERE is_active = 1
+                    ORDER BY server_id
+                """)
+                
+                return [dict(row) for row in cursor.fetchall()]
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
+    async def update_token_last_used(self, server_id: int) -> None:
+        """
+        Actualiza el timestamp de último uso del token.
+        
+        Args:
+            server_id: ID del servidor
+        """
+        def _update():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE mediamtx_auth_tokens
+                    SET last_used_at = CURRENT_TIMESTAMP
+                    WHERE server_id = ? AND is_active = 1
+                """, (server_id,))
+                
+        await asyncio.get_event_loop().run_in_executor(None, _update)
+    
+    async def deactivate_auth_token(self, server_id: int) -> None:
+        """
+        Marca un token como inactivo.
+        
+        Args:
+            server_id: ID del servidor
+        """
+        def _deactivate():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE mediamtx_auth_tokens
+                    SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+                    WHERE server_id = ? AND is_active = 1
+                """, (server_id,))
+                
+        await asyncio.get_event_loop().run_in_executor(None, _deactivate)
+        self.logger.info(f"Token desactivado para servidor {server_id}")
+    
     # === Métodos auxiliares privados ===
     
     def _calculate_start_time(
