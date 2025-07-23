@@ -142,6 +142,10 @@ class LoggingService(BaseService):
         # Formatter base
         self.formatter = logging.Formatter(log_format, datefmt=date_format)
         
+        # Configurar si usar JSON para ELK
+        self.use_json_logs = os.getenv('USE_JSON_LOGS', 'false').lower() == 'true'
+        self.elk_enabled = os.getenv('ELK_ENABLED', 'false').lower() == 'true'
+        
         # Configurar handlers por defecto
         self._setup_default_handlers()
         
@@ -149,7 +153,18 @@ class LoggingService(BaseService):
         """Configura handlers por defecto."""
         # Console handler
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(self.formatter)
+        
+        # Usar JSON formatter si está habilitado
+        if self.use_json_logs:
+            from utils.json_formatter import StructuredJSONFormatter
+            json_formatter = StructuredJSONFormatter(
+                environment=self.environment,
+                sanitize=True
+            )
+            console_handler.setFormatter(json_formatter)
+        else:
+            console_handler.setFormatter(self.formatter)
+            
         console_handler.addFilter(EnvironmentBasedFilter(self.environment))
         self._handlers['console'] = console_handler
         
@@ -192,6 +207,48 @@ class LoggingService(BaseService):
         audit_format = '%(asctime)s - %(name)s - AUDIT - %(message)s - %(pathname)s:%(lineno)d'
         audit_handler.setFormatter(logging.Formatter(audit_format))
         self._handlers['audit'] = audit_handler
+        
+        # ELK Handler si está habilitado
+        if self.elk_enabled:
+            self._setup_elk_handler()
+            
+    def _setup_elk_handler(self) -> None:
+        """Configura el handler para ELK Stack."""
+        try:
+            from utils.elk_handler import create_elk_handler
+            
+            # Configurar tipo de handler según ambiente
+            handler_type = os.getenv('ELK_HANDLER_TYPE', 'file')
+            
+            if handler_type == 'file':
+                # Handler basado en archivos (recomendado para producción)
+                elk_handler = create_elk_handler(
+                    handler_type='file',
+                    log_dir=str(self.log_dir / 'elk'),
+                    index_prefix='ucv',
+                    buffer_size=int(os.getenv('ELK_BUFFER_SIZE', '1000')),
+                    flush_interval=float(os.getenv('ELK_FLUSH_INTERVAL', '5.0'))
+                )
+            else:
+                # Handler directo a Elasticsearch (desarrollo/testing)
+                elk_handler = create_elk_handler(
+                    handler_type='elasticsearch',
+                    es_host=os.getenv('ELASTICSEARCH_HOST', 'localhost'),
+                    es_port=int(os.getenv('ELASTICSEARCH_PORT', '9200')),
+                    index_prefix='ucv',
+                    use_ssl=os.getenv('ELASTICSEARCH_SSL', 'false').lower() == 'true',
+                    es_user=os.getenv('ELASTICSEARCH_USER'),
+                    es_password=os.getenv('ELASTICSEARCH_PASSWORD')
+                )
+                
+            # Agregar filtros de seguridad
+            elk_handler.addFilter(SensitiveDataFilter(environment=self.environment))
+            
+            self._handlers['elk'] = elk_handler
+            self.logger.info(f"ELK handler configurado: {handler_type}")
+            
+        except Exception as e:
+            self.logger.error(f"Error configurando ELK handler: {e}")
         
     def get_logger(self, name: str, 
                    additional_filters: Optional[List[str]] = None) -> SecureLogger:

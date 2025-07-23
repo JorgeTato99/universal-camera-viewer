@@ -11,7 +11,7 @@ from datetime import datetime
 from websocket.connection_manager import manager
 from websocket.stream_handler import stream_manager
 from api.dependencies import create_response
-from api.dependencies.rate_limit import rate_limit, websocket_rate_limit
+from api.deps.rate_limit import rate_limit, websocket_rate_limit
 
 logger = logging.getLogger(__name__)
 

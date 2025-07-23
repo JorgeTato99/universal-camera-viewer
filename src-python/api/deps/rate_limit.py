@@ -346,3 +346,16 @@ async def reset_rate_limit(client_ip: str, limit_name: str) -> bool:
     except Exception as e:
         logger.error(f"Error resetting rate limit: {e}")
         return False
+
+
+# === Alias para compatibilidad ===
+
+# Alias usados en routers existentes
+scan_operation_limit = critical_operation_limit
+connection_operation_limit = lambda: camera_operation_limit("connect")
+ws_connection_limit = lambda: websocket_rate_limit("websocket_connect")
+
+# Alias adicionales para compatibilidad
+default_rate_limit = rate_limit
+network_scan_limit = critical_operation_limit
+camera_connection_limit = lambda: camera_operation_limit("connect")

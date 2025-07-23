@@ -2,13 +2,13 @@
 Router para endpoints CRUD básicos de cámaras.
 """
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, status, Request, Depends, BackgroundTasks
 from datetime import datetime
 import logging
 import asyncio
 
 from api.dependencies import create_response
-from api.dependencies.rate_limit import read_limit, write_limit
+from api.deps.rate_limit import read_limit, write_limit
 from api.models.camera_models import (
     CreateCameraRequest,
     UpdateCameraRequest,
@@ -41,6 +41,7 @@ router = APIRouter(
 @router.get("/")
 @read_limit()  # 100/minute (1000/minute en desarrollo)
 async def list_cameras(
+    request: Request,
     active_only: bool = True,
     protocol: Optional[ProtocolType] = None
 ):
@@ -102,7 +103,7 @@ async def list_cameras(
 
 @router.get("/{camera_id}")
 @read_limit()  # 100/minute
-async def get_camera(camera_id: str):
+async def get_camera(request: Request, camera_id: str):
     """
     Obtener información detallada de una cámara específica.
     
@@ -162,7 +163,7 @@ async def get_camera(camera_id: str):
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 @write_limit()  # 10/minute (100/minute en desarrollo)
-async def create_camera(request: CreateCameraRequest):
+async def create_camera(request: Request, camera_request: CreateCameraRequest):
     """
     Crear una nueva cámara.
     
@@ -177,30 +178,30 @@ async def create_camera(request: CreateCameraRequest):
     """
     try:
         # Validar datos de entrada
-        if not request.display_name or not request.ip:
+        if not camera_request.display_name or not camera_request.ip:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="display_name e ip son campos obligatorios"
             )
             
-        logger.info(f"Creando nueva cámara: {request.display_name} ({request.ip})")
+        logger.info(f"Creando nueva cámara: {camera_request.display_name} ({camera_request.ip})")
         
         # Preparar datos
         camera_data = {
-            'brand': request.brand,
-            'model': request.model,
-            'display_name': request.display_name,
-            'ip': request.ip,
-            'username': request.credentials.username,
-            'password': request.credentials.password,
-            'auth_type': request.credentials.auth_type,
-            'location': request.location,
-            'description': request.description
+            'brand': camera_request.brand,
+            'model': camera_request.model,
+            'display_name': camera_request.display_name,
+            'ip': camera_request.ip,
+            'username': camera_request.credentials.username,
+            'password': camera_request.credentials.password,
+            'auth_type': camera_request.credentials.auth_type,
+            'location': camera_request.location,
+            'description': camera_request.description
         }
         
         # Agregar protocolos si se proporcionan
-        if request.protocols:
-            for protocol in request.protocols:
+        if camera_request.protocols:
+            for protocol in camera_request.protocols:
                 if protocol.protocol_type == ProtocolType.RTSP:
                     camera_data['rtsp_port'] = protocol.port
                 elif protocol.protocol_type == ProtocolType.ONVIF:
@@ -209,7 +210,7 @@ async def create_camera(request: CreateCameraRequest):
                     camera_data['http_port'] = protocol.port
         
         # Agregar endpoints si se proporcionan
-        if request.endpoints:
+        if camera_request.endpoints:
             camera_data['endpoints'] = [
                 {
                     'type': ep.type,
@@ -217,7 +218,7 @@ async def create_camera(request: CreateCameraRequest):
                     'verified': ep.verified,
                     'priority': ep.priority
                 }
-                for ep in request.endpoints
+                for ep in camera_request.endpoints
             ]
         
         # Crear cámara
@@ -230,7 +231,7 @@ async def create_camera(request: CreateCameraRequest):
         )
         
     except CameraAlreadyExistsError as e:
-        logger.warning(f"Cámara ya existe: {request.ip}")
+        logger.warning(f"Cámara ya existe: {camera_request.ip}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
@@ -257,7 +258,7 @@ async def create_camera(request: CreateCameraRequest):
 
 @router.put("/{camera_id}")
 @write_limit()  # 10/minute
-async def update_camera(camera_id: str, request: UpdateCameraRequest):
+async def update_camera(request: Request, camera_id: str, update_request: UpdateCameraRequest):
     """
     Actualizar una cámara existente.
     
@@ -285,22 +286,22 @@ async def update_camera(camera_id: str, request: UpdateCameraRequest):
         # Preparar actualizaciones
         updates = {}
         
-        if request.display_name is not None:
-            updates['display_name'] = request.display_name
-        if request.location is not None:
-            updates['location'] = request.location
-        if request.description is not None:
-            updates['description'] = request.description
-        if request.is_active is not None:
-            updates['is_active'] = request.is_active
+        if update_request.display_name is not None:
+            updates['display_name'] = update_request.display_name
+        if update_request.location is not None:
+            updates['location'] = update_request.location
+        if update_request.description is not None:
+            updates['description'] = update_request.description
+        if update_request.is_active is not None:
+            updates['is_active'] = update_request.is_active
             
-        if request.credentials:
+        if update_request.credentials:
             updates['credentials'] = {
-                'username': request.credentials.username,
-                'password': request.credentials.password
+                'username': update_request.credentials.username,
+                'password': update_request.credentials.password
             }
             
-        if request.endpoints:
+        if update_request.endpoints:
             updates['endpoints'] = [
                 {
                     'type': ep.type,
@@ -308,7 +309,7 @@ async def update_camera(camera_id: str, request: UpdateCameraRequest):
                     'verified': ep.verified,
                     'priority': ep.priority
                 }
-                for ep in request.endpoints
+                for ep in update_request.endpoints
             ]
         
         # Actualizar cámara
@@ -348,7 +349,7 @@ async def update_camera(camera_id: str, request: UpdateCameraRequest):
 
 @router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
 @write_limit()  # 10/minute
-async def delete_camera(camera_id: str):
+async def delete_camera(request: Request, camera_id: str):
     """
     Eliminar una cámara.
     

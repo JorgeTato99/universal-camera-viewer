@@ -13,8 +13,8 @@ from services.base_service import BaseService
 from services.data_service import DataService, get_data_service
 from services.connection_service import ConnectionService, ConnectionType
 from models.camera_model import CameraModel, ConnectionConfig, StreamConfig, CameraCapabilities, ProtocolType, ConnectionStatus
-from utils.exceptions import (
 from services.logging_service import get_secure_logger
+from utils.exceptions import (
     CameraNotFoundError,
     CameraAlreadyExistsError,
     InvalidCredentialsError,
@@ -48,6 +48,7 @@ class CameraManagerService(BaseService):
             return
             
         super().__init__()
+        self.logger = get_secure_logger(__name__)
         self._data_service = get_data_service()
         self._connection_service = ConnectionService()
         self._cameras_cache: Dict[str, CameraModel] = {}

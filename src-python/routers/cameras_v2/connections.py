@@ -2,12 +2,12 @@
 Router para endpoints de conexión de cámaras.
 """
 from typing import Optional
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Request
 import logging
 import ipaddress
 
 from api.dependencies import create_response
-from api.dependencies.rate_limit import rate_limit, camera_operation_limit
+from api.deps.rate_limit import rate_limit, camera_operation_limit
 from api.models.camera_models import (
     TestConnectionRequest,
     TestConnectionResponse,
@@ -31,11 +31,12 @@ router = APIRouter(
 
 @router.post("/{camera_id}/connect")
 @camera_operation_limit("connect")  # 5/minute - conexión es costosa
-async def connect_camera(camera_id: str, background_tasks: BackgroundTasks):
+async def connect_camera(request: Request, camera_id: str, background_tasks: BackgroundTasks):
     """
     Conectar a una cámara.
     
     Args:
+        request: Request de FastAPI
         camera_id: ID de la cámara
         background_tasks: Tareas en background de FastAPI
         
@@ -237,18 +238,19 @@ async def get_camera_stream_url(
 
 @router.post("/test-connection")
 @camera_operation_limit("test")  # 20/minute - test es más ligero
-async def test_connection(request: TestConnectionRequest):
+async def test_connection(request: Request, test_request: TestConnectionRequest):
     """
     Probar conexión a una cámara sin guardarla.
     
     Args:
-        request: Datos de conexión
+        request: Request de FastAPI
+        test_request: Datos de conexión
         
     Returns:
         Resultado de la prueba
     """
     # Validar datos de entrada
-    if not request.ip:
+    if not test_request.ip:
         logger.warning("IP no proporcionada para prueba de conexión")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -258,43 +260,43 @@ async def test_connection(request: TestConnectionRequest):
     # Validar formato de IP
     try:
         import ipaddress
-        ipaddress.ip_address(request.ip)
+        ipaddress.ip_address(test_request.ip)
     except ValueError:
-        logger.warning(f"IP inválida proporcionada: {request.ip}")
+        logger.warning(f"IP inválida proporcionada: {test_request.ip}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Dirección IP inválida"
         )
     
     try:
-        logger.info(f"Probando conexión a {request.ip} - protocolo: {request.protocol}, marca: {request.brand}")
+        logger.info(f"Probando conexión a {test_request.ip} - protocolo: {test_request.protocol}, marca: {test_request.brand}")
         
         connection_data = {
-            'ip': request.ip,
-            'username': request.username or '',
-            'password': request.password or '',
-            'brand': request.brand or 'Generic'
+            'ip': test_request.ip,
+            'username': test_request.username or '',
+            'password': test_request.password or '',
+            'brand': test_request.brand or 'Generic'
         }
         
         # Asignar puerto según protocolo
-        if request.port:
-            if request.protocol == ProtocolType.RTSP:
-                connection_data['rtsp_port'] = request.port
-            elif request.protocol == ProtocolType.ONVIF:
-                connection_data['onvif_port'] = request.port
-            elif request.protocol == ProtocolType.HTTP:
-                connection_data['http_port'] = request.port
-            elif request.protocol == ProtocolType.HTTPS:
-                connection_data['https_port'] = request.port
+        if test_request.port:
+            if test_request.protocol == ProtocolType.RTSP:
+                connection_data['rtsp_port'] = test_request.port
+            elif test_request.protocol == ProtocolType.ONVIF:
+                connection_data['onvif_port'] = test_request.port
+            elif test_request.protocol == ProtocolType.HTTP:
+                connection_data['http_port'] = test_request.port
+            elif test_request.protocol == ProtocolType.HTTPS:
+                connection_data['https_port'] = test_request.port
             else:
-                logger.warning(f"Protocolo no reconocido: {request.protocol}")
+                logger.warning(f"Protocolo no reconocido: {test_request.protocol}")
         
         success, message = await camera_manager_service.test_camera_connection(connection_data)
         
         if success:
-            logger.info(f"Conexión exitosa a {request.ip}: {message}")
+            logger.info(f"Conexión exitosa a {test_request.ip}: {message}")
         else:
-            logger.warning(f"Conexión fallida a {request.ip}: {message}")
+            logger.warning(f"Conexión fallida a {test_request.ip}: {message}")
         
         response_data = TestConnectionResponse(
             success=success,
@@ -307,7 +309,7 @@ async def test_connection(request: TestConnectionRequest):
         )
         
     except ServiceError as e:
-        logger.error(f"Error de servicio probando conexión a {request.ip}: {e}")
+        logger.error(f"Error de servicio probando conexión a {test_request.ip}: {e}")
         response_data = TestConnectionResponse(
             success=False,
             message="Servicio temporalmente no disponible"
@@ -331,7 +333,7 @@ async def test_connection(request: TestConnectionRequest):
             data=response_data.dict()
         )
     except Exception as e:
-        logger.error(f"Error inesperado probando conexión a {request.ip}: {e}", exc_info=True)
+        logger.error(f"Error inesperado probando conexión a {test_request.ip}: {e}", exc_info=True)
         response_data = TestConnectionResponse(
             success=False,
             message="Error interno al probar conexión"

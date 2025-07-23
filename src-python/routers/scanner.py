@@ -12,7 +12,7 @@ import ipaddress
 import logging
 
 from api.dependencies import create_response
-from api.dependencies.rate_limit import rate_limit, critical_operation_limit
+from api.deps.rate_limit import rate_limit, critical_operation_limit
 from api.config import settings
 from api.schemas.requests.scanner_requests import (
     ScanNetworkRequest,

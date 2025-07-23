@@ -6,6 +6,7 @@ preparado para futuras mejoras cuando MediaMTX exponga más información.
 """
 
 import asyncio
+import logging
 
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
