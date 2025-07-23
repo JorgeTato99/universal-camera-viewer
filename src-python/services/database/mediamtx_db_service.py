@@ -7,7 +7,7 @@ del esquema MediaMTX definido en mediamtx_tables.py.
 
 import sqlite3
 import json
-import logging
+
 from typing import Optional, Dict, List, Any, Tuple
 from datetime import datetime, timedelta
 from contextlib import contextmanager
@@ -20,9 +20,10 @@ from api.schemas.requests.mediamtx_requests import (
     GetMetricsRequest, GetHistoryRequest, GetViewersRequest
 )
 from utils.exceptions import ServiceError
+from services.logging_service import get_secure_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_secure_logger("services.database.mediamtx_db_service")
 
 
 class MediaMTXDatabaseService(PublishingDatabaseService):

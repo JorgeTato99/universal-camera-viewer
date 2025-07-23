@@ -12,7 +12,7 @@ Proporciona funcionalidades unificadas para:
 
 import asyncio
 import cv2
-import logging
+
 import requests
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -22,6 +22,7 @@ from typing import Optional, Dict, Any, List, Tuple, Union, Callable
 import threading
 import time
 from utils.sanitizers import sanitize_url
+from services.logging_service import get_secure_logger
 
 # Importaciones opcionales para protocolos específicos
 try:
@@ -107,7 +108,7 @@ class BaseProtocolHandler(ABC):
         """
         self.config = config
         self.streaming_config = streaming_config or StreamingConfig()
-        self.logger = logging.getLogger(f"{self.__class__.__name__}")
+        self.logger = get_secure_logger("services.protocol_service")
         
         # Estado interno
         self._state = ConnectionState.DISCONNECTED
@@ -822,7 +823,7 @@ class ProtocolService:
     
     def __init__(self):
         """Inicializa el servicio de protocolos."""
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_secure_logger("services.protocol_service")
         
         # Manejadores de protocolos disponibles
         self._protocol_handlers = {

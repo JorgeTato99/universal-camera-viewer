@@ -9,8 +9,7 @@ import asyncio
 import re
 import shutil
 from typing import Dict, Optional, Any
-import logging
-
+from services.logging_service import get_secure_logger
 
 class FFmpegManager:
     """
@@ -33,7 +32,7 @@ class FFmpegManager:
     
     def __init__(self):
         """Inicializa el manager."""
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_secure_logger("services.publishing.ffmpeg_manager")
         self._ffmpeg_path: Optional[str] = None
         self._error_count: Dict[str, int] = {}  # Contador de errores por tipo
         

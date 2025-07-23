@@ -6,7 +6,7 @@ preparado para futuras mejoras cuando MediaMTX exponga más información.
 """
 
 import asyncio
-import logging
+
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
@@ -19,6 +19,7 @@ from services.publishing import MediaMTXClient
 from utils.exceptions import ServiceError
 from api.schemas.requests.mediamtx_requests import ViewerProtocol
 from models.publishing.mediamtx_models import PathInfo, PathReader
+from services.logging_service import get_secure_logger
 
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ class ViewerAnalyticsService(BaseService):
         self._snapshot_interval = 30  # segundos
         self._max_snapshots_memory = 120  # mantener 1 hora en memoria
         self._collection_tasks: Dict[str, asyncio.Task] = {}
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_secure_logger("services.publishing.viewer_analytics_service")
         
     async def initialize(self) -> None:
         """Inicializa el servicio y sus dependencias."""

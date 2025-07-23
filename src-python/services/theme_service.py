@@ -15,11 +15,12 @@ import flet as ft
 from typing import Optional, Callable, List
 import json
 import os
-import logging
+
 from pathlib import Path
 
 from models.theme_config import ThemeConfig, LIGHT_THEME, DARK_THEME
 from utils.event_bus import Event, emit
+from services.logging_service import get_secure_logger
 
 
 class ThemeMode:
@@ -41,7 +42,7 @@ class ThemeService:
     """
     
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_secure_logger("services.theme_service")
         self.current_theme = ThemeMode.LIGHT
         self.theme_change_callbacks = []
         self._observers: List[Callable] = []

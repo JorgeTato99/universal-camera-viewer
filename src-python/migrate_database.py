@@ -20,7 +20,6 @@ sys.path.append(str(Path(__file__).parent))
 
 from services.create_database import DatabaseCreator
 from seed_database import DatabaseSeeder
-from services.encryption_service import encryption_service
 
 
 def setup_logging(verbose: bool = False):
@@ -209,7 +208,7 @@ def main():
     # Convertir ruta relativa a absoluta
     db_path = Path(args.db_path)
     if not db_path.is_absolute():
-        db_path = Path(__file__).parent.parent / db_path
+        db_path = Path(__file__).parent / db_path
     
     logger.info("=" * 60)
     logger.info("MIGRACIÓN DE BASE DE DATOS")

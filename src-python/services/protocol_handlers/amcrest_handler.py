@@ -7,7 +7,7 @@ implementando HTTP/CGI, PTZ, snapshots y streaming MJPEG.
 
 import asyncio
 import io
-import logging
+
 import time
 from typing import Optional, Dict, Any, List
 import numpy as np
@@ -18,6 +18,7 @@ from requests.auth import HTTPDigestAuth
 from services.protocol_handlers.base_handler import BaseHandler
 from services.protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
 from models import ConnectionConfig
+from services.logging_service import get_secure_logger
 
 
 class AmcrestHandler(BaseHandler):

@@ -9,10 +9,10 @@ import aiohttp
 import asyncio
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-import logging
 
 from models.publishing.mediamtx_models import PathInfo, PathList
 from utils.exceptions import ServiceError
+from services.logging_service import get_secure_logger
 
 
 class MediaMTXClient:
@@ -42,7 +42,7 @@ class MediaMTXClient:
         self.api_url = api_url.rstrip('/')
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.max_retries = max_retries
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_secure_logger("services.publishing.mediamtx_client")
         self._session: Optional[aiohttp.ClientSession] = None
         
     async def __aenter__(self):

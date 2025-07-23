@@ -7,7 +7,7 @@ manteniendo compatibilidad y mejorando con patrones async/await.
 
 import asyncio
 import cv2
-import logging
+
 import requests
 from typing import Optional, Dict, Any, List
 from urllib.parse import urlparse
@@ -22,6 +22,14 @@ except ImportError:
 from services.protocol_handlers.base_handler import BaseHandler
 from services.protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
 from models import ConnectionConfig
+from services.logging_service import get_secure_logger
+from utils.sanitizers import sanitize_url, sanitize_command
+# TODO: Este servicio contiene logs que pueden exponer información sensible.
+# Revisar y aplicar sanitización donde sea necesario:
+# - Usar sanitize_url() para URLs con credenciales
+# - Usar sanitize_command() para comandos del sistema
+# - No loggear passwords o tokens directamente
+
 
 
 class ONVIFHandler(BaseHandler):

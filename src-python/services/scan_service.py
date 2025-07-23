@@ -18,7 +18,7 @@ Responsabilidades:
 import asyncio
 import ipaddress
 import json
-import logging
+
 import threading
 import time
 from collections import defaultdict
@@ -28,6 +28,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Callable, Any, Tuple
+from services.logging_service import get_secure_logger
 
 try:
     from ..models.scan_model import ScanModel, ScanStatus, ScanMethod, ScanRange, ScanResult, ProtocolDetectionResult
@@ -191,7 +192,7 @@ class ScanService:
         Args:
             config: Configuración del servicio (opcional)
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_secure_logger("services.scan_service")
         
         # Configuración
         self.config = config or ScanServiceConfig()

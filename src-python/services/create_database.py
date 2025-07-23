@@ -22,7 +22,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
 # Importar definiciones de esquema
-from database.schema import (
+from services.database.schema import (
     core_tables,
     operation_tables,
     scanning_tables,
@@ -33,7 +33,8 @@ from database.schema import (
     triggers,
     views
 )
-from database.data import initial_data
+from services.database.data import initial_data
+from services.logging_service import get_secure_logger
 
 # Configurar logging
 logging.basicConfig(
@@ -41,7 +42,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-logger = logging.getLogger(__name__)
+logger = get_secure_logger("services.create_database")
 
 
 class DatabaseCreator:

@@ -13,7 +13,7 @@ Proporciona funcionalidades completas de:
 
 import asyncio
 import json
-import logging
+
 import sqlite3
 import threading
 import time
@@ -41,6 +41,7 @@ except ImportError:
 
 from dataclasses import dataclass, field
 from enum import Enum
+from services.logging_service import get_secure_logger
 
 try:
     from ..models import CameraModel, ConnectionModel, ScanModel
@@ -159,7 +160,7 @@ class DataService:
             config: Configuración del servicio
         """
         self.config = config or DataServiceConfig()
-        self.logger = logging.getLogger("DataService")
+        self.logger = get_secure_logger("services.data_service")
         
         # Estado del servicio
         self._initialized = False

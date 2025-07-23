@@ -7,7 +7,7 @@ para mantener compatibilidad mientras se adopta la nueva arquitectura MVP.
 
 import asyncio
 import cv2
-import logging
+
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional, List, Callable
 # Imports directos de la nueva arquitectura
 from models import ConnectionConfig
 from services.protocol_service import ConnectionState, ProtocolCapabilities, StreamingConfig
+from services.logging_service import get_secure_logger
 
 
 class BaseHandler(ABC):
@@ -41,7 +42,7 @@ class BaseHandler(ABC):
         - Nuevo: BaseHandler(config: ConnectionConfig, streaming_config: StreamingConfig)
         - Antiguo: BaseHandler(camera_ip: str, credentials: dict)
         """
-        self.logger = logging.getLogger(f"{self.__class__.__name__}")
+        self.logger = get_secure_logger("services.protocol_handlers.base_handler")
         
         # Estado interno
         self._state = ConnectionState.DISCONNECTED

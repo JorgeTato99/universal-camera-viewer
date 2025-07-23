@@ -8,8 +8,9 @@ de su conversión y envío.
 import cv2
 import numpy as np
 from typing import Optional, Tuple, Dict, Any
-import logging
+
 from dataclasses import dataclass
+from services.logging_service import get_secure_logger
 
 
 @dataclass
@@ -34,7 +35,7 @@ class FrameProcessor:
     
     def __init__(self):
         """Inicializa el procesador."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_secure_logger("services.video.frame_processor")
         
         # Para detección de movimiento
         self._last_frame: Optional[np.ndarray] = None

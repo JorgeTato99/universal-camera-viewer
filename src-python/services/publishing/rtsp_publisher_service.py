@@ -6,7 +6,7 @@ de streams RTSP desde cámaras hacia el servidor MediaMTX.
 """
 
 import asyncio
-import logging
+
 from typing import Dict, Optional, List
 from datetime import datetime
 import uuid
@@ -21,6 +21,7 @@ from services.camera_manager_service import camera_manager_service
 from utils.sanitizers import sanitize_command, sanitize_url
 from services.publishing.ffmpeg_manager import FFmpegManager
 from utils.exceptions import ServiceError
+from services.logging_service import get_secure_logger
 
 
 class RTSPPublisherService(BaseService):
@@ -55,7 +56,7 @@ class RTSPPublisherService(BaseService):
         self._processes: Dict[str, PublisherProcess] = {}
         self._ffmpeg_manager = FFmpegManager()
         self._shutdown_event = asyncio.Event()
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_secure_logger("services.publishing.rtsp_publisher_service")
         self._db_service = None  # Se inicializa en initialize()
         self._config_id = None  # ID de configuración en BD
         

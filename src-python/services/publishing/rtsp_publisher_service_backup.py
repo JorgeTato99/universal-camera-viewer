@@ -6,7 +6,7 @@ de streams RTSP desde cámaras hacia el servidor MediaMTX.
 """
 
 import asyncio
-import logging
+
 from typing import Dict, Optional, List
 from datetime import datetime
 
@@ -18,6 +18,7 @@ from models.publishing import (
 from services.camera_manager_service import camera_manager_service
 from services.publishing.ffmpeg_manager import FFmpegManager
 from utils.exceptions import ServiceError
+from services.logging_service import get_secure_logger
 
 
 class RTSPPublisherService(BaseService):

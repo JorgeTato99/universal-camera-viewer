@@ -11,12 +11,13 @@ import time
 from abc import ABC, abstractmethod
 from typing import Optional, Callable, Any, Dict
 import numpy as np
-import logging
+
 from datetime import datetime
 
 from models.streaming import StreamModel, StreamProtocol, StreamStatus
 from models import ConnectionConfig
 from utils.video import FrameConverter
+from services.logging_service import get_secure_logger
 
 
 class StreamManager(ABC):
@@ -62,10 +63,10 @@ class StreamManager(ABC):
             self._main_loop = asyncio.get_running_loop()
         except RuntimeError:
             self._main_loop = None
-            self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+            self.logger = get_secure_logger("services.video.stream_manager")
             self.logger.warning("No se pudo obtener el event loop actual")
         else:
-            self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+            self.logger = get_secure_logger("services.video.stream_manager")
     
     def set_frame_callback(self, callback: Callable[[str, str], None]) -> None:
         """Establece el callback para notificar frames."""
@@ -262,7 +263,7 @@ class StreamManagerFactory:
     
     def __init__(self):
         """Inicializa la factory."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_secure_logger("services.video.stream_manager")
     
     def create_stream_manager(
         self,

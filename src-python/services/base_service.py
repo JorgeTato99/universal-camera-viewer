@@ -2,9 +2,9 @@
 Clase base para todos los servicios.
 """
 
-import logging
 from typing import Dict, List, Any, Callable
 from abc import ABC
+import logging
 
 
 class BaseService(ABC):
@@ -16,7 +16,13 @@ class BaseService(ABC):
     
     def __init__(self):
         """Inicializar servicio base."""
-        self.logger = logging.getLogger(self.__class__.__name__)
+        # Importación diferida para evitar circularidad
+        try:
+            from services.logging_service import get_secure_logger
+            self.logger = get_secure_logger(f"{self.__module__}.{self.__class__.__name__}")
+        except ImportError:
+            # Fallback a logging estándar si hay problema de importación
+            self.logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._listeners: Dict[str, List[Callable]] = {}
         self._is_initialized = False
         

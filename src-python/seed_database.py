@@ -14,7 +14,10 @@ from pathlib import Path
 # Agregar el directorio src-python al path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from services.encryption_service import encryption_service
+from services.encryption_service_v2 import EncryptionServiceV2
+
+# Instanciar el servicio de encriptación v2
+encryption_service = EncryptionServiceV2()
 from utils.id_generator import generate_camera_id
 
 # Configurar logging

@@ -6,7 +6,7 @@ unificada para el control de streaming.
 """
 
 import asyncio
-import logging
+
 from typing import Dict, Optional, Callable, List, Any
 from datetime import datetime
 import uuid
@@ -17,6 +17,7 @@ from models import ConnectionConfig
 from utils.video import FrameConverter, Base64JPEGStrategy
 from utils.video.performance_monitor import StreamPerformanceMonitor
 from services.video.stream_manager import StreamManagerFactory, StreamManager
+from services.logging_service import get_secure_logger
 
 
 class VideoStreamService(BaseService):

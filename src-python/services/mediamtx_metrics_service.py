@@ -6,7 +6,7 @@ de calidad para las publicaciones de streaming.
 """
 
 import asyncio
-import logging
+
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
@@ -18,6 +18,7 @@ from services.base_service import BaseService
 from services.database.mediamtx_db_service import get_mediamtx_db_service
 from utils.exceptions import ServiceError, MediaMTXAPIError
 from models.publishing import PublishStatus
+from services.logging_service import get_secure_logger
 
 
 logger = logging.getLogger(__name__)

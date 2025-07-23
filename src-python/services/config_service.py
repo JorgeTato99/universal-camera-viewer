@@ -14,7 +14,7 @@ Proporciona funcionalidades completas de:
 
 import asyncio
 import json
-import logging
+
 import os
 import threading
 from dataclasses import dataclass, field, asdict
@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Set, Callable, Union
 import base64
 import hashlib
+from services.logging_service import get_secure_logger
 
 # Importaciones para encriptación
 try:
@@ -149,7 +150,7 @@ class ConfigService:
             config: Configuración del servicio
         """
         self.config = config or ConfigServiceConfig()
-        self.logger = logging.getLogger("ConfigService")
+        self.logger = get_secure_logger("services.config_service")
         
         # Estado del servicio
         self._initialized = False

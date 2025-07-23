@@ -9,7 +9,7 @@ import re
 import uuid
 import random
 import string
-import logging
+
 from typing import Dict, List, Optional, Any, Set
 from datetime import datetime
 from dataclasses import dataclass, field
@@ -21,6 +21,7 @@ from services.database.mediamtx_db_service import get_mediamtx_db_service
 from services.publishing import MediaMTXClient
 from utils.exceptions import ServiceError, ValidationError
 from models.camera_model import CameraModel
+from services.logging_service import get_secure_logger
 
 
 logger = logging.getLogger(__name__)
@@ -113,7 +114,7 @@ class MediaMTXPathsService(BaseService):
         self._path_cache: Dict[str, Dict[str, Any]] = {}
         self._reserved_paths: Set[str] = set()
         self._cache_lock = asyncio.Lock()
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_secure_logger("services.publishing.mediamtx_paths_service")
         
     async def initialize(self) -> None:
         """

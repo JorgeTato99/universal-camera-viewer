@@ -7,7 +7,7 @@ en la base de datos SQLite.
 
 import sqlite3
 import json
-import logging
+
 from typing import Optional, Dict, List, Any
 from datetime import datetime
 from contextlib import contextmanager
@@ -20,9 +20,10 @@ import os
 
 from models.publishing import PublishConfiguration, PublishStatus, PublisherProcess
 from utils.exceptions import ServiceError
+from services.logging_service import get_secure_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_secure_logger("services.database.publishing_db_service")
 
 
 class PublishingDatabaseService:

@@ -5,7 +5,7 @@ Proporciona una interfaz de alto nivel para gestionar cámaras,
 integrando el DataService con la nueva estructura normalizada.
 """
 import asyncio
-import logging
+
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 
@@ -14,6 +14,7 @@ from services.data_service import DataService, get_data_service
 from services.connection_service import ConnectionService, ConnectionType
 from models.camera_model import CameraModel, ConnectionConfig, StreamConfig, CameraCapabilities, ProtocolType, ConnectionStatus
 from utils.exceptions import (
+from services.logging_service import get_secure_logger
     CameraNotFoundError,
     CameraAlreadyExistsError,
     InvalidCredentialsError,

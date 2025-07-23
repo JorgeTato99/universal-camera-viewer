@@ -16,7 +16,7 @@ Responsabilidades:
 """
 
 import asyncio
-import logging
+
 import threading
 import time
 from collections import defaultdict
@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional, Set, Callable, Any, Tuple
+from services.logging_service import get_secure_logger
 
 try:
     from ..models.camera_model import CameraModel, ProtocolType, ConnectionStatus
@@ -140,7 +141,7 @@ class ConnectionService:
         Args:
             config: Configuración del servicio (opcional)
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_secure_logger("services.connection_service")
         
         # Configuración
         self.config = config or ConnectionServiceConfig()

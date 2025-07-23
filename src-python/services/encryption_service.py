@@ -5,7 +5,7 @@ Gestiona la encriptación y desencriptación segura de credenciales de cámaras.
 """
 import os
 import base64
-import logging
+
 from typing import Optional
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from pathlib import Path
 
 from services.base_service import BaseService
+from services.logging_service import get_secure_logger
 
 
 class EncryptionService(BaseService):

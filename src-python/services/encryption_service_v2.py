@@ -11,7 +11,7 @@ Este servicio implementa:
 import os
 import base64
 import json
-import logging
+
 import time
 from typing import Optional, Dict, Tuple, List
 from cryptography.fernet import Fernet, InvalidToken
@@ -23,6 +23,14 @@ import threading
 import hashlib
 
 from services.base_service import BaseService
+from services.logging_service import get_secure_logger
+from utils.sanitizers import sanitize_url, sanitize_command
+# TODO: Este servicio contiene logs que pueden exponer información sensible.
+# Revisar y aplicar sanitización donde sea necesario:
+# - Usar sanitize_url() para URLs con credenciales
+# - Usar sanitize_command() para comandos del sistema
+# - No loggear passwords o tokens directamente
+
 
 
 class KeyVersion:

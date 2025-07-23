@@ -6,7 +6,7 @@ y los presenters, manteniendo la arquitectura MVP.
 """
 
 import asyncio
-import logging
+
 from typing import Dict, Any, Optional, Callable
 from datetime import datetime
 import socket
@@ -20,6 +20,14 @@ from models import ConnectionConfig
 from models.streaming import StreamProtocol
 from config.settings import settings
 from utils.exceptions import StreamingError
+from services.logging_service import get_secure_logger
+from utils.sanitizers import sanitize_url, sanitize_command
+# TODO: Este servicio contiene logs que pueden exponer información sensible.
+# Revisar y aplicar sanitización donde sea necesario:
+# - Usar sanitize_url() para URLs con credenciales
+# - Usar sanitize_command() para comandos del sistema
+# - No loggear passwords o tokens directamente
+
 
 
 class WebSocketStreamService(BaseService):
