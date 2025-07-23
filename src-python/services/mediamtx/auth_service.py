@@ -18,7 +18,7 @@ import jwt
 from urllib.parse import urljoin
 
 from services.base_service import BaseService
-from services.encryption_service_v2 import get_encryption_service
+from services.encryption_service_v2 import EncryptionServiceV2
 from services.database.mediamtx_db_service import get_mediamtx_db_service
 from services.logging_service import get_secure_logger
 from utils.exceptions import ServiceError, MediaMTXAPIError
@@ -137,7 +137,7 @@ class MediaMTXAuthService(BaseService):
         self.logger = logger
         
         # Servicios dependientes
-        self._encryption_service = get_encryption_service()
+        self._encryption_service = EncryptionServiceV2()
         self._db_service = get_mediamtx_db_service()
         
         # Cache de tokens en memoria

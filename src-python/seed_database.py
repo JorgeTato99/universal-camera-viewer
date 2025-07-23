@@ -15,9 +15,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from services.encryption_service_v2 import EncryptionServiceV2
-
-# Instanciar el servicio de encriptación v2
-encryption_service = EncryptionServiceV2()
 from utils.id_generator import generate_camera_id
 
 # Configurar logging
@@ -366,6 +363,7 @@ class DatabaseSeeder:
                 )
 
                 # 2. Insertar credenciales
+                encryption_service = EncryptionServiceV2()
                 encrypted_password = encryption_service.encrypt(camera_data["password"])
                 self.cursor.execute(
                     """
@@ -497,6 +495,7 @@ class DatabaseSeeder:
             
             # Encriptar contraseña
             if server_data["password"]:
+                encryption_service = EncryptionServiceV2()
                 encrypted_password = encryption_service.encrypt(server_data["password"])
             else:
                 encrypted_password = None

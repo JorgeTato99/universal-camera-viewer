@@ -87,8 +87,8 @@ async def test_authentication():
             print("\n3. Realizando login...")
             
             # Obtener contraseña desencriptada
-            from services.encryption_service_v2 import get_encryption_service
-            encryption = get_encryption_service()
+            from services.encryption_service_v2 import EncryptionServiceV2
+            encryption = EncryptionServiceV2()
             
             if test_server['password_encrypted']:
                 password = encryption.decrypt(test_server['password_encrypted'])

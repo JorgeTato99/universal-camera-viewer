@@ -22,6 +22,7 @@ psutil>=5.9.0                  # Información de CPU, memoria y red
 
 # Seguridad y encriptación
 cryptography>=41.0.0           # Cifrado para credenciales y comunicaciones
+PyJWT>=2.8.0                   # Manejo de tokens JWT para autenticación
 
 # Análisis de datos (opcional)
 pandas>=2.0.0                  # Manipulación de datos tabulares
