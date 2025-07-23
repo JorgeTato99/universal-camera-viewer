@@ -73,8 +73,8 @@ class ExportFormat(Enum):
 class DataServiceConfig:
     """Configuración del DataService."""
     database_type: DatabaseType = DatabaseType.SQLITE
-    # Usar ruta absoluta basada en el proyecto
-    database_path: str = str(Path(__file__).parent.parent.parent / "data" / "camera_data.db")
+    # Usar ruta absoluta basada en src-python
+    database_path: str = str(Path(__file__).parent.parent / "data" / "camera_data.db")
     cache_size_mb: int = 50
     cache_ttl_hours: int = 24
     auto_cleanup_days: int = 30
@@ -85,7 +85,7 @@ class DataServiceConfig:
     enable_analytics: bool = True
     
     # Configuración de exportación
-    export_directory: str = "exports"
+    export_directory: str = str(Path(__file__).parent.parent / "exports")
     max_export_file_size_mb: int = 100
     
     # Configuración de historial
@@ -254,12 +254,15 @@ class DataService:
     
     def _create_directories(self) -> None:
         """Crea los directorios necesarios."""
+        # Base directory for data files in src-python
+        base_data_dir = Path(__file__).parent.parent / "data"
+        
         directories = [
             Path(self.config.database_path).parent,
             Path(self.config.export_directory),
-            Path("data/snapshots"),
-            Path("data/cache"),
-            Path("data/backups")
+            base_data_dir / "snapshots",
+            base_data_dir / "cache",
+            base_data_dir / "backups"
         ]
         
         for directory in directories:
@@ -941,7 +944,8 @@ class DataService:
             
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = Path("data/backups") / f"backup_{timestamp}.db"
+            base_data_dir = Path(__file__).parent.parent / "data"
+            backup_path = base_data_dir / "backups" / f"backup_{timestamp}.db"
             
             # Copiar base de datos
             shutil.copy2(self.config.database_path, backup_path)
@@ -950,7 +954,7 @@ class DataService:
             self.logger.info(f"Backup creado: {backup_path}")
             
             # Limpiar backups antiguos (mantener solo los últimos 10)
-            backup_dir = Path("data/backups")
+            backup_dir = base_data_dir / "backups"
             backups = sorted(backup_dir.glob("backup_*.db"))
             if len(backups) > 10:
                 for old_backup in backups[:-10]:

@@ -106,7 +106,7 @@ class LoggingService(BaseService):
         
         # Configuración
         self.environment = os.getenv('ENVIRONMENT', 'production')
-        self.log_dir = Path(__file__).parent.parent.parent / "logs"
+        self.log_dir = Path(__file__).parent.parent / "logs"
         self.log_dir.mkdir(exist_ok=True)
         
         # Estado interno

@@ -35,8 +35,8 @@ class EncryptionService(BaseService):
         super().__init__()
         self._cipher_suite: Optional[Fernet] = None
         # Usar ruta absoluta para evitar problemas con cambios de directorio
-        project_root = Path(__file__).parent.parent.parent  # src-python/services -> universal-camera-viewer
-        self._key_file = project_root / "data" / ".encryption_key"
+        src_python_root = Path(__file__).parent.parent  # src-python/services -> src-python
+        self._key_file = src_python_root / "data" / ".encryption_key"
         self._initialize_encryption()
         self._initialized = True
         

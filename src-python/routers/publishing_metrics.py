@@ -464,8 +464,9 @@ async def export_camera_metrics(
         # Generar ID único para la exportación
         export_id = str(uuid.uuid4())
         
-        # Definir ruta del archivo
-        export_dir = Path("exports/metrics")
+        # Definir ruta del archivo - usar ruta absoluta basada en src-python
+        base_dir = Path(__file__).parent.parent
+        export_dir = base_dir / "exports" / "metrics"
         export_dir.mkdir(parents=True, exist_ok=True)
         
         extension_map = {

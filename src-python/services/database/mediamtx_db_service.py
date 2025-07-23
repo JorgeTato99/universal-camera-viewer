@@ -38,13 +38,16 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
     - Health checks y alertas
     """
     
-    def __init__(self, db_path: str = "data/camera_data.db"):
+    def __init__(self, db_path: Optional[str] = None):
         """
         Inicializa el servicio extendido.
         
         Args:
             db_path: Ruta a la base de datos SQLite
         """
+        if db_path is None:
+            # Usar ruta absoluta basada en src-python
+            db_path = str(Path(__file__).parent.parent.parent / "data" / "camera_data.db")
         super().__init__(db_path)
         self.logger = logger
         

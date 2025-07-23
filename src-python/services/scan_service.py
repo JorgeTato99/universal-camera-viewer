@@ -236,13 +236,14 @@ class ScanService:
         # Configuración manager
         self.config_manager = ConfigurationManager()
         
-        # Archivos de persistencia
-        self.cache_file = Path("data/scan_cache.json")
-        self.history_file = Path("data/scan_history.json")
-        self.analysis_file = Path("data/network_analysis.json")
+        # Archivos de persistencia - usar rutas absolutas basadas en src-python
+        data_dir = Path(__file__).parent.parent / "data"
+        self.cache_file = data_dir / "scan_cache.json"
+        self.history_file = data_dir / "scan_history.json"
+        self.analysis_file = data_dir / "network_analysis.json"
         
         # Crear directorio de datos
-        Path("data").mkdir(exist_ok=True)
+        data_dir.mkdir(exist_ok=True)
         
         # Cargar datos persistentes
         self._load_persistent_data()
@@ -1090,5 +1091,6 @@ def get_scan_service(config: Optional[ScanServiceConfig] = None) -> ScanService:
     return _scan_service_instance
 
 
-# Crear instancia singleton
-scan_service = get_scan_service() 
+# NO crear instancia singleton durante la importación
+# Usar get_scan_service() cuando se necesite
+# scan_service = get_scan_service() 

@@ -41,7 +41,8 @@
       "Bash(head:*)",
       "Bash(wc:*)",
       "Bash(sqlite3:*)",
-      "mcp__ide__executeCode"
+      "mcp__ide__executeCode",
+      "Bash(cmd /c:*)"
     ],
     "deny": []
   }

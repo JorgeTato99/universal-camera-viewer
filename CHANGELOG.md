@@ -7,6 +7,76 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.17] - 2025-07-23 - 🔒 SEGURIDAD CRÍTICA Y AGREGACIÓN DE LOGS
+
+### 🔒 Security - Implementaciones Críticas Completadas
+
+#### 📊 Rate Limiting (Fase 1.2) ✅
+- **Sistema completo de protección DoS** con SlowAPI
+- **Configuración externa** en `config/rate_limit_settings.yaml`
+- **Límites diferenciados**: Lectura (100/min), Escritura (10/min), Escaneo (1/min)
+- **Headers RFC 6585**: X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After
+- **100% cobertura**: Todos los endpoints protegidos
+
+#### 🔐 Encriptación v2 (Fase 1.3) ✅
+- **Versionado de claves** con formato `v{version}:{encrypted_base64}`
+- **Sistema de rotación** preparado para rotación periódica de claves
+- **Migración automática** desde v1 sin pérdida de datos
+- **Auditoría completa** sin exponer valores sensibles
+- **103 test cases** cubriendo todos los escenarios
+
+#### 🪵 Sanitización de Logs (Fase 1.4) ✅
+- **Filtros inteligentes** para URLs, comandos, IPs y headers
+- **Contexto automático** con reglas específicas por módulo
+- **27 servicios migrados** usando `get_secure_logger()`
+- **Tests exhaustivos** para sanitizadores, filtros y servicio
+
+#### 📈 ELK Stack Integration ✅
+- **Formateadores JSON**: Estándar, ECS y streaming-específico
+- **Handlers flexibles**: Filebeat (producción) y Elasticsearch (desarrollo)
+- **Contexto enriquecido**: Correlation IDs, metadata de cámaras/streams
+- **Documentación completa** con Docker Compose y guías paso a paso
+
+### 🐛 Fixed - Problema de Rutas de Archivos
+
+#### 🗂️ Creación Incorrecta de Carpeta `data`
+- **Problema**: Se creaba `D:\universal-camera-viewer\data\` en lugar de `D:\universal-camera-viewer\src-python\data\`
+- **Causa**: Múltiples servicios usaban rutas relativas o `Path(__file__).parent.parent.parent`
+- **Archivos corregidos** (11 archivos):
+  - `services/data_service.py` - Rutas absolutas para base de datos y exports
+  - `services/scan_service.py` - Eliminada inicialización singleton durante import
+  - `config/settings.py` - DATABASE_PATH con ruta absoluta por defecto
+  - `services/encryption_service.py` - Keystore path corregido
+  - `services/encryption_service_v2.py` - Path calculation fixed
+  - `services/logging_service.py` - Log directory path
+  - `api/middleware/rate_limit.py` - Config file path
+  - `routers/publishing_metrics.py` - Export directory path
+  - `services/database/publishing_db_service.py` - Database path y key file
+  - `services/database/mediamtx_db_service.py` - Database path
+  - `routers/scanner.py` - Cambio de import singleton a función factory
+
+### 🧪 Testing - Cobertura de Seguridad
+
+- **test_encryption_service_v2.py**: 103 test cases completos
+- **test_sanitizers.py**: Pruebas exhaustivas de sanitización
+- **test_logging_filters.py**: Verificación de filtros de logs
+- **test_logging_service.py**: Tests del servicio singleton
+
+### 📚 Documentation
+
+- **RUN_API_GUIDE.md**: Actualizado con solución al problema de rutas
+- **CURRENT_WORK_STATUS.md**: Estado actualizado de implementaciones
+- **docs/elk_integration.md**: Guía completa de integración ELK Stack
+- **docs/security_implementation.md**: Documentación de seguridad
+
+### 🔄 Work Status
+
+- **Completado**: Rate Limiting, Encriptación v2, Log Sanitization, ELK Stack
+- **Pospuesto**: WebSocket Authentication (para release final)
+- **Eliminado**: Input Validation (fase 1.5) - no necesario con validación existente
+
+---
+
 ## [0.9.16] - 2025-07-23 - 📖 DOCUMENTACIÓN OPENAPI Y MIGRACIÓN MEDIAMTX
 
 ### 📚 Documentation - OpenAPI/Swagger Mejorado

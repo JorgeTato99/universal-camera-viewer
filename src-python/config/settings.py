@@ -6,6 +6,7 @@ Gestiona variables de entorno y configuraciones por defecto.
 
 import os
 from typing import Optional
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Cargar variables de entorno
@@ -57,7 +58,9 @@ class Settings:
     
     # Configuración de base de datos
     DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
-    DATABASE_PATH: str = os.getenv("DATABASE_PATH", "data/camera_data.db")
+    # Usar ruta absoluta basada en src-python
+    _default_db_path = str(Path(__file__).parent.parent / "data" / "camera_data.db")
+    DATABASE_PATH: str = os.getenv("DATABASE_PATH", _default_db_path)
     
     # Configuración de caché
     CACHE_TTL: int = int(os.getenv("CACHE_TTL", "300"))  # 5 minutos

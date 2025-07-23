@@ -153,7 +153,7 @@ from pathlib import Path
 # Agregar src-python al path si es necesario
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from services.scan_service import scan_service
+from services.scan_service import get_scan_service
 from models.scan_model import ScanMethod, ScanRange as ScanRangeModel
 
 
@@ -255,7 +255,7 @@ async def start_scan(
             methods.append(ScanMethod.PROTOCOL_DETECTION)
         
         # Iniciar escaneo usando el servicio real
-        scan_id = await scan_service.start_scan(
+        scan_id = await get_scan_service().start_scan(
             ranges=scan_ranges,
             methods=methods,
             max_concurrent=request.concurrent_scans,
@@ -317,7 +317,7 @@ async def get_scan_progress(
     """
     try:
         # Obtener estado desde el servicio real
-        scan_status = await scan_service.get_scan_status(scan_id)
+        scan_status = await get_scan_service().get_scan_status(scan_id)
         
         if not scan_status:
             raise HTTPException(
@@ -326,8 +326,8 @@ async def get_scan_progress(
             )
         
         # Obtener el modelo de escaneo para acceder al progreso
-        if scan_id in scan_service.active_scans:
-            scan_model = scan_service.active_scans[scan_id]
+        if scan_id in get_scan_service().active_scans:
+            scan_model = get_scan_service().active_scans[scan_id]
             progress_data = scan_model.progress
             
             # Construir respuesta de progreso
@@ -379,7 +379,7 @@ async def stop_scan(scan_id: str):
     """
     try:
         # Verificar si el escaneo existe
-        scan_status = await scan_service.get_scan_status(scan_id)
+        scan_status = await get_scan_service().get_scan_status(scan_id)
         
         if not scan_status:
             raise HTTPException(
@@ -395,7 +395,7 @@ async def stop_scan(scan_id: str):
             )
         
         # Detener el escaneo
-        success = await scan_service.stop_scan(scan_id)
+        success = await get_scan_service().stop_scan(scan_id)
         
         if success:
             return create_response(
@@ -435,7 +435,7 @@ async def get_scan_results(scan_id: str):
     """
     try:
         # Obtener estado del escaneo
-        scan_status = await scan_service.get_scan_status(scan_id)
+        scan_status = await get_scan_service().get_scan_status(scan_id)
         
         if not scan_status:
             raise HTTPException(
@@ -451,13 +451,13 @@ async def get_scan_results(scan_id: str):
             )
         
         # Obtener resultados
-        results = await scan_service.get_scan_results(scan_id)
+        results = await get_scan_service().get_scan_results(scan_id)
         detected_cameras = []
         
         if not results:
             # Si no hay resultados guardados, intentar obtener del modelo activo
-            if scan_id in scan_service.active_scans:
-                scan_model = scan_service.active_scans[scan_id]
+            if scan_id in get_scan_service().active_scans:
+                scan_model = get_scan_service().active_scans[scan_id]
                 camera_results = scan_model.get_camera_results()
                 
                 # Formatear resultados para el frontend
@@ -538,7 +538,7 @@ async def quick_scan(request: QuickScanRequest):
         )
         
         # Iniciar escaneo usando el servicio real
-        scan_id = await scan_service.start_scan(
+        scan_id = await get_scan_service().start_scan(
             ranges=[scan_range],
             methods=[ScanMethod.PORT_SCAN, ScanMethod.PROTOCOL_DETECTION],
             max_concurrent=len(request.ports),  # Un thread por puerto
@@ -558,7 +558,7 @@ async def quick_scan(request: QuickScanRequest):
             elapsed += wait_interval
         
         # Obtener resultados
-        results = await scan_service.get_scan_results(scan_id)
+        results = await get_scan_service().get_scan_results(scan_id)
         
         # Determinar red local (simulado)
         local_network = "192.168.1.0/24"  # TODO: Detectar red real
@@ -642,7 +642,7 @@ async def detect_protocols(
         )
         
         # Ejecutar escaneo con detección de protocolos
-        scan_id = await scan_service.start_scan(
+        scan_id = await get_scan_service().start_scan(
             ranges=[scan_range],
             methods=[ScanMethod.PORT_SCAN, ScanMethod.PROTOCOL_DETECTION],
             max_concurrent=len(ports),
@@ -662,7 +662,7 @@ async def detect_protocols(
             elapsed += wait_interval
         
         # Obtener resultados
-        results = await scan_service.get_scan_results(scan_id)
+        results = await get_scan_service().get_scan_results(scan_id)
         
         protocols = []
         if results and ip in results:
@@ -948,7 +948,7 @@ async def delete_scan_results(scan_id: str):
     """
     try:
         # Verificar que el escaneo existe
-        scan_status = await scan_service.get_scan_status(scan_id)
+        scan_status = await get_scan_service().get_scan_status(scan_id)
         
         if not scan_status:
             logger.warning(f"Escaneo no encontrado para eliminar: {scan_id}")

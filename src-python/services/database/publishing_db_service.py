@@ -37,13 +37,16 @@ class PublishingDatabaseService:
     - Estadísticas de uso
     """
     
-    def __init__(self, db_path: str = "data/camera_data.db"):
+    def __init__(self, db_path: Optional[str] = None):
         """
         Inicializa el servicio de base de datos.
         
         Args:
             db_path: Ruta a la base de datos SQLite
         """
+        if db_path is None:
+            # Usar ruta absoluta basada en src-python
+            db_path = str(Path(__file__).parent.parent.parent / "data" / "camera_data.db")
         self.db_path = Path(db_path)
         self.logger = logger
         self._initialized = False
@@ -918,8 +921,7 @@ def get_publishing_db_service(db_path: Optional[str] = None) -> PublishingDataba
     global _db_service
     
     if _db_service is None:
-        if db_path is None:
-            db_path = "data/camera_data.db"
+        # No especificar db_path aquí, dejar que el constructor use el valor por defecto
         _db_service = PublishingDatabaseService(db_path)
         
     return _db_service

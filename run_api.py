@@ -1,33 +1,19 @@
 #!/usr/bin/env python
 """
-Script para ejecutar el servidor FastAPI
+Script para ejecutar el servidor FastAPI.
+
+Este script es un wrapper conveniente que ejecuta el main.py
+ubicado en src-python, evitando problemas con rutas relativas.
 """
 
+import subprocess
 import sys
-import os
 from pathlib import Path
 
-# Agregar src-python al path
-sys.path.insert(0, str(Path(__file__).parent / "src-python"))
 
 if __name__ == "__main__":
-    # Cambiar al directorio src-python
-    os.chdir(Path(__file__).parent / "src-python")
+    # Ruta al main.py en src-python
+    main_path = Path(__file__).parent / "src-python" / "main.py"
     
-    # Importar y ejecutar
-    import uvicorn
-    from api.config import settings
-    
-    print(f"[STARTING] {settings.app_name} v{settings.app_version}")
-    print(f"[SERVER] http://{settings.host}:{settings.port}")
-    print(f"[DOCS] http://{settings.host}:{settings.port}/docs")
-    print(f"[RELOAD] {'Enabled' if settings.reload else 'Disabled'}")
-    print("-" * 50)
-    
-    uvicorn.run(
-        "api.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.reload,
-        log_level=settings.log_level.lower()
-    )
+    # Ejecutar main.py usando el mismo intérprete de Python
+    subprocess.run([sys.executable, str(main_path)])
