@@ -8,6 +8,7 @@ import logging
 import asyncio
 
 from api.dependencies import create_response
+from api.dependencies.rate_limit import read_limit, write_limit
 from api.models.camera_models import (
     CreateCameraRequest,
     UpdateCameraRequest,
@@ -38,6 +39,7 @@ router = APIRouter(
 # === Endpoints CRUD ===
 
 @router.get("/")
+@read_limit()  # 100/minute (1000/minute en desarrollo)
 async def list_cameras(
     active_only: bool = True,
     protocol: Optional[ProtocolType] = None
@@ -99,6 +101,7 @@ async def list_cameras(
 
 
 @router.get("/{camera_id}")
+@read_limit()  # 100/minute
 async def get_camera(camera_id: str):
     """
     Obtener información detallada de una cámara específica.
@@ -158,6 +161,7 @@ async def get_camera(camera_id: str):
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
+@write_limit()  # 10/minute (100/minute en desarrollo)
 async def create_camera(request: CreateCameraRequest):
     """
     Crear una nueva cámara.
@@ -252,6 +256,7 @@ async def create_camera(request: CreateCameraRequest):
 
 
 @router.put("/{camera_id}")
+@write_limit()  # 10/minute
 async def update_camera(camera_id: str, request: UpdateCameraRequest):
     """
     Actualizar una cámara existente.
@@ -342,6 +347,7 @@ async def update_camera(camera_id: str, request: UpdateCameraRequest):
 
 
 @router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
+@write_limit()  # 10/minute
 async def delete_camera(camera_id: str):
     """
     Eliminar una cámara.

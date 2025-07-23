@@ -36,6 +36,7 @@ uvicorn[standard]>=0.27.0      # Servidor ASGI para FastAPI
 websockets>=12.0               # Soporte WebSocket
 python-multipart>=0.0.6        # Soporte para form data
 aiofiles>=23.2.1               # Operaciones de archivo asíncronas
+slowapi>=0.1.9                 # Rate limiting para FastAPI
 
 # Herramientas de desarrollo básicas
 black>=23.0.0                  # Formateador de código

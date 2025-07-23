@@ -11,6 +11,7 @@ from datetime import datetime
 from websocket.connection_manager import manager
 from websocket.stream_handler import stream_manager
 from api.dependencies import create_response
+from api.dependencies.rate_limit import rate_limit, websocket_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,7 @@ async def get_websocket_status():
 # === WebSocket Endpoints ===
 
 @router.websocket("/stream/{camera_id}")
+@websocket_rate_limit("websocket_connect")  # 20/hour - limitar nuevas conexiones WS
 async def websocket_stream(websocket: WebSocket, camera_id: str):
     """
     WebSocket endpoint para streaming de video de una cámara.

@@ -12,6 +12,7 @@ import ipaddress
 import logging
 
 from api.dependencies import create_response
+from api.dependencies.rate_limit import rate_limit, critical_operation_limit
 from api.config import settings
 from api.schemas.requests.scanner_requests import (
     ScanNetworkRequest,
@@ -182,6 +183,7 @@ def calculate_total_ips(ranges: List[ScanRange]) -> int:
 # === Endpoints ===
 
 @router.post("/scan", response_model=ScanProgressResponse)
+@critical_operation_limit()  # 1/minute - escaneo de red es muy costoso
 async def start_scan(
     request: ScanNetworkRequest,
     background_tasks: BackgroundTasks
@@ -513,6 +515,7 @@ async def get_scan_results(scan_id: str):
 
 
 @router.post("/quick-scan", response_model=QuickScanResponse)
+@rate_limit("test_connection")  # 20/minute - más ligero que escaneo completo
 async def quick_scan(request: QuickScanRequest):
     """
     Escaneo rápido de una IP específica.

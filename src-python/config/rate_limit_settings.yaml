@@ -1,0 +1,123 @@
+# Configuración de Rate Limiting para Universal Camera Viewer
+# Este archivo permite ajustar fácilmente los límites según el ambiente
+
+# Configuración por ambiente
+development:
+  enabled: true
+  multiplier: 10  # Límites 10x más altos en desarrollo
+  storage: "memory"
+  # Logging más detallado en desarrollo
+  log_level: "DEBUG"
+  
+production:
+  enabled: true
+  multiplier: 1
+  storage: "memory"  # TODO: Migrar a Redis para escalabilidad horizontal
+  log_level: "WARNING"
+  
+  # Configuración futura para Redis (documentada pero no implementada)
+  # redis:
+  #   url: "redis://localhost:6379"
+  #   key_prefix: "ucv_rate_limit"
+  #   ttl_multiplier: 1.1  # TTL ligeramente mayor que la ventana
+
+# Límites base (se multiplican por el multiplier del ambiente)
+limits:
+  # Límite global por IP - protección DoS básica
+  global:
+    rate: "1000/hour"
+    burst: 50  # Permitir ráfagas cortas
+    
+  # Operaciones de lectura (GET requests)
+  read:
+    rate: "100/minute"
+    burst: 10
+    
+  # Operaciones de escritura (POST, PUT, DELETE)
+  write:
+    rate: "10/minute"
+    burst: 2
+    
+  # === Operaciones críticas con recursos intensivos ===
+  
+  # Conexión a cámaras - costoso en red y CPU
+  camera_connect:
+    rate: "5/minute"
+    burst: 1
+    message: "Demasiados intentos de conexión. Espere antes de reconectar."
+    
+  # Escaneo de red - MUY costoso, puede tardar minutos
+  network_scan:
+    rate: "1/minute"
+    burst: 1
+    message: "El escaneo de red es una operación costosa. Espere antes de escanear nuevamente."
+    
+  # Iniciar streaming - consume ancho de banda significativo
+  stream_start:
+    rate: "10/minute"
+    burst: 2
+    message: "Límite de nuevos streams alcanzado. Cierre streams existentes."
+    
+  # Conexiones WebSocket - mantener conexiones persistentes
+  websocket_connect:
+    rate: "20/hour"
+    burst: 5
+    message: "Demasiadas conexiones WebSocket. Reutilice conexiones existentes."
+    
+  # Operaciones de protocolo - pueden ser lentas
+  protocol_discovery:
+    rate: "30/minute"
+    burst: 5
+    
+  # Test de conexión - similar a camera_connect pero más ligero
+  test_connection:
+    rate: "20/minute"
+    burst: 3
+
+# Endpoints excluidos de rate limiting
+excluded_paths:
+  - "/health"           # Health checks para monitoreo
+  - "/metrics"          # Métricas del sistema
+  - "/docs"             # Documentación Swagger
+  - "/redoc"            # Documentación ReDoc
+  - "/openapi.json"     # Especificación OpenAPI
+  - "/favicon.ico"      # Favicon
+  - "/static"           # Archivos estáticos (si hay)
+
+# IPs confiables (bypass de rate limiting)
+# ADVERTENCIA: Usar con cuidado, solo para servicios internos
+trusted_ips:
+  - "127.0.0.1"        # Localhost siempre confiable
+  - "::1"              # IPv6 localhost
+  # - "10.0.0.0/8"     # Ejemplo: red interna (comentado por seguridad)
+
+# Configuración de headers
+headers:
+  # Headers estándar RFC 6585
+  limit_header: "X-RateLimit-Limit"
+  remaining_header: "X-RateLimit-Remaining"
+  reset_header: "X-RateLimit-Reset"
+  retry_header: "Retry-After"
+  
+  # Headers adicionales informativos
+  window_header: "X-RateLimit-Window"
+  burst_header: "X-RateLimit-Burst"
+
+# Mensajes de error personalizados
+error_messages:
+  default: "Límite de peticiones excedido. Por favor, intente más tarde."
+  global: "Demasiadas peticiones desde su IP. Por favor, reduzca la frecuencia."
+  
+# Configuración de almacenamiento en memoria
+memory_storage:
+  # Limpieza de entradas expiradas
+  cleanup_interval: 300  # segundos (5 minutos)
+  max_entries: 100000    # Límite de entradas para evitar memory leak
+  
+# Métricas y monitoreo
+metrics:
+  enabled: true
+  # Intervalo para log de estadísticas agregadas
+  stats_interval: 60  # segundos
+  # Top N IPs a reportar en estadísticas
+  top_ips_count: 10

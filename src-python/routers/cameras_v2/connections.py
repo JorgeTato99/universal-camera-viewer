@@ -7,6 +7,7 @@ import logging
 import ipaddress
 
 from api.dependencies import create_response
+from api.dependencies.rate_limit import rate_limit, camera_operation_limit
 from api.models.camera_models import (
     TestConnectionRequest,
     TestConnectionResponse,
@@ -29,6 +30,7 @@ router = APIRouter(
 
 
 @router.post("/{camera_id}/connect")
+@camera_operation_limit("connect")  # 5/minute - conexión es costosa
 async def connect_camera(camera_id: str, background_tasks: BackgroundTasks):
     """
     Conectar a una cámara.
@@ -234,6 +236,7 @@ async def get_camera_stream_url(
 
 
 @router.post("/test-connection")
+@camera_operation_limit("test")  # 20/minute - test es más ligero
 async def test_connection(request: TestConnectionRequest):
     """
     Probar conexión a una cámara sin guardarla.

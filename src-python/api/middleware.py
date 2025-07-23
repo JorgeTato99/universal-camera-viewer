@@ -12,6 +12,7 @@ import time
 import logging
 from typing import Callable
 from .config import settings
+from .middleware.rate_limit import setup_rate_limiting
 
 logger = logging.getLogger(__name__)
 
@@ -78,5 +79,8 @@ def setup_middleware(app: FastAPI) -> None:
     
     # Error Handling - Manejo global de errores
     app.add_middleware(ErrorHandlingMiddleware)
+    
+    # Rate Limiting - Protección contra abuso
+    setup_rate_limiting(app)
     
     logger.info("Middlewares configurados correctamente")
