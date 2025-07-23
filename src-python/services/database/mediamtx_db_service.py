@@ -1961,6 +1961,230 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
             'total_data_mb': round(row['total_data_mb'] or 0, 2),
             'uptime_percent': 100.0  # Asumiendo que si hay métricas, estuvo activo
         }
+    
+    async def save_remote_publication(
+        self,
+        camera_id: str,
+        server_id: int,
+        remote_camera_id: str,
+        publish_url: str,
+        webrtc_url: str,
+        agent_command: str,
+        session_id: str
+    ) -> Optional[int]:
+        """
+        Guarda una publicación remota en la base de datos.
+        
+        Args:
+            camera_id: ID de la cámara local
+            server_id: ID del servidor MediaMTX
+            remote_camera_id: ID de la cámara en el servidor remoto
+            publish_url: URL RTMP para publicación
+            webrtc_url: URL WebRTC para visualización
+            agent_command: Comando FFmpeg completo
+            session_id: ID único de sesión
+            
+        Returns:
+            ID de la publicación creada o None si falla
+        """
+        async with self._lock:
+            try:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    # Verificar si ya existe una publicación activa
+                    cursor.execute("""
+                        SELECT publication_id FROM camera_publications
+                        WHERE camera_id = ? AND is_active = 1
+                    """, (camera_id,))
+                    
+                    existing = cursor.fetchone()
+                    if existing:
+                        # Marcar la existente como inactiva
+                        cursor.execute("""
+                            UPDATE camera_publications
+                            SET is_active = 0, 
+                                stop_time = CURRENT_TIMESTAMP,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE publication_id = ?
+                        """, (existing['publication_id'],))
+                    
+                    # Insertar nueva publicación
+                    cursor.execute("""
+                        INSERT INTO camera_publications (
+                            camera_id, server_id, session_id, publish_path,
+                            status, remote_camera_id, publish_url, webrtc_url,
+                            ffmpeg_command, is_remote, is_active,
+                            start_time, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 
+                                  CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """, (
+                        camera_id,
+                        server_id,
+                        session_id,
+                        f"ucv_{camera_id}",  # publish_path
+                        'IDLE',  # status inicial
+                        remote_camera_id,
+                        publish_url,
+                        webrtc_url,
+                        agent_command
+                    ))
+                    
+                    publication_id = cursor.lastrowid
+                    
+                    self.logger.info(
+                        f"Publicación remota guardada - ID: {publication_id}, "
+                        f"Cámara: {camera_id}, Servidor: {server_id}"
+                    )
+                    
+                    return publication_id
+                    
+            except Exception as e:
+                self.logger.error(f"Error guardando publicación remota: {str(e)}")
+                return None
+    
+    async def update_publication_status(
+        self,
+        publication_id: int,
+        status: str,
+        error_message: Optional[str] = None
+    ) -> bool:
+        """
+        Actualiza el estado de una publicación.
+        
+        Args:
+            publication_id: ID de la publicación
+            status: Nuevo estado (IDLE, STARTING, PUBLISHING, STOPPED, ERROR)
+            error_message: Mensaje de error si aplica
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        async with self._lock:
+            try:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    if error_message:
+                        cursor.execute("""
+                            UPDATE camera_publications
+                            SET status = ?, 
+                                last_error = ?,
+                                last_error_time = CURRENT_TIMESTAMP,
+                                error_count = error_count + 1,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE publication_id = ?
+                        """, (status, error_message, publication_id))
+                    else:
+                        cursor.execute("""
+                            UPDATE camera_publications
+                            SET status = ?,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE publication_id = ?
+                        """, (status, publication_id))
+                    
+                    return cursor.rowcount > 0
+                    
+            except Exception as e:
+                self.logger.error(f"Error actualizando estado de publicación: {str(e)}")
+                return False
+    
+    async def get_active_remote_publications(
+        self,
+        server_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Obtiene las publicaciones remotas activas.
+        
+        Args:
+            server_id: Filtrar por servidor (opcional)
+            
+        Returns:
+            Lista de publicaciones activas con sus datos
+        """
+        async with self._lock:
+            try:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    query = """
+                        SELECT 
+                            cp.*,
+                            c.display_name as camera_name,
+                            c.brand as camera_brand,
+                            c.model as camera_model,
+                            s.server_name,
+                            s.api_url
+                        FROM camera_publications cp
+                        JOIN cameras c ON cp.camera_id = c.camera_id
+                        JOIN mediamtx_servers s ON cp.server_id = s.server_id
+                        WHERE cp.is_active = 1 AND cp.is_remote = 1
+                    """
+                    
+                    params = []
+                    if server_id is not None:
+                        query += " AND cp.server_id = ?"
+                        params.append(server_id)
+                    
+                    cursor.execute(query, params)
+                    
+                    publications = []
+                    for row in cursor:
+                        publications.append({
+                            'publication_id': row['publication_id'],
+                            'camera_id': row['camera_id'],
+                            'camera_name': row['camera_name'],
+                            'camera_brand': row['camera_brand'],
+                            'camera_model': row['camera_model'],
+                            'server_id': row['server_id'],
+                            'server_name': row['server_name'],
+                            'remote_camera_id': row['remote_camera_id'],
+                            'publish_url': row['publish_url'],
+                            'webrtc_url': row['webrtc_url'],
+                            'status': row['status'],
+                            'start_time': row['start_time'],
+                            'error_count': row['error_count'],
+                            'last_error': row['last_error']
+                        })
+                    
+                    return publications
+                    
+            except Exception as e:
+                self.logger.error(f"Error obteniendo publicaciones activas: {str(e)}")
+                return []
+    
+    async def deactivate_publication(
+        self,
+        camera_id: str
+    ) -> bool:
+        """
+        Marca una publicación como inactiva.
+        
+        Args:
+            camera_id: ID de la cámara local
+            
+        Returns:
+            True si se desactivó correctamente
+        """
+        async with self._lock:
+            try:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    cursor.execute("""
+                        UPDATE camera_publications
+                        SET is_active = 0,
+                            status = 'STOPPED',
+                            stop_time = CURRENT_TIMESTAMP,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE camera_id = ? AND is_active = 1
+                    """, (camera_id,))
+                    
+                    return cursor.rowcount > 0
+                    
+            except Exception as e:
+                self.logger.error(f"Error desactivando publicación: {str(e)}")
+                return False
 
 
 # Instancia singleton

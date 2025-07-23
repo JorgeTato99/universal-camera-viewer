@@ -28,6 +28,7 @@ from routers.publishing_history import router as history_router
 from api.routers.publishing_viewers import router as viewers_router
 from api.routers.publishing_paths import router as paths_router
 from api.routers.mediamtx_auth import router as mediamtx_auth_router
+from api.routers.mediamtx_cameras import router as mediamtx_cameras_router
 from services.camera_manager_service import camera_manager_service
 from websocket.handlers.publishing_handler import get_publishing_ws_handler
 
@@ -277,6 +278,7 @@ app.include_router(history_router)
 app.include_router(viewers_router)
 app.include_router(paths_router)
 app.include_router(mediamtx_auth_router)
+app.include_router(mediamtx_cameras_router)
 
 # WebSocket routers (sin prefijo API)
 app.include_router(streaming.router, prefix="/ws")
