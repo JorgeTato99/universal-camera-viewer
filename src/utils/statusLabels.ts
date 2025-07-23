@@ -255,16 +255,13 @@ export function mapBackendToFrontendPublishingStatus(
     return 'STOPPING';
   }
   
-  // Mapeo directo para el resto
-  const statusMap: Record<string, string> = {
-    'idle': 'IDLE',
-    'starting': 'STARTING',
-    'publishing': 'PUBLISHING',
-    'stopped': 'STOPPED',
-    'error': 'ERROR'
-  };
+  // El backend ya envía estados en MAYÚSCULAS, no necesitamos mapeo
+  // Solo validamos que sea un estado válido
+  const validStates = ['IDLE', 'STARTING', 'PUBLISHING', 'STOPPED', 'ERROR'];
   
-  return statusMap[backendStatus.toLowerCase()] || 'ERROR';
+  return validStates.includes(backendStatus.toUpperCase()) 
+    ? backendStatus.toUpperCase() 
+    : 'ERROR';
 }
 
 /**

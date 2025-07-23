@@ -257,7 +257,6 @@ export interface MetricsFilters {
 
 /**
  * Colores de estado para UI
- * @deprecated Usar getPublishingStatusColor() desde utils/statusLabels
  */
 export const STATUS_COLORS = {
   [PublishingStatus.IDLE]: '#9e9e9e',         // Gris
@@ -271,7 +270,6 @@ export const STATUS_COLORS = {
 
 /**
  * Labels de estado para UI
- * @deprecated Usar getPublishingStatusLabel() desde utils/statusLabels
  */
 export const STATUS_LABELS = {
   [PublishingStatus.IDLE]: 'Inactivo',

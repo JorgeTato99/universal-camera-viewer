@@ -1561,10 +1561,6 @@ Esta versión marca el inicio de la migración de Flet a Tauri para lograr una a
 
 ---
 
-## 🔮 Roadmap - Próximas Versiones
-
----
-
 **Formato**: [Unreleased] para cambios aún no lanzados  
 **Tags**: [Major.Minor.Patch] siguiendo Semantic Versioning  
 **Categorías**: Added, Changed, Deprecated, Removed, Fixed, Security
