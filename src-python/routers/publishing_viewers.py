@@ -178,6 +178,9 @@ async def get_publication_viewers(
     - Tendencias temporales
     - Análisis geográfico (opcional)
     - Métricas de calidad de experiencia
+    
+    **NOTA**: Actualmente devuelve datos de ejemplo. La implementación
+    real del análisis en el servicio de BD está pendiente.
     """
 )
 async def get_viewer_analytics(
@@ -505,7 +508,20 @@ async def disconnect_viewer(
 @router.get(
     "/stats/protocols",
     summary="Estadísticas por protocolo",
-    description="Obtiene estadísticas de uso por protocolo"
+    description="""
+    Obtiene estadísticas detalladas de uso por protocolo.
+    
+    Proporciona información sobre:
+    - Viewers activos por protocolo
+    - Sesiones totales del día
+    - Duración promedio de sesión
+    - Ancho de banda utilizado
+    - Score de calidad promedio
+    - Problemas comunes por protocolo
+    
+    **NOTA**: Los datos actuales son de ejemplo. La implementación
+    con consulta real a BD está pendiente.
+    """
 )
 async def get_protocol_statistics() -> Dict[str, Any]:
     """

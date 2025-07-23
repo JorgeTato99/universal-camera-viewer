@@ -100,7 +100,17 @@ MOCK_CONFIG = AppConfig()
 
 # === Endpoints ===
 
-@router.get("/", response_model=AppConfig)
+@router.get(
+    "/",
+    response_model=AppConfig,
+    summary="Obtener configuración completa",
+    description="""
+    Obtiene toda la configuración actual de la aplicación.
+    
+    **NOTA**: Este endpoint actualmente devuelve datos MOCK.
+    La integración con ConfigService real está pendiente.
+    """
+)
 async def get_config():
     """
     Obtener configuración completa de la aplicación.
@@ -128,7 +138,20 @@ async def get_config():
         )
 
 
-@router.get("/categories", response_model=List[ConfigCategoryResponse])
+@router.get(
+    "/categories",
+    response_model=List[ConfigCategoryResponse],
+    summary="Obtener configuración por categorías",
+    description="""
+    Obtiene la configuración organizada en categorías lógicas:
+    - **general**: Configuración general de la aplicación
+    - **streaming**: Parámetros de streaming de video
+    - **ui**: Preferencias de interfaz de usuario
+    - **network**: Configuración de red y escaneo
+    - **storage**: Opciones de almacenamiento
+    - **advanced**: Configuración avanzada y debugging
+    """
+)
 async def get_config_categories():
     """
     Obtener configuración organizada por categorías.
@@ -204,7 +227,29 @@ async def get_config_categories():
     return categories
 
 
-@router.get("/{key}", response_model=ConfigValueResponse)
+@router.get(
+    "/{key}",
+    response_model=ConfigValueResponse,
+    summary="Obtener valor de configuración",
+    description="""
+    Obtiene el valor de una clave específica de configuración.
+    
+    Ejemplos de claves válidas:
+    - `theme`: Tema de la aplicación (light/dark)
+    - `default_fps`: FPS por defecto para streaming
+    - `grid_columns`: Número de columnas en la grilla
+    """,
+    responses={
+        404: {
+            "description": "Clave de configuración no encontrada",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Configuración 'invalid_key' no encontrada"}
+                }
+            }
+        }
+    }
+)
 async def get_config_value(key: str):
     """
     Obtener valor específico de configuración.
@@ -252,7 +297,33 @@ async def get_config_value(key: str):
         )
 
 
-@router.put("/", response_model=ConfigUpdateResponse)
+@router.put(
+    "/",
+    response_model=ConfigUpdateResponse,
+    summary="Actualizar configuración",
+    description="""
+    Actualiza un valor específico de configuración.
+    
+    El tipo de dato del valor debe coincidir con el tipo esperado.
+    Por ejemplo, si la clave espera un booleano, no se puede enviar un string.
+    
+    **NOTA**: Los cambios son temporales y se perderán al reiniciar
+    la aplicación. La persistencia real está pendiente de implementación.
+    """,
+    responses={
+        400: {
+            "description": "Valor inválido para la configuración",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Tipo inválido. Se esperaba int, se recibió str"}
+                }
+            }
+        },
+        404: {
+            "description": "Clave de configuración no encontrada"
+        }
+    }
+)
 async def update_config(update: ConfigUpdateRequest):
     """
     Actualizar un valor de configuración.

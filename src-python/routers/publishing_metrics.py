@@ -478,6 +478,8 @@ async def export_camera_metrics(
         file_path = export_dir / filename
         
         # Programar generación del archivo en background
+        # NOTA: La generación real del archivo está implementada pero
+        # puede fallar si no hay datos suficientes en la BD
         background_tasks.add_task(
             _generate_export_file,
             camera_id=camera_id,
@@ -682,6 +684,7 @@ def _aggregate_metrics(
     """
     # TODO: Implementar agregación real
     # Por ahora retornamos los datos sin modificar
+    # La agregación debería promediar valores dentro de cada intervalo
     logger.warning(f"Agregación con intervalo {interval} no implementada aún")
     return data_points
 
@@ -796,7 +799,12 @@ async def _export_to_json(data: dict, file_path: Path, include_raw: bool):
 
 
 async def _export_to_excel(data: dict, file_path: Path, include_raw: bool):
-    """Exporta métricas a Excel."""
+    """
+    Exporta métricas a Excel.
+    
+    NOTA: Requiere que openpyxl esté instalado. Si no está disponible,
+    se exportará como CSV como alternativa.
+    """
     # Requiere openpyxl
     try:
         import openpyxl

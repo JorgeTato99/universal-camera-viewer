@@ -216,6 +216,19 @@ class MetricPoint(BaseModel):
     
     class Config:
         from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "timestamp": "2024-01-15T10:30:00Z",
+                "fps": 25.0,
+                "bitrate_kbps": 2048.5,
+                "frames": 150000,
+                "dropped_frames": 12,
+                "quality_score": 94.5,
+                "viewer_count": 5,
+                "cpu_usage_percent": 35.2,
+                "memory_usage_mb": 256.8
+            }
+        }
 
 
 class MetricsSummary(BaseModel):
@@ -232,6 +245,24 @@ class MetricsSummary(BaseModel):
     avg_viewers: float = Field(..., description="Viewers promedio")
     total_data_mb: float = Field(..., description="Datos totales en MB")
     uptime_percent: float = Field(..., description="Porcentaje de uptime")
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "avg_fps": 24.8,
+                "min_fps": 22.5,
+                "max_fps": 25.0,
+                "avg_bitrate_kbps": 2015.3,
+                "total_frames": 8928000,
+                "total_dropped_frames": 342,
+                "avg_quality_score": 92.7,
+                "peak_viewers": 15,
+                "avg_viewers": 7.3,
+                "total_data_mb": 14567.8,
+                "uptime_percent": 99.2
+            }
+        }
 
 
 class PublicationMetricsResponse(BaseModel):
@@ -246,6 +277,44 @@ class PublicationMetricsResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "camera_id": "cam_001",
+                "publication_id": 42,
+                "time_range": "LAST_HOUR",
+                "data_points": [
+                    {
+                        "timestamp": "2024-01-15T10:30:00Z",
+                        "fps": 25.0,
+                        "bitrate_kbps": 2048.5,
+                        "frames": 150000,
+                        "dropped_frames": 12,
+                        "quality_score": 94.5,
+                        "viewer_count": 5
+                    }
+                ],
+                "summary": {
+                    "avg_fps": 24.8,
+                    "min_fps": 22.5,
+                    "max_fps": 25.0,
+                    "avg_bitrate_kbps": 2015.3,
+                    "total_frames": 8928000,
+                    "total_dropped_frames": 342,
+                    "avg_quality_score": 92.7,
+                    "peak_viewers": 15,
+                    "avg_viewers": 7.3,
+                    "total_data_mb": 14567.8,
+                    "uptime_percent": 99.2
+                },
+                "viewer_stats": {
+                    "total_viewers": 45,
+                    "current_viewers": 5,
+                    "peak_viewers": 15,
+                    "average_session_duration": 32.5,
+                    "bounce_rate": 12.3
+                }
+            }
+        }
 
 
 class PaginatedMetricsResponse(PaginatedResponse[PublishMetricsSnapshot]):

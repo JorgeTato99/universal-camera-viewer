@@ -7,6 +7,119 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.16] - 2025-07-23 - 📖 DOCUMENTACIÓN OPENAPI Y MIGRACIÓN MEDIAMTX
+
+### 📚 Documentation - OpenAPI/Swagger Mejorado
+
+- **Mejoras en documentación de endpoints**:
+  - Añadidos decoradores `summary` y `description` a todos los endpoints críticos
+  - Documentación de funcionalidades MOCK y pendientes
+  - Mejora en descripciones de parámetros y respuestas
+  - Ejemplos de respuestas de error con códigos HTTP apropiados
+
+- **Modelos con json_schema_extra**:
+  - `MetricPoint`: Ejemplo completo con todas las métricas
+  - `MetricsSummary`: Estadísticas con valores realistas
+  - `PublicationMetricsResponse`: Respuesta completa con viewer_stats
+
+### 🔄 Changed - Guía de Migración
+
+- **migration-guide-v0.9.16.md** creado con:
+  - Cambios en enums (PublishStatus ahora en MAYÚSCULAS)
+  - Script SQL de migración para actualizar valores existentes
+  - Mapping de overall_status para compatibilidad frontend
+  - Ajustes necesarios en código existente
+
+### 🐛 Fixed - Consistencia de Tipos
+
+- **PublishStatus enum**:
+  - Valores cambiados de minúsculas a MAYÚSCULAS
+  - Consistencia con frontend que espera valores en mayúsculas
+  - Script de migración SQL incluido
+
+- **PublishingHealth.overall_status**:
+  - Mapping automático con validator Pydantic
+  - Backend: healthy/degraded/critical
+  - Frontend: healthy/warning/error
+  - Compatibilidad transparente sin cambios en frontend
+
+### 📝 Documentation Updates
+
+- **type-consistency-report.md**: Marcados como resueltos todos los issues
+- **mui-grid-v7-migration-guide.md**: Simplificado, removida sección extensa sobre MediaMTXPath
+- **mediamtx-id-inconsistency-solution.md**: Mantenido como referencia
+
+---
+
+## [0.9.15] - 2025-07-23 - 🔧 INTEGRACIÓN MEDIAMTX FASE 4.1 COMPLETA
+
+### ✨ Added - Tests de Integración MediaMTX
+
+#### 🧪 Sistema de Validación de Tipos TypeScript → Python
+
+- **TypeScript Parser** implementado:
+  - Extracción de interfaces y tipos desde archivos `.ts`
+  - Soporte para tipos básicos, arrays, unions y enums
+  - Parseo de propiedades opcionales y requeridas
+
+- **Type Validator** para consistencia:
+  - Validación de respuestas backend contra interfaces TypeScript
+  - Detección automática de inconsistencias de campos
+  - Reporte detallado de incompatibilidades
+
+#### ✅ Tests Unitarios y de Integración
+
+- **Tests para PaginatedResponse**:
+  - Propiedades computadas (has_next, has_previous, total_pages)
+  - Serialización JSON y model_dump
+  - Validación de límites de paginación
+
+- **Tests de Integración de Endpoints**:
+  - `/api/publishing/status` - Estados de publicación
+  - `/api/publishing/control` - Control de publicación
+  - `/api/publishing/health` - Salud del sistema
+  - `/api/publishing/metrics` - Métricas de streaming
+  - `/api/publishing/alerts` - Sistema de alertas
+
+- **Tests de Flujo Completo**:
+  - Ciclo de vida de publicación (start → metrics → stop)
+  - Manejo de errores y timeouts
+  - Requests concurrentes
+
+### 🐛 Fixed - Inconsistencias de Tipos
+
+#### 🔄 MediaMTXPath Field Mapping
+
+- **Problema**: Frontend espera `id`, backend usa `path_id`
+- **Solución**: Alias Pydantic con `Field(..., alias="id")`
+- **Compatibilidad**: Acepta tanto `id` como `path_id` en requests
+
+#### 🎯 PublishingStatus Enum
+
+- **Problema**: Backend usaba minúsculas, frontend espera MAYÚSCULAS
+- **Solución**: Actualización de enum a valores en MAYÚSCULAS
+- **Impacto**: Requiere migración de BD (script SQL incluido)
+
+#### 🩺 PublishingHealth Status Mapping
+
+- **Problema**: Backend usa degraded/critical, frontend espera warning/error
+- **Solución**: Validator Pydantic que mapea automáticamente
+- **Transparencia**: Sin cambios necesarios en frontend
+
+### 🧪 Testing Infrastructure
+
+- **Pytest configuration** con fixtures compartidas
+- **Mock factories** para componentes MediaMTX
+- **AsyncClient fixture** para tests de integración
+- **Cobertura estimada**: 85% de endpoints críticos
+
+### 📊 Technical Stats
+
+- **Tests añadidos**: 30+ tests nuevos
+- **Modelos validados**: 15+ interfaces TypeScript
+- **Inconsistencias resueltas**: 3 críticas
+- **Archivos de test**: 8 nuevos archivos Python
+
 ## [0.9.14] - 2025-07-21 - 🚀 INTEGRACIÓN MEDIAMTX FRONTEND COMPLETA
 
 ### ✨ Added - Sistema de Publicación MediaMTX Frontend

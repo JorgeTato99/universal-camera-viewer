@@ -355,7 +355,20 @@ async def cleanup_history(
 @router.get(
     "/stats/summary",
     summary="Estadísticas del historial",
-    description="Obtiene estadísticas agregadas del historial de publicaciones"
+    description="""
+    Obtiene estadísticas agregadas del historial de publicaciones.
+    
+    Permite agrupar las estadísticas por:
+    - **hour**: Por hora del día
+    - **day**: Por día
+    - **week**: Por semana
+    - **camera**: Por cámara
+    - **server**: Por servidor MediaMTX
+    - **termination_reason**: Por razón de terminación
+    
+    **NOTA**: Actualmente devuelve estadísticas de ejemplo.
+    La agregación real en el servicio de BD está pendiente.
+    """
 )
 async def get_history_statistics(
     days: int = Query(30, ge=1, le=365, description="Días a analizar"),
