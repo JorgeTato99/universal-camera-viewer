@@ -359,28 +359,67 @@ class ServiceError(CameraViewerError):
 class MediaMTXAPIError(ServiceError):
     """Error al comunicarse con la API de MediaMTX."""
     
-    def __init__(self, endpoint: str, status_code: Optional[int] = None, reason: str = ""):
+    def __init__(self, message: str, status_code: Optional[int] = None, 
+                 response_data: Optional[Dict[str, Any]] = None, endpoint: Optional[str] = None):
         """
         Inicializa error de API MediaMTX.
         
         Args:
-            endpoint: Endpoint de la API que falló
+            message: Mensaje descriptivo del error
             status_code: Código HTTP de respuesta si aplica
-            reason: Razón adicional del error
+            response_data: Datos de respuesta de la API
+            endpoint: Endpoint de la API que falló
         """
-        message = f"Error en API MediaMTX endpoint {endpoint}"
-        if status_code:
-            message += f" (HTTP {status_code})"
-        if reason:
-            message += f": {reason}"
-            
+        self.status_code = status_code
+        self.response_data = response_data or {}
+        
         super().__init__(
             message=message,
             error_code="MEDIAMTX_API_ERROR",
             context={
                 'endpoint': endpoint,
                 'status_code': status_code,
-                'reason': reason
+                'response_data': response_data
+            }
+        )
+
+
+class MediaMTXConnectionError(ServiceError):
+    """Error de conexión con servidor MediaMTX."""
+    
+    def __init__(self, message: str, original_error: Optional[Exception] = None):
+        """
+        Inicializa error de conexión MediaMTX.
+        
+        Args:
+            message: Mensaje descriptivo del error
+            original_error: Excepción original si existe
+        """
+        super().__init__(
+            message=message,
+            error_code="MEDIAMTX_CONNECTION_ERROR",
+            context={
+                'original_error': str(original_error) if original_error else None
+            }
+        )
+
+
+class MediaMTXAuthenticationError(ServiceError):
+    """Error de autenticación con servidor MediaMTX."""
+    
+    def __init__(self, message: str, server_id: Optional[int] = None):
+        """
+        Inicializa error de autenticación MediaMTX.
+        
+        Args:
+            message: Mensaje descriptivo del error
+            server_id: ID del servidor si aplica
+        """
+        super().__init__(
+            message=message,
+            error_code="MEDIAMTX_AUTH_ERROR",
+            context={
+                'server_id': server_id
             }
         )
 
@@ -589,6 +628,8 @@ __all__ = [
     # Servicio
     'ServiceError',
     'MediaMTXAPIError',
+    'MediaMTXConnectionError',
+    'MediaMTXAuthenticationError',
     
     # Streaming
     'StreamingError',

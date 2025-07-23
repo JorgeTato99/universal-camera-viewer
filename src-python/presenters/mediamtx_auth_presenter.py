@@ -326,6 +326,16 @@ class MediaMTXAuthPresenter(BasePresenter):
             Dict con resultado de la validación
         """
         try:
+            # Obtener información del servidor
+            server = await self._db_service.get_server_by_id(server_id)
+            if not server:
+                return {
+                    'success': False,
+                    'server_id': server_id,
+                    'error': f'Servidor {server_id} no encontrado',
+                    'needs_auth': False
+                }
+            
             # Verificar si hay token válido
             token = await self._auth_service.get_valid_token(server_id)
             
@@ -337,15 +347,36 @@ class MediaMTXAuthPresenter(BasePresenter):
                     'needs_auth': True
                 }
             
-            # TODO: Hacer petición de prueba a la API para validar token
-            # Por ahora asumimos que si hay token, está válido
+            # Validar token con petición real a la API
+            is_valid, error_msg = await self._auth_service.validate_token(
+                server_id,
+                server['api_url']
+            )
             
-            return {
-                'success': True,
-                'server_id': server_id,
-                'message': 'Conexión válida',
-                'is_authenticated': True
-            }
+            if is_valid:
+                # Actualizar estado interno
+                if server_id in self._server_auth_status:
+                    self._server_auth_status[server_id]['is_authenticated'] = True
+                    self._server_auth_status[server_id]['last_check'] = datetime.utcnow()
+                
+                return {
+                    'success': True,
+                    'server_id': server_id,
+                    'message': 'Conexión válida',
+                    'is_authenticated': True
+                }
+            else:
+                # Token inválido - actualizar estado
+                if server_id in self._server_auth_status:
+                    self._server_auth_status[server_id]['is_authenticated'] = False
+                    self._server_auth_status[server_id]['last_check'] = datetime.utcnow()
+                
+                return {
+                    'success': False,
+                    'server_id': server_id,
+                    'error': error_msg or 'Token inválido',
+                    'needs_auth': True
+                }
             
         except Exception as e:
             self.logger.error(f"Error validando conexión: {str(e)}")

@@ -354,6 +354,63 @@ class MediaMTXAuthService(BaseService):
             'Authorization': f'Bearer {token}'
         }
     
+    async def validate_token(self, server_id: int, api_url: str) -> Tuple[bool, Optional[str]]:
+        """
+        Valida un token realizando una petición de prueba a la API.
+        
+        Args:
+            server_id: ID del servidor
+            api_url: URL base de la API
+            
+        Returns:
+            Tupla (válido, mensaje_error)
+        """
+        try:
+            # Obtener token actual
+            token = await self.get_valid_token(server_id)
+            if not token:
+                return False, "No hay token disponible"
+            
+            # Headers de autorización
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json'
+            }
+            
+            # Construir URL de validación - usamos el endpoint de cámaras
+            validate_url = urljoin(api_url.rstrip('/') + '/', 'api/v1/cameras')
+            
+            self.logger.info(f"Validando token para servidor {server_id} con {sanitize_url(validate_url)}")
+            
+            # Realizar petición GET
+            async with self._session.get(validate_url, headers=headers) as response:
+                if response.status == 200:
+                    # Token válido
+                    data = await response.json()
+                    self.logger.info(f"Token válido para servidor {server_id}, {len(data.get('cameras', []))} cámaras encontradas")
+                    return True, None
+                    
+                elif response.status == 401:
+                    # Token inválido o expirado
+                    self.logger.warning(f"Token inválido/expirado para servidor {server_id}")
+                    # Eliminar token del cache
+                    if server_id in self._token_cache:
+                        del self._token_cache[server_id]
+                    return False, "Token inválido o expirado"
+                    
+                else:
+                    error_text = await response.text()
+                    self.logger.warning(f"Error validando token: {response.status} - {error_text}")
+                    return False, f"Error del servidor: {response.status}"
+                    
+        except aiohttp.ClientError as e:
+            self.logger.error(f"Error de conexión validando token: {str(e)}")
+            return False, f"Error de conexión: {str(e)}"
+            
+        except Exception as e:
+            self.logger.error(f"Error inesperado validando token: {str(e)}")
+            return False, f"Error inesperado: {str(e)}"
+    
     # === Métodos privados ===
     
     async def _load_active_tokens(self) -> None:

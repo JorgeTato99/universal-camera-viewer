@@ -56,6 +56,15 @@ class DatabaseSeeder:
             
             # Orden de eliminación (respetando dependencias)
             tables_to_clear = [
+                # Tablas de MediaMTX (dependientes primero)
+                "publication_viewers",
+                "publication_metrics",
+                "publication_history",
+                "camera_publications",
+                "mediamtx_auth_tokens",
+                "mediamtx_paths",
+                "mediamtx_servers",
+                # Tablas de cámaras
                 "camera_events",
                 "recordings",
                 "snapshots",
@@ -453,6 +462,96 @@ class DatabaseSeeder:
         self.conn.commit()
         logger.info("[OK] Todas las camaras SEED insertadas exitosamente")
 
+    def seed_mediamtx_server(self) -> None:
+        """Inserta un servidor MediaMTX de prueba en la base de datos."""
+        try:
+            logger.info("Insertando servidor MediaMTX de prueba...")
+            
+            # Datos del servidor MediaMTX remoto
+            server_data = {
+                "server_name": "MediaMTX Remoto - Prueba",
+                "rtsp_url": "rtsp://31.220.104.212",
+                "rtsp_port": 8554,
+                "api_url": "http://31.220.104.212:8000",
+                "api_port": 8000,
+                "api_enabled": True,
+                "username": "jorge.cliente",
+                "password": "easypass123!",
+                "auth_enabled": True,
+                "use_tcp": True,
+                "max_reconnects": 3,
+                "reconnect_delay": 5.0,
+                "publish_path_template": "ucv_{camera_code}",
+                "is_active": True,
+                "is_default": True,
+                "health_check_interval": 30,
+                "last_health_status": "unknown",
+                "metadata": json.dumps({
+                    "description": "Servidor MediaMTX remoto para pruebas de integración",
+                    "location": "Cloud",
+                    "environment": "test",
+                    "capabilities": ["rtsp", "rtmp", "webrtc", "api", "auth"],
+                    "notes": "Credenciales de prueba proporcionadas por el equipo de desarrollo"
+                })
+            }
+            
+            # Encriptar contraseña
+            if server_data["password"]:
+                encrypted_password = encryption_service.encrypt(server_data["password"])
+            else:
+                encrypted_password = None
+            
+            # Insertar servidor
+            self.cursor.execute(
+                """
+                INSERT INTO mediamtx_servers (
+                    server_name, rtsp_url, rtsp_port, api_url, api_port,
+                    api_enabled, username, password_encrypted, auth_enabled,
+                    use_tcp, max_reconnects, reconnect_delay, publish_path_template,
+                    is_active, is_default, health_check_interval, last_health_status,
+                    metadata, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    server_data["server_name"],
+                    server_data["rtsp_url"],
+                    server_data["rtsp_port"],
+                    server_data["api_url"],
+                    server_data["api_port"],
+                    server_data["api_enabled"],
+                    server_data["username"],
+                    encrypted_password,
+                    server_data["auth_enabled"],
+                    server_data["use_tcp"],
+                    server_data["max_reconnects"],
+                    server_data["reconnect_delay"],
+                    server_data["publish_path_template"],
+                    server_data["is_active"],
+                    server_data["is_default"],
+                    server_data["health_check_interval"],
+                    server_data["last_health_status"],
+                    server_data["metadata"],
+                    "seed_database.py"
+                ),
+            )
+            
+            self.conn.commit()
+            logger.info("[OK] Servidor MediaMTX de prueba insertado exitosamente")
+            
+            # Verificar inserción
+            self.cursor.execute("SELECT server_id, server_name FROM mediamtx_servers WHERE server_name = ?", (server_data["server_name"],))
+            server = self.cursor.fetchone()
+            if server:
+                logger.info(f"   - ID: {server[0]}")
+                logger.info(f"   - Nombre: {server[1]}")
+                logger.info(f"   - API URL: {server_data['api_url']}")
+                logger.info(f"   - Usuario: {server_data['username']}")
+            
+        except Exception as e:
+            logger.error(f"Error insertando servidor MediaMTX: {e}")
+            self.conn.rollback()
+            raise
+
     def verify_seed_data(self) -> None:
         """Verifica que los datos se insertaron correctamente."""
 
@@ -491,6 +590,28 @@ class DatabaseSeeder:
             logger.info(f"   - Protocolos: {camera[7]}")
             logger.info(f"   - Endpoints: {camera[8]}")
 
+        # Verificar servidores MediaMTX
+        self.cursor.execute("SELECT COUNT(*) FROM mediamtx_servers")
+        server_count = self.cursor.fetchone()[0]
+        
+        if server_count > 0:
+            logger.info(f"\nServidores MediaMTX: {server_count}")
+            
+            self.cursor.execute(
+                """
+                SELECT server_id, server_name, api_url, is_active, is_default
+                FROM mediamtx_servers
+                """
+            )
+            servers = self.cursor.fetchall()
+            
+            for server in servers:
+                logger.info(f"\n[SERVIDOR] {server[1]}")
+                logger.info(f"   - ID: {server[0]}")
+                logger.info(f"   - API URL: {server[2]}")
+                logger.info(f"   - Activo: {'Sí' if server[3] else 'No'}")
+                logger.info(f"   - Por defecto: {'Sí' if server[4] else 'No'}")
+
         logger.info(f"\n{'='*80}")
 
     def close(self) -> None:
@@ -523,6 +644,11 @@ def main():
     parser.add_argument(
         "--path", default="data/camera_data.db", help="Ruta de la base de datos"
     )
+    parser.add_argument(
+        "--mediamtx-only",
+        action="store_true",
+        help="Solo agregar servidor MediaMTX de prueba sin tocar las cámaras",
+    )
 
     args = parser.parse_args()
 
@@ -530,6 +656,16 @@ def main():
         seeder = DatabaseSeeder(args.path)
 
         if args.verify_only:
+            seeder.verify_seed_data()
+        elif args.mediamtx_only:
+            # Solo agregar servidor MediaMTX
+            seeder.cursor.execute("SELECT COUNT(*) FROM mediamtx_servers WHERE server_name = ?", ("MediaMTX Remoto - Prueba",))
+            if seeder.cursor.fetchone()[0] > 0:
+                print("El servidor MediaMTX de prueba ya existe")
+            else:
+                print("Agregando servidor MediaMTX de prueba...")
+                seeder.seed_mediamtx_server()
+                print("Servidor MediaMTX agregado exitosamente")
             seeder.verify_seed_data()
         else:
             # Si se especifica --clear, limpiar primero
@@ -541,6 +677,7 @@ def main():
                         print("Operacion cancelada")
                         return
                 seeder.seed_cameras(clear_first=True)
+                seeder.seed_mediamtx_server()
             else:
                 # Verificar si ya hay datos
                 seeder.cursor.execute("SELECT COUNT(*) FROM cameras")
@@ -555,6 +692,12 @@ def main():
                 
                 # Insertar datos SEED
                 seeder.seed_cameras(clear_first=False)
+            
+            # Insertar servidor MediaMTX si no existe
+            seeder.cursor.execute("SELECT COUNT(*) FROM mediamtx_servers")
+            if seeder.cursor.fetchone()[0] == 0:
+                logger.info("\nNo hay servidores MediaMTX, agregando servidor de prueba...")
+                seeder.seed_mediamtx_server()
 
             # Verificar
             seeder.verify_seed_data()
