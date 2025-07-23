@@ -1,14 +1,15 @@
-# 📊 Estado Actual del Proyecto - v0.9.14 (21 Enero 2025)
+# 📊 Estado Actual del Proyecto - v0.9.17 (23 Enero 2025)
 
-> **Documento técnico consolidado** - Sistema con streaming funcional, API v2 completa y métricas avanzadas.
+> **Documento técnico consolidado** - Sistema con streaming funcional, API v2 completa, métricas avanzadas y seguridad reforzada.
 
 ![Estado](https://img.shields.io/badge/Estado-PRODUCCIÓN-brightgreen)
 ![Backend](https://img.shields.io/badge/Backend%20FastAPI-100%25%20Completo-brightgreen)
 ![Frontend](https://img.shields.io/badge/Frontend%20React-100%25%20Streaming-brightgreen)
 ![Database](https://img.shields.io/badge/Database-3FN%20Normalizada-brightgreen)
 ![API](https://img.shields.io/badge/API%20v2-CRUD%20Completo-brightgreen)
-![Versión](https://img.shields.io/badge/Versión-0.9.14-blue)
+![Versión](https://img.shields.io/badge/Versión-0.9.17-blue)
 ![MediaMTX](https://img.shields.io/badge/MediaMTX%20Frontend-100%25%20Completo-brightgreen)
+![Seguridad](https://img.shields.io/badge/Seguridad-Rate%20Limiting%20%2B%20Encriptación%20v2-brightgreen)
 
 ---
 

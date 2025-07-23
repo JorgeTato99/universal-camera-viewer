@@ -292,7 +292,7 @@ sequenceDiagram
 |----------|-----------------|---------|
 | **CameraManagerService** | Orquestación de operaciones de cámara | Facade |
 | **VideoStreamService** | Gestión centralizada de streaming | Singleton |
-| **EncryptionService** | Encriptación AES-256 de credenciales | Singleton |
+| **EncryptionServiceV2** | Encriptación versionada con migración | Singleton |
 | **DataService** | Acceso a base de datos SQLite | Repository |
 | **ProtocolService** | Implementación de protocolos | Strategy |
 | **WebSocketStreamService** | Gestión de conexiones WebSocket | Observer |
@@ -324,20 +324,51 @@ print(f"FPS: {metrics.current_fps}")
 
 ## 🔒 Seguridad
 
-### Encriptación de Credenciales
+### Encriptación de Credenciales v2
 
 - **Algoritmo**: AES-256 con Fernet
-- **Ubicación clave**: `data/.encryption_key`
-- **Rotación**: Manual (pendiente automatizar)
+- **Versionado**: Formato `v{version}:{encrypted_base64}`
+- **Ubicación**: `src-python/data/.encryption/`
+- **Rotación**: Sistema preparado para rotación automática
+- **Migración**: Automática desde v1 sin pérdida de datos
 
 ```python
-from services.encryption_service import encryption_service
+from services.encryption_service_v2 import get_encryption_service
+
+encryption_service = get_encryption_service()
 
 # Encriptar password
 encrypted = encryption_service.encrypt("mi_password_seguro")
+# Resultado: "v1:gAAAAABh..."
 
-# Desencriptar
+# Desencriptar (detecta versión automáticamente)
 plaintext = encryption_service.decrypt(encrypted)
+```
+
+### Rate Limiting
+
+- **Framework**: SlowAPI
+- **Configuración**: `config/rate_limit_settings.yaml`
+- **Límites por defecto**:
+  - Lectura: 100 requests/minuto
+  - Escritura: 10 requests/minuto  
+  - Escaneo: 1 request/minuto
+- **Headers RFC 6585**: X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After
+
+```python
+from api.deps.rate_limit import rate_limit
+
+@router.get("/cameras")
+@rate_limit("read")  # Aplica límite de lectura
+async def get_cameras():
+    pass
+```
+
+### Sanitización de Logs
+
+- **Protección automática** de información sensible
+- **27 servicios** migrados a logging seguro
+- **Filtros inteligentes** para URLs, IPs, comandos
 ```
 
 ### Headers de Seguridad

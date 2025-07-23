@@ -1,6 +1,6 @@
 # 🎥 Universal Camera Gateway
 
-[![Version](https://img.shields.io/badge/version-0.9.10-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
+[![Version](https://img.shields.io/badge/version-0.9.17-blue)](https://github.com/JorgeTato99/universal-camera-viewer)
 [![Status](https://img.shields.io/badge/status-PRODUCCIÓN-brightgreen)](CURRENT_STATUS.md)
 [![Python](https://img.shields.io/badge/python-3.8+-green)](https://www.python.org/)
 [![React](https://img.shields.io/badge/react-19-61dafb)](https://react.dev/)
@@ -125,6 +125,9 @@ python src-python/seed_database.py --verify-only
 python run_api.py
 # API: http://localhost:8000
 # Docs: http://localhost:8000/docs
+
+# Alternativa (si hay problemas con rutas):
+cd src-python && python main.py
 
 # Terminal 2 - Frontend React
 yarn dev
