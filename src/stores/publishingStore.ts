@@ -237,7 +237,7 @@ export const usePublishingStore = create<PublishingState>()(
     isPublishing: new Map(),
     error: null,
 
-    pollingInterval: 5, // 5 segundos por defecto
+    pollingInterval: 30, // 30 segundos por defecto (reducido para menor carga del servidor)
     pollingEnabled: true,
 
     // === IMPLEMENTACIÓN DE ACCIONES ===

@@ -411,13 +411,12 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                     'page_size': request.page_size,
                     'items': items,
                     'filters_applied': {
-                        'camera_id': request.camera_id,
-                        'server_id': request.server_id,
-                        'termination_reason': request.termination_reason,
-                        'date_range': {
-                            'start': request.start_date,
-                            'end': request.end_date
-                        }
+                        'camera_id': request.camera_id or '',
+                        'server_id': str(request.server_id) if request.server_id else '',
+                        'termination_reason': request.termination_reason or '',
+                        'start_date': request.start_date or '',
+                        'end_date': request.end_date or '',
+                        'min_duration_seconds': str(request.min_duration_seconds) if request.min_duration_seconds else ''
                     }
                 }
                 
@@ -596,7 +595,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 cursor.execute(f"""
                     SELECT 
                         ph.camera_id,
-                        c.name as camera_name,
+                        c.display_name as camera_name,
                         COUNT(*) as count,
                         SUM(ph.total_data_mb) as data_mb
                     FROM publication_history ph
@@ -783,7 +782,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                         ph.termination_reason,
                         ph.last_error,
                         ph.metadata,
-                        c.name as camera_name,
+                        c.display_name as camera_name,
                         ms.server_name
                     FROM publication_history ph
                     LEFT JOIN cameras c ON ph.camera_id = c.camera_id
@@ -813,12 +812,12 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                     'page_size': request.page_size,
                     'items': items,
                     'filters_applied': {
-                        'camera_id': request.camera_id,
-                        'server_id': request.server_id,
-                        'termination_reason': request.termination_reason.value if request.termination_reason else None,
-                        'start_date': request.start_date.isoformat() if request.start_date else None,
-                        'end_date': request.end_date.isoformat() if request.end_date else None,
-                        'min_duration_seconds': request.min_duration_seconds
+                        'camera_id': request.camera_id or '',
+                        'server_id': str(request.server_id) if request.server_id else '',
+                        'termination_reason': request.termination_reason.value if request.termination_reason else '',
+                        'start_date': request.start_date.isoformat() if request.start_date else '',
+                        'end_date': request.end_date.isoformat() if request.end_date else '',
+                        'min_duration_seconds': str(request.min_duration_seconds) if request.min_duration_seconds else ''
                     }
                 }
                 
@@ -852,7 +851,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 cursor.execute("""
                     SELECT 
                         ph.*,
-                        c.name as camera_name,
+                        c.display_name as camera_name,
                         ms.server_name
                     FROM publication_history ph
                     LEFT JOIN cameras c ON ph.camera_id = c.camera_id

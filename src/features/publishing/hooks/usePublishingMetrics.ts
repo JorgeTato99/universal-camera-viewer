@@ -21,7 +21,7 @@ interface UsePublishingMetricsOptions {
 export function usePublishingMetrics({
   cameraId,
   autoRefresh = true,
-  refreshInterval = 5,
+  refreshInterval = 15, // Incrementado de 5s a 15s (métricas necesitan ser más frecuentes que health)
   maxSamples = 50
 }: UsePublishingMetricsOptions) {
   const {

@@ -17,7 +17,7 @@ interface UsePublishingHealthOptions {
  */
 export function usePublishingHealth({
   autoRefresh = true,
-  refreshInterval = 30,
+  refreshInterval = 60, // Incrementado de 30s a 60s para reducir carga del servidor
   includeAlerts = true
 }: UsePublishingHealthOptions = {}) {
   const {

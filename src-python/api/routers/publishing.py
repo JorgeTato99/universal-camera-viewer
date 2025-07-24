@@ -741,11 +741,13 @@ async def get_active_alerts(
         
         response = AlertsListResponse(
             total=len(alerts),
+            page=1,  # Las alertas no tienen paginación real, siempre página 1
+            page_size=len(alerts) if alerts else 10,  # Tamaño igual al total
             active_count=sum(1 for a in alerts if not a.resolved),
             critical_count=sum(1 for a in alerts if a.severity == 'critical'),
             items=alerts,
             by_severity=by_severity,
-            by_category=by_category
+            by_alert_type=by_category  # Corregido: debe ser by_alert_type, no by_category
         )
         
         logger.info(f"Alertas obtenidas: {response.total} total, "

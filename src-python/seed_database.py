@@ -268,30 +268,53 @@ class DatabaseSeeder:
             },
             {
                 "camera_id": generate_camera_id(),
-                "code": "CAM-XIAOMI-PASILLO-104",
-                "brand": "xiaomi",
-                "model": "Mi Home Security 360",
-                "display_name": "Cámara Pasillo",
-                "ip_address": "192.168.1.104",
-                "location": "Pasillo",
-                "description": "Cámara Xiaomi con visión 360° y app móvil",
-                "username": "admin",
-                "password": "admin",
+                "code": "CAM-TPLINK-C200-248",
+                "brand": "tplink",
+                "model": "C200",
+                "display_name": "Cámara TP-Link C200 Interior",
+                "ip_address": "192.168.100.248",
+                "mac_address": "",  # Por completar si lo conoces
+                "firmware_version": "",  # Por completar si lo conoces
+                "location": "Interior",
+                "description": "Cámara TP-Link C200 HD con PTZ, visión nocturna y audio bidireccional",
+                "username": "superadmin",
+                "password": "superadmin",
                 "protocols": [
                     {"type": "RTSP", "port": 554, "is_primary": True},
+                    {"type": "ONVIF", "port": 2020},  # Puerto típico ONVIF para TP-Link
                     {"type": "HTTP", "port": 80},
                 ],
-                "capabilities": ["rtsp", "http_api", "ptz", "audio"],
+                "capabilities": [
+                    "rtsp", 
+                    "onvif",
+                    "http_api", 
+                    "ptz",  # La C200 tiene PTZ
+                    "audio",  # Confirmado por FFmpeg output
+                    "motion_detection",  # Típicamente incluida
+                    "night_vision",  # Típicamente incluida
+                    "h264",  # Confirmado por FFmpeg output
+                    "two_way_audio"  # Típico en C200
+                ],
                 "endpoints": [
                     {
                         "type": "rtsp_main",
-                        "name": "Stream Principal",
-                        "url": "rtsp://192.168.1.104:554/live/ch0",
+                        "name": "Stream Principal HD (1280x720)",
+                        "url": "rtsp://192.168.100.248:554/stream1",
                     },
                     {
-                        "type": "mjpeg",
-                        "name": "Stream MJPEG",
-                        "url": "http://192.168.1.104/mjpeg",
+                        "type": "rtsp_sub",
+                        "name": "Stream Secundario SD (640x360)",
+                        "url": "rtsp://192.168.100.248:554/stream2",
+                    },
+                    {
+                        "type": "onvif_device",
+                        "name": "ONVIF Device Service",
+                        "url": "http://192.168.100.248:2020/onvif/device_service",
+                    },
+                    {
+                        "type": "snapshot",
+                        "name": "Captura HTTP",
+                        "url": "http://192.168.100.248/capture",  # URL típica, verificar
                     },
                 ],
             },
@@ -347,8 +370,9 @@ class DatabaseSeeder:
                     """
                     INSERT INTO cameras (
                         camera_id, code, brand, model, display_name,
-                        ip_address, location, description, is_active
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                        ip_address, mac_address, firmware_version, location, 
+                        description, is_active
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 """,
                     (
                         camera_data["camera_id"],
@@ -357,6 +381,8 @@ class DatabaseSeeder:
                         camera_data["model"],
                         camera_data["display_name"],
                         camera_data["ip_address"],
+                        camera_data.get("mac_address") or None,
+                        camera_data.get("firmware_version") or None,
                         camera_data["location"],
                         camera_data["description"],
                     ),

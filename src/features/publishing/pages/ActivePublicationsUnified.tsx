@@ -99,11 +99,23 @@ const ActivePublicationsUnified = memo(() => {
     loadData();
   }, [loadCameras, fetchRemoteServers, fetchUnifiedPublications]);
 
-  // Auto-refresh cada 5 segundos
+  // Auto-refresh cada 30 segundos (reducido desde 5 segundos para mejorar performance)
   useEffect(() => {
-    const interval = setInterval(fetchUnifiedPublications, 5000);
-    return () => clearInterval(interval);
-  }, [fetchUnifiedPublications]);
+    // Solo hacer polling si hay publicaciones activas o si estamos cargando
+    const hasActivePublications = unifiedPublications.some(pub => 
+      pub.status === 'publishing' || pub.status === 'starting'
+    );
+    
+    if (hasActivePublications || isLoading) {
+      // Polling más frecuente (15s) cuando hay actividad
+      const interval = setInterval(fetchUnifiedPublications, 15000);
+      return () => clearInterval(interval);
+    } else {
+      // Polling menos frecuente (30s) cuando no hay actividad
+      const interval = setInterval(fetchUnifiedPublications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchUnifiedPublications, unifiedPublications, isLoading]);
 
   // Cargar publicaciones unificadas cuando cambien los filtros
   useEffect(() => {

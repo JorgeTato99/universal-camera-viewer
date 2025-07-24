@@ -22,7 +22,7 @@ interface UseRemotePublishingOptions {
 
 interface UseRemotePublishingReturn {
   // Estado
-  remotePublication: ReturnType<typeof usePublishingStore>['getRemotePublicationByCameraId'] extends (cameraId: string) => infer R ? R : undefined;
+  remotePublication: ReturnType<typeof usePublishingStore.getState>['getRemotePublicationByCameraId'] extends (cameraId: string) => infer R ? R : undefined;
   isPublishing: boolean;
   isLoading: boolean;
   error: string | null;
@@ -46,13 +46,12 @@ interface UseRemotePublishingReturn {
 export function useRemotePublishing({
   cameraId,
   autoRefresh = true,
-  refreshInterval = 5000
+  refreshInterval = 30000 // Incrementado de 5s a 30s para reducir carga del servidor
 }: UseRemotePublishingOptions): UseRemotePublishingReturn {
   // Estado desde el store unificado
   const remotePublication = usePublishingStore((state) => state.getRemotePublicationByCameraId(cameraId));
   const isLoadingMap = usePublishingStore((state) => state.isPublishing);
   const error = usePublishingStore((state) => state.error);
-  const selectedServerId = usePublishingStore((state) => state.remote.selectedServerId);
   
   // Acciones del store
   const startRemotePublishing = usePublishingStore((state) => state.startRemotePublishing);
@@ -102,7 +101,7 @@ export function useRemotePublishing({
   // Iniciar publicación (usa store)
   const startPublishing = useCallback(async (
     serverId: number,
-    customName?: string
+    _customName?: string // Prefijo con _ para indicar que no se usa
   ): Promise<boolean> => {
     clearError();
     

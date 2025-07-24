@@ -22,7 +22,7 @@ export interface RequestConfig extends RequestInit {
 
 export class ApiClient {
   private baseURL: string;
-  private defaultHeaders: HeadersInit;
+  private defaultHeaders: Record<string, string>;
   private timeout: number;
 
   constructor(
@@ -44,6 +44,17 @@ export class ApiClient {
     // FastAPI requiere slash al final para rutas de colección
     const normalizedEndpoint = endpoint.endsWith('/') ? endpoint : 
                               endpoint.match(/^\/[^\/]+$/) ? `${endpoint}/` : endpoint;
+    
+    // Logging temporal para debug de URL duplicada
+    if (endpoint.includes('publishing/all')) {
+      console.debug('[ApiClient] Building URL:', {
+        baseURL: this.baseURL,
+        endpoint,
+        normalizedEndpoint,
+        fullURL: `${this.baseURL}${normalizedEndpoint}`
+      });
+    }
+    
     const url = new URL(`${this.baseURL}${normalizedEndpoint}`);
     
     if (params) {

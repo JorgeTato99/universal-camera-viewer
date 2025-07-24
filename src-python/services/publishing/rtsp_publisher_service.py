@@ -131,7 +131,8 @@ class RTSPPublisherService(BaseService):
         force_restart: bool = False,
         target_url: Optional[str] = None,
         source_url: Optional[str] = None,
-        is_remote: bool = False
+        is_remote: bool = False,
+        agent_command: Optional[str] = None
     ) -> PublishResult:
         """
         Inicia la publicación de una cámara específica a MediaMTX.
@@ -205,6 +206,10 @@ class RTSPPublisherService(BaseService):
             self._processes[camera_id] = process
             
             # Construir comando FFmpeg
+            # TODO: Para publicaciones remotas, usar agent_command proporcionado por el servidor
+            # if is_remote and agent_command:
+            #     cmd = shlex.split(agent_command)
+            # else:
             cmd = self._build_ffmpeg_command(source_url, target_url)
             
             # Iniciar proceso
@@ -596,9 +601,8 @@ class RTSPPublisherService(BaseService):
         Returns:
             URL RTSP completa con credenciales
         """
-        # TODO: Implementar construcción de URL desde camera model
-        # Por ahora, retornar URL básica
-        url = f"rtsp://{camera.ip}/stream"
+        # Usar el método get_rtsp_url() del modelo de cámara
+        url = camera.get_rtsp_url()
         self.logger.debug(f"URL origen construida: {url}")
         return url
     
@@ -632,31 +636,41 @@ class RTSPPublisherService(BaseService):
         target_url: str
     ) -> List[str]:
         """
-        Construye el comando FFmpeg optimizado para relay RTSP.
+        Construye el comando FFmpeg optimizado para relay de video.
         
         Utiliza -c copy para evitar recodificación y minimizar CPU/latencia.
+        Detecta automáticamente el formato de salida según la URL de destino.
         
         Args:
             source_url: URL RTSP de origen (cámara)
-            target_url: URL RTSP de destino (MediaMTX)
+            target_url: URL de destino (RTSP para local, RTMP para remoto)
             
         Returns:
             Lista de argumentos para subprocess
         """
+        # Detectar formato de salida basado en la URL de destino
+        output_format = 'rtsp'  # Por defecto RTSP para servidores locales
+        if target_url.startswith('rtmp://'):
+            output_format = 'flv'  # FLV es el formato correcto para RTMP
+            self.logger.debug("Detectado destino RTMP, usando formato FLV")
+        elif target_url.startswith('rtsp://'):
+            output_format = 'rtsp'
+            self.logger.debug("Detectado destino RTSP, usando formato RTSP")
+        
         cmd = [
             'ffmpeg',
             '-nostdin',                    # No input interactivo
             '-loglevel', 'warning',        # Solo warnings y errores
             '-stats',                      # Mostrar estadísticas
-            '-rtsp_transport', 'tcp',      # Forzar TCP para estabilidad
+            '-rtsp_transport', 'tcp',      # Forzar TCP para estabilidad en origen
             '-stimeout', '5000000',        # Timeout 5 segundos
             '-i', source_url,              # Input
             '-c', 'copy',                  # No recodificar (relay directo)
-            '-f', 'rtsp',                  # Output format
+            '-f', output_format,           # Output format según destino
         ]
         
-        # Agregar transporte TCP para salida si está configurado
-        if self._config.use_tcp:
+        # Solo agregar transporte TCP para RTSP (no aplica para RTMP)
+        if self._config.use_tcp and output_format == 'rtsp':
             cmd.extend(['-rtsp_transport', 'tcp'])
             
         cmd.append(target_url)

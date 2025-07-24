@@ -106,20 +106,13 @@ async def get_all_publications(
     permitiendo al frontend mostrar todo en un solo dashboard.
     """
     try:
-        # Asegurar que los presenters estén inicializados
-        if not local_presenter.is_ready:
-            await local_presenter.initialize()
-        
-        if not remote_presenter.is_ready:
-            await remote_presenter.initialize()
+        # Los presenters ya están inicializados por sus factory methods
+        # No es necesario inicializarlos aquí nuevamente
         
         # Obtener publicaciones locales
         local_publications = []
         try:
-            # TODO: Implementar get_active_publications en PublishingPresenter
-            # Por ahora retornar lista vacía
-            logger.warning("get_active_publications no implementado en PublishingPresenter")
-            local_publications = []
+            local_publications = await local_presenter.get_active_publications()
         except Exception as e:
             logger.error(f"Error obteniendo publicaciones locales: {str(e)}")
             local_publications = []
@@ -127,13 +120,13 @@ async def get_all_publications(
         # Obtener publicaciones remotas
         remote_publications = []
         try:
-            remote_pubs = await remote_presenter.get_active_publications()
+            remote_pubs = await remote_presenter.list_remote_streams()
             
             # Formatear publicaciones remotas
-            for camera_id, pub_data in remote_pubs.items():
+            for pub_data in remote_pubs:
                 remote_publications.append({
-                    'camera_id': camera_id,
-                    'camera_name': pub_data.get('camera_name', camera_id),
+                    'camera_id': pub_data.get('camera_id'),
+                    'camera_name': pub_data.get('camera_name', pub_data.get('camera_id')),
                     'status': pub_data.get('status', 'active'),
                     'type': 'remote',
                     'server_name': pub_data.get('server_name', 'Unknown Server'),
