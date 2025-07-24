@@ -1,6 +1,15 @@
 /**
  * 🎥 Active Publications Unified Page - Universal Camera Viewer
  * Control unificado de publicaciones locales y remotas hacia MediaMTX
+ * 
+ * @todo Funcionalidades pendientes:
+ * - Implementar visor de stream WebRTC inline para publicaciones remotas
+ * - Agregar botón de "Ver detalles" con métricas avanzadas
+ * - Implementar exportación de métricas a CSV
+ * - Agregar soporte para múltiples publicaciones por cámara
+ * - Implementar filtros avanzados (por estado, fecha, etc.)
+ * 
+ * @note Esta página reemplaza a ActivePublications.tsx con una vista unificada
  */
 
 import { useEffect, useState, memo, useCallback } from 'react';

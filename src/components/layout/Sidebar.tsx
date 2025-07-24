@@ -35,6 +35,8 @@ import {
   PlayCircle as PlayCircleIcon,
   History as HistoryIcon,
   Route as RouteIcon,
+  CloudQueue as CloudIcon,
+  Computer as ComputerIcon,
 } from "@mui/icons-material";
 import { useTheme } from "../../hooks/useTheme";
 import { colorTokens } from "../../design-system/tokens";
@@ -186,6 +188,20 @@ const navItems: NavItem[] = [
         tooltip: "Control de publicaciones activas",
       },
       {
+        id: "publishing-servers",
+        path: "/publishing/servers",
+        icon: <CloudIcon />,
+        label: "Servidores Remotos",
+        tooltip: "Gestión de servidores MediaMTX remotos",
+      },
+      {
+        id: "publishing-paths",
+        path: "/publishing/paths",
+        icon: <ComputerIcon />,
+        label: "Servidor Local",
+        tooltip: "Configuración del servidor MediaMTX local",
+      },
+      {
         id: "publishing-metrics",
         path: "/publishing/metrics",
         icon: <AnalyticsIcon />,
@@ -198,13 +214,6 @@ const navItems: NavItem[] = [
         icon: <HistoryIcon />,
         label: "Historial",
         tooltip: "Registro de sesiones",
-      },
-      {
-        id: "publishing-paths",
-        path: "/publishing/paths",
-        icon: <RouteIcon />,
-        label: "Configuración",
-        tooltip: "Gestión de paths MediaMTX",
       },
     ],
   },

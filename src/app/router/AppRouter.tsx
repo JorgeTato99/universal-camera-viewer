@@ -34,8 +34,8 @@ const SettingsPage = React.lazy(
 const PublishingDashboard = React.lazy(
   () => import("../../features/publishing/pages/PublishingDashboard")
 );
-const ActivePublications = React.lazy(
-  () => import("../../features/publishing/pages/ActivePublications")
+const ActivePublicationsUnified = React.lazy(
+  () => import("../../features/publishing/pages/ActivePublicationsUnified")
 );
 const PublishingMetrics = React.lazy(
   () => import("../../features/publishing/pages/PublishingMetrics")
@@ -237,7 +237,7 @@ export const AppRouter = memo(() => {
           <Route path="/publishing" element={<Navigate to="/publishing/dashboard" replace />} />
           <Route path="/publishing/dashboard" element={<PublishingDashboard />} />
           <Route path="/publishing/servers" element={<MediaMTXServersPage />} />
-          <Route path="/publishing/active" element={<ActivePublications />} />
+          <Route path="/publishing/active" element={<ActivePublicationsUnified />} />
           <Route path="/publishing/metrics" element={<PublishingMetrics />} />
           <Route path="/publishing/history" element={<PublishingHistory />} />
           <Route path="/publishing/paths" element={<PathConfiguration />} />

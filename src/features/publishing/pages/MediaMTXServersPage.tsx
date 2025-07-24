@@ -1,9 +1,19 @@
 /**
- * 🌐 MediaMTX Servers Page - Universal Camera Viewer
+ * ☁️ Remote MediaMTX Servers Page - Universal Camera Viewer
  * Página de gestión de servidores MediaMTX remotos
+ *
+ * @todo Funcionalidades pendientes:
+ * - Implementar importación/exportación de configuraciones de servidor
+ * - Agregar monitoreo de salud en tiempo real con gráficas
+ * - Implementar gestión de permisos por servidor
+ * - Agregar soporte para configuración avanzada de MediaMTX
+ * - Implementar logs de servidor en tiempo real
+ * - Agregar soporte para múltiples credenciales por servidor
+ *
+ * @note Esta página gestiona exclusivamente servidores remotos (90% caso de uso)
  */
 
-import React, { useEffect, useState, useCallback, memo } from 'react';
+import React, { useEffect, useState, useCallback, memo } from "react";
 import {
   Box,
   Container,
@@ -26,7 +36,9 @@ import {
   Menu,
   MenuItem,
   Skeleton,
-} from '@mui/material';
+  InputAdornment,
+} from "@mui/material";
+import Grid from "@mui/material/Grid";
 import {
   Add as AddIcon,
   Refresh as RefreshIcon,
@@ -38,14 +50,22 @@ import {
   Link as LinkIcon,
   LinkOff as LinkOffIcon,
   Speed as SpeedIcon,
-} from '@mui/icons-material';
-import { DataTable } from '../../../components/common/DataTable';
-import { ConfirmationDialog } from '../../../components/common/ConfirmationDialog';
-import { MediaMTXAuthDialog } from '../components/auth/MediaMTXAuthDialog';
-import { usePublishingStore } from '../../../stores/publishingStore';
-import { mediamtxServerService } from '../../../services/publishing/mediamtxServerService';
-import { colorTokens } from '../../../design-system/tokens';
-import type { MediaMTXServer, CreateServerDto, UpdateServerDto } from '../../../services/publishing/mediamtxServerService';
+  Api as ApiIcon,
+  CloudQueue as CloudIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
+} from "@mui/icons-material";
+import { DataTable } from "../../../components/common/DataTable";
+import { ConfirmationDialog } from "../../../components/common/ConfirmationDialog";
+import { MediaMTXAuthDialog } from "../components/auth/MediaMTXAuthDialog";
+import { usePublishingStore } from "../../../stores/publishingStore";
+import { mediamtxServerService } from "../../../services/publishing/mediamtxServerService";
+import { colorTokens } from "../../../design-system/tokens";
+import type {
+  MediaMTXServer,
+  CreateServerDto,
+  UpdateServerDto,
+} from "../../../services/publishing/mediamtxServerService";
 
 /**
  * Formulario de servidor (crear/editar)
@@ -70,16 +90,18 @@ const ServerFormDialog = memo<{
   onSave: (data: ServerFormData) => Promise<void>;
 }>(({ open, server, onClose, onSave }) => {
   const [formData, setFormData] = useState<ServerFormData>({
-    name: '',
-    api_url: 'http://localhost:9997',
-    rtmp_url: 'rtmp://localhost:1935',
-    rtsp_url: 'rtsp://localhost:8554',
+    name: "",
+    api_url: "http://localhost:9997",
+    rtmp_url: "rtmp://localhost:1935",
+    rtsp_url: "rtsp://localhost:8554",
     auth_required: false,
-    username: '',
-    password: '',
+    username: "",
+    password: "",
   });
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof ServerFormData, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof ServerFormData, string>>
+  >({});
 
   // Cargar datos del servidor si está editando
   useEffect(() => {
@@ -90,19 +112,19 @@ const ServerFormDialog = memo<{
         rtmp_url: server.rtmp_url,
         rtsp_url: server.rtsp_url,
         auth_required: server.auth_required,
-        username: '', // No cargamos credenciales por seguridad
-        password: '',
+        username: "", // No cargamos credenciales por seguridad
+        password: "",
       });
     } else {
       // Reset para nuevo servidor
       setFormData({
-        name: '',
-        api_url: 'http://localhost:9997',
-        rtmp_url: 'rtmp://localhost:1935',
-        rtsp_url: 'rtsp://localhost:8554',
+        name: "",
+        api_url: "http://localhost:9997",
+        rtmp_url: "rtmp://localhost:1935",
+        rtsp_url: "rtsp://localhost:8554",
         auth_required: false,
-        username: '',
-        password: '',
+        username: "",
+        password: "",
       });
     }
     setErrors({});
@@ -113,34 +135,36 @@ const ServerFormDialog = memo<{
     const newErrors: Partial<Record<keyof ServerFormData, string>> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es obligatorio';
+      newErrors.name = "El nombre es obligatorio";
     }
 
     if (!formData.api_url.trim()) {
-      newErrors.api_url = 'La URL de API es obligatoria';
+      newErrors.api_url = "La URL de API es obligatoria";
     } else if (!formData.api_url.match(/^https?:\/\/.+/)) {
-      newErrors.api_url = 'Debe ser una URL válida (http:// o https://)';
+      newErrors.api_url = "Debe ser una URL válida (http:// o https://)";
     }
 
     if (!formData.rtmp_url.trim()) {
-      newErrors.rtmp_url = 'La URL RTMP es obligatoria';
+      newErrors.rtmp_url = "La URL RTMP es obligatoria";
     } else if (!formData.rtmp_url.match(/^rtmp:\/\/.+/)) {
-      newErrors.rtmp_url = 'Debe ser una URL RTMP válida';
+      newErrors.rtmp_url = "Debe ser una URL RTMP válida";
     }
 
     if (!formData.rtsp_url.trim()) {
-      newErrors.rtsp_url = 'La URL RTSP es obligatoria';
+      newErrors.rtsp_url = "La URL RTSP es obligatoria";
     } else if (!formData.rtsp_url.match(/^rtsp:\/\/.+/)) {
-      newErrors.rtsp_url = 'Debe ser una URL RTSP válida';
+      newErrors.rtsp_url = "Debe ser una URL RTSP válida";
     }
 
     if (formData.auth_required && !server) {
       // Solo validar credenciales en creación si auth está habilitado
       if (!formData.username?.trim()) {
-        newErrors.username = 'El usuario es obligatorio si requiere autenticación';
+        newErrors.username =
+          "El usuario es obligatorio si requiere autenticación";
       }
       if (!formData.password?.trim()) {
-        newErrors.password = 'La contraseña es obligatoria si requiere autenticación';
+        newErrors.password =
+          "La contraseña es obligatoria si requiere autenticación";
       }
     }
 
@@ -157,121 +181,272 @@ const ServerFormDialog = memo<{
       await onSave(formData);
       onClose();
     } catch (error) {
-      console.error('Error guardando servidor:', error);
+      console.error("Error guardando servidor:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {server ? 'Editar Servidor MediaMTX' : 'Agregar Servidor MediaMTX'}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 2,
+            boxShadow: 24,
+          },
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+        }}
+      >
+        <CloudIcon />
+        {server ? "Editar Servidor Remoto" : "Agregar Servidor MediaMTX Remoto"}
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField
-            label="Nombre del servidor"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            error={!!errors.name}
-            helperText={errors.name}
-            fullWidth
-            required
-          />
+      <DialogContent sx={{ mt: 3 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {/* Información básica */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
+            >
+              INFORMACIÓN BÁSICA
+            </Typography>
+            <TextField
+              label="Nombre del servidor"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              error={!!errors.name}
+              helperText={errors.name}
+              fullWidth
+              required
+              placeholder="Mi servidor remoto"
+              sx={{ mb: 2 }}
+            />
+          </Box>
 
-          <TextField
-            label="URL de API"
-            value={formData.api_url}
-            onChange={(e) => setFormData({ ...formData, api_url: e.target.value })}
-            error={!!errors.api_url}
-            helperText={errors.api_url || 'Ej: http://servidor.com:9997'}
-            fullWidth
-            required
-          />
+          {/* URLs de conexión */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
+            >
+              URLS DE CONEXIÓN
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={12}>
+                <TextField
+                  label="URL de API"
+                  value={formData.api_url}
+                  onChange={(e) =>
+                    setFormData({ ...formData, api_url: e.target.value })
+                  }
+                  error={!!errors.api_url}
+                  helperText={errors.api_url || "Puerto por defecto: 9997"}
+                  fullWidth
+                  required
+                  placeholder="http://servidor.com:9997"
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <ApiIcon sx={{ color: "action.active" }} />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  label="URL RTMP"
+                  value={formData.rtmp_url}
+                  onChange={(e) =>
+                    setFormData({ ...formData, rtmp_url: e.target.value })
+                  }
+                  error={!!errors.rtmp_url}
+                  helperText={errors.rtmp_url || "Puerto por defecto: 1935"}
+                  fullWidth
+                  required
+                  placeholder="rtmp://servidor.com:1935"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  label="URL RTSP"
+                  value={formData.rtsp_url}
+                  onChange={(e) =>
+                    setFormData({ ...formData, rtsp_url: e.target.value })
+                  }
+                  error={!!errors.rtsp_url}
+                  helperText={errors.rtsp_url || "Puerto por defecto: 8554"}
+                  fullWidth
+                  required
+                  placeholder="rtsp://servidor.com:8554"
+                />
+              </Grid>
+            </Grid>
+          </Box>
 
-          <TextField
-            label="URL RTMP"
-            value={formData.rtmp_url}
-            onChange={(e) => setFormData({ ...formData, rtmp_url: e.target.value })}
-            error={!!errors.rtmp_url}
-            helperText={errors.rtmp_url || 'Ej: rtmp://servidor.com:1935'}
-            fullWidth
-            required
-          />
+          {/* Configuración de seguridad */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
+            >
+              CONFIGURACIÓN DE SEGURIDAD
+            </Typography>
 
-          <TextField
-            label="URL RTSP"
-            value={formData.rtsp_url}
-            onChange={(e) => setFormData({ ...formData, rtsp_url: e.target.value })}
-            error={!!errors.rtsp_url}
-            helperText={errors.rtsp_url || 'Ej: rtsp://servidor.com:8554'}
-            fullWidth
-            required
-          />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.auth_required}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      auth_required: e.target.checked,
+                    })
+                  }
+                  icon={<LockOpenIcon />}
+                  checkedIcon={<LockIcon />}
+                  sx={{
+                    color: "action.active",
+                    "&.Mui-checked": {
+                      color: "warning.main",
+                    },
+                  }}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">
+                    Requiere autenticación
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    El servidor requiere credenciales para publicar
+                  </Typography>
+                </Box>
+              }
+            />
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.auth_required}
-                onChange={(e) => setFormData({ ...formData, auth_required: e.target.checked })}
-              />
-            }
-            label="Requiere autenticación"
-          />
+            {formData.auth_required && !server && (
+              <Box sx={{ mt: 2 }}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Las credenciales se usarán solo para la configuración inicial
+                </Alert>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Usuario"
+                      value={formData.username}
+                      onChange={(e) =>
+                        setFormData({ ...formData, username: e.target.value })
+                      }
+                      error={!!errors.username}
+                      helperText={errors.username}
+                      fullWidth
+                      autoComplete="username"
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <LockIcon
+                                sx={{ color: "action.active", fontSize: 20 }}
+                              />
+                            </InputAdornment>
+                          ),
+                        },
+                      }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Contraseña"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      error={!!errors.password}
+                      helperText={errors.password}
+                      fullWidth
+                      autoComplete="new-password"
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <LockIcon
+                                sx={{ color: "action.active", fontSize: 20 }}
+                              />
+                            </InputAdornment>
+                          ),
+                        },
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
 
-          {formData.auth_required && !server && (
-            <>
-              <Alert severity="info">
-                Las credenciales se usarán solo para la configuración inicial
+            {server && formData.auth_required && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Para cambiar las credenciales, use el botón "Autenticar" después
+                de guardar
               </Alert>
-              <TextField
-                label="Usuario"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                error={!!errors.username}
-                helperText={errors.username}
-                fullWidth
-                autoComplete="username"
-              />
-              <TextField
-                label="Contraseña"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                error={!!errors.password}
-                helperText={errors.password}
-                fullWidth
-                autoComplete="new-password"
-              />
-            </>
-          )}
-
-          {server && formData.auth_required && (
-            <Alert severity="info">
-              Para cambiar las credenciales, use el botón "Autenticar" después de guardar
-            </Alert>
-          )}
+            )}
+          </Box>
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+      <DialogActions sx={{ px: 3, py: 2, bgcolor: "grey.50" }}>
+        <Button onClick={onClose} disabled={loading} sx={{ mr: 1 }}>
           Cancelar
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}
-          startIcon={loading && <CircularProgress size={16} />}
+          startIcon={
+            loading ? (
+              <CircularProgress size={16} />
+            ) : server ? (
+              <EditIcon />
+            ) : (
+              <AddIcon />
+            )
+          }
+          sx={{
+            minWidth: 150,
+            background: (theme) =>
+              `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`,
+            boxShadow: "0 3px 5px 2px rgba(33, 203, 243, .3)",
+            "&:hover": {
+              background: (theme) =>
+                `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.primary.main} 90%)`,
+            },
+          }}
         >
-          {server ? 'Guardar cambios' : 'Agregar servidor'}
+          {server ? "Guardar cambios" : "Agregar servidor"}
         </Button>
       </DialogActions>
     </Dialog>
   );
 });
 
-ServerFormDialog.displayName = 'ServerFormDialog';
+ServerFormDialog.displayName = "ServerFormDialog";
 
 /**
  * Página de gestión de servidores MediaMTX
@@ -281,9 +456,13 @@ const MediaMTXServersPage = memo(() => {
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedServer, setSelectedServer] = useState<MediaMTXServer | null>(null);
+  const [selectedServer, setSelectedServer] = useState<MediaMTXServer | null>(
+    null
+  );
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const [testingConnection, setTestingConnection] = useState<number | null>(null);
+  const [testingConnection, setTestingConnection] = useState<number | null>(
+    null
+  );
 
   // Cargar servidores al montar
   useEffect(() => {
@@ -291,46 +470,52 @@ const MediaMTXServersPage = memo(() => {
   }, [fetchRemoteServers]);
 
   // Crear servidor
-  const handleCreateServer = useCallback(async (data: ServerFormData) => {
-    try {
-      const createDto: CreateServerDto = {
-        name: data.name,
-        api_url: data.api_url,
-        rtmp_url: data.rtmp_url,
-        rtsp_url: data.rtsp_url,
-        auth_required: data.auth_required,
-        username: data.username,
-        password: data.password,
-      };
+  const handleCreateServer = useCallback(
+    async (data: ServerFormData) => {
+      try {
+        const createDto: CreateServerDto = {
+          name: data.name,
+          api_url: data.api_url,
+          rtmp_url: data.rtmp_url,
+          rtsp_url: data.rtsp_url,
+          auth_required: data.auth_required,
+          username: data.username,
+          password: data.password,
+        };
 
-      await mediamtxServerService.createServer(createDto);
-      await fetchRemoteServers(); // Recargar lista
-    } catch (error) {
-      console.error('Error creando servidor:', error);
-      throw error;
-    }
-  }, [fetchRemoteServers]);
+        await mediamtxServerService.createServer(createDto);
+        await fetchRemoteServers(); // Recargar lista
+      } catch (error) {
+        console.error("Error creando servidor:", error);
+        throw error;
+      }
+    },
+    [fetchRemoteServers]
+  );
 
   // Actualizar servidor
-  const handleUpdateServer = useCallback(async (data: ServerFormData) => {
-    if (!selectedServer) return;
+  const handleUpdateServer = useCallback(
+    async (data: ServerFormData) => {
+      if (!selectedServer) return;
 
-    try {
-      const updateDto: UpdateServerDto = {
-        name: data.name,
-        api_url: data.api_url,
-        rtmp_url: data.rtmp_url,
-        rtsp_url: data.rtsp_url,
-        auth_required: data.auth_required,
-      };
+      try {
+        const updateDto: UpdateServerDto = {
+          name: data.name,
+          api_url: data.api_url,
+          rtmp_url: data.rtmp_url,
+          rtsp_url: data.rtsp_url,
+          auth_required: data.auth_required,
+        };
 
-      await mediamtxServerService.updateServer(selectedServer.id, updateDto);
-      await fetchRemoteServers(); // Recargar lista
-    } catch (error) {
-      console.error('Error actualizando servidor:', error);
-      throw error;
-    }
-  }, [selectedServer, fetchRemoteServers]);
+        await mediamtxServerService.updateServer(selectedServer.id, updateDto);
+        await fetchRemoteServers(); // Recargar lista
+      } catch (error) {
+        console.error("Error actualizando servidor:", error);
+        throw error;
+      }
+    },
+    [selectedServer, fetchRemoteServers]
+  );
 
   // Eliminar servidor
   const handleDeleteServer = useCallback(async () => {
@@ -342,7 +527,7 @@ const MediaMTXServersPage = memo(() => {
       setDeleteDialogOpen(false);
       setSelectedServer(null);
     } catch (error) {
-      console.error('Error eliminando servidor:', error);
+      console.error("Error eliminando servidor:", error);
     }
   }, [selectedServer, fetchRemoteServers]);
 
@@ -352,14 +537,17 @@ const MediaMTXServersPage = memo(() => {
     try {
       await mediamtxServerService.testConnection(server.id);
     } catch (error) {
-      console.error('Error probando conexión:', error);
+      console.error("Error probando conexión:", error);
     } finally {
       setTestingConnection(null);
     }
   }, []);
 
   // Abrir menú de acciones
-  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, server: MediaMTXServer) => {
+  const handleOpenMenu = (
+    event: React.MouseEvent<HTMLElement>,
+    server: MediaMTXServer
+  ) => {
     setMenuAnchor(event.currentTarget);
     setSelectedServer(server);
   };
@@ -372,8 +560,8 @@ const MediaMTXServersPage = memo(() => {
   // Columnas de la tabla
   const columns = [
     {
-      field: 'name',
-      headerName: 'Nombre',
+      field: "name",
+      headerName: "Nombre",
       flex: 1,
       renderCell: (row: MediaMTXServer) => (
         <Box>
@@ -387,15 +575,15 @@ const MediaMTXServersPage = memo(() => {
       ),
     },
     {
-      field: 'api_url',
-      headerName: 'URL del Servidor',
+      field: "api_url",
+      headerName: "URL del Servidor",
       flex: 1.5,
       renderCell: (row: MediaMTXServer) => (
         <Box>
-          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
             {row.api_url}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+          <Box sx={{ display: "flex", gap: 0.5, mt: 0.5 }}>
             <Chip label="RTMP" size="small" variant="outlined" />
             <Chip label="RTSP" size="small" variant="outlined" />
           </Box>
@@ -403,19 +591,23 @@ const MediaMTXServersPage = memo(() => {
       ),
     },
     {
-      field: 'status',
-      headerName: 'Estado',
+      field: "status",
+      headerName: "Estado",
       width: 200,
       renderCell: (row: MediaMTXServer) => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {row.is_active ? (
-              <CheckIcon sx={{ fontSize: 20, color: colorTokens.status.connected }} />
+              <CheckIcon
+                sx={{ fontSize: 20, color: colorTokens.status.connected }}
+              />
             ) : (
-              <WarningIcon sx={{ fontSize: 20, color: colorTokens.neutral[500] }} />
+              <WarningIcon
+                sx={{ fontSize: 20, color: colorTokens.neutral[500] }}
+              />
             )}
             <Typography variant="body2">
-              {row.is_active ? 'Activo' : 'Inactivo'}
+              {row.is_active ? "Activo" : "Inactivo"}
             </Typography>
           </Box>
           {row.is_authenticated ? (
@@ -439,29 +631,29 @@ const MediaMTXServersPage = memo(() => {
       ),
     },
     {
-      field: 'last_health_check',
-      headerName: 'Última verificación',
+      field: "last_health_check",
+      headerName: "Última verificación",
       width: 180,
       renderCell: (row: MediaMTXServer) => (
         <Typography variant="body2" color="text.secondary">
           {row.last_health_check
-            ? new Date(row.last_health_check).toLocaleString('es-ES', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
+            ? new Date(row.last_health_check).toLocaleString("es-ES", {
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
               })
-            : 'Nunca'}
+            : "Nunca"}
         </Typography>
       ),
     },
     {
-      field: 'actions',
-      headerName: 'Acciones',
+      field: "actions",
+      headerName: "Acciones",
       width: 300,
       sortable: false,
       renderCell: (row: MediaMTXServer) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 1 }}>
           {!row.is_authenticated ? (
             <Button
               size="small"
@@ -497,10 +689,7 @@ const MediaMTXServersPage = memo(() => {
               )}
             </IconButton>
           </Tooltip>
-          <IconButton
-            size="small"
-            onClick={(e) => handleOpenMenu(e, row)}
-          >
+          <IconButton size="small" onClick={(e) => handleOpenMenu(e, row)}>
             <MoreIcon />
           </IconButton>
         </Box>
@@ -513,16 +702,24 @@ const MediaMTXServersPage = memo(() => {
       <Fade in timeout={300}>
         <Box>
           {/* Header */}
-          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box
+            sx={{
+              mb: 4,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Box>
               <Typography variant="h4" gutterBottom>
-                Servidores MediaMTX
+                Servidores MediaMTX Remotos
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Gestiona los servidores MediaMTX remotos para publicación de cámaras
+                Gestiona los servidores MediaMTX remotos para publicación de
+                cámaras a la nube
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
@@ -594,7 +791,7 @@ const MediaMTXServersPage = memo(() => {
                 handleCloseMenu();
                 setDeleteDialogOpen(true);
               }}
-              sx={{ color: 'error.main' }}
+              sx={{ color: "error.main" }}
             >
               <DeleteIcon sx={{ mr: 1, fontSize: 20 }} />
               Eliminar
@@ -648,6 +845,6 @@ const MediaMTXServersPage = memo(() => {
   );
 });
 
-MediaMTXServersPage.displayName = 'MediaMTXServersPage';
+MediaMTXServersPage.displayName = "MediaMTXServersPage";
 
 export default MediaMTXServersPage;

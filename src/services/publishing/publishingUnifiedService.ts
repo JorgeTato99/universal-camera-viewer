@@ -3,6 +3,15 @@
  * Proporciona una vista agregada de todas las publicaciones activas
  * 
  * @module services/publishing/publishingUnifiedService
+ * 
+ * @todo Funcionalidades pendientes:
+ * - Implementar caché inteligente para reducir llamadas a la API
+ * - Agregar soporte para publicación en múltiples servidores simultáneos
+ * - Implementar cola de reintentos para publicaciones fallidas
+ * - Agregar métricas de rendimiento del servicio
+ * - Implementar throttling para evitar sobrecarga de API
+ * 
+ * @note Este servicio es el punto único de entrada para toda la gestión de publicaciones
  */
 
 import { apiClient } from '../api/apiClient';
@@ -135,7 +144,7 @@ class PublishingUnifiedService {
         `/api/publishing/all?${params.toString()}`
       );
 
-      if (response.data.success && response.data.data) {
+      if (response.data?.success && response.data?.data) {
         return response.data.data;
       }
 
@@ -156,7 +165,7 @@ class PublishingUnifiedService {
         '/api/publishing/summary'
       );
 
-      if (response.data.success && response.data.data) {
+      if (response.data?.success && response.data?.data) {
         return response.data.data;
       }
 
@@ -187,7 +196,7 @@ class PublishingUnifiedService {
         payload
       );
 
-      if (response.data.success && response.data.data) {
+      if (response.data?.success && response.data?.data) {
         notificationStore.addNotification({
           type: 'success',
           title: 'Publicación iniciada',
@@ -218,7 +227,7 @@ class PublishingUnifiedService {
         { server_id: serverId }
       );
 
-      if (response.data.success) {
+      if (response.data?.success) {
         notificationStore.addNotification({
           type: 'success',
           title: 'Publicación detenida',
@@ -249,7 +258,7 @@ class PublishingUnifiedService {
         { camera_id: cameraId }
       );
 
-      if (response.data.success && response.data.data) {
+      if (response.data?.success && response.data?.data) {
         notificationStore.addNotification({
           type: 'success',
           title: 'Publicación local iniciada',
@@ -281,7 +290,7 @@ class PublishingUnifiedService {
         { camera_id: cameraId }
       );
 
-      if (response.data.success) {
+      if (response.data?.success) {
         notificationStore.addNotification({
           type: 'success',
           title: 'Publicación local detenida',

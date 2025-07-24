@@ -1,6 +1,6 @@
 /**
- * 🛤️ Path Configuration Page - Universal Camera Viewer
- * Configuración de paths y servidores MediaMTX
+ * 💻 Local Server Configuration Page - Universal Camera Viewer
+ * Configuración del servidor MediaMTX local
  */
 
 import React, { useState, useEffect, memo } from "react";
@@ -232,10 +232,10 @@ const PathConfiguration = memo(() => {
           >
             <Box>
               <Typography variant="h4" gutterBottom>
-                Configuración de Servidores
+                Servidor Local MediaMTX
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Gestión de configuraciones MediaMTX para publicación
+                Configuración y gestión del servidor MediaMTX local para publicación de cámaras
               </Typography>
             </Box>
             <Button
@@ -243,7 +243,7 @@ const PathConfiguration = memo(() => {
               startIcon={<AddIcon />}
               onClick={handleNewConfig}
             >
-              Nueva Configuración
+              Nueva Configuración Local
             </Button>
           </Box>
 
@@ -429,7 +429,7 @@ const PathConfiguration = memo(() => {
               }}
             >
               <SettingsIcon />
-              {editingConfig ? "Editar Configuración" : "Nueva Configuración MediaMTX"}
+              {editingConfig ? "Editar Configuración Local" : "Nueva Configuración del Servidor Local"}
             </DialogTitle>
             <DialogContent sx={{ mt: 3 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>

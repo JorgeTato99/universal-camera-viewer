@@ -1683,13 +1683,6 @@ function handleWebSocketMessage(data: any): void {
       }
       break;
       
-    case 'metrics_update':
-      // Actualizar métricas
-      if (data.camera_id && data.metrics) {
-        state.addMetricSample(data.camera_id, data.metrics);
-      }
-      break;
-      
     case 'remote_publication':
       // Actualizar publicación remota
       if (data.publication) {
