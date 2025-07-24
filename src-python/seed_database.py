@@ -463,11 +463,11 @@ class DatabaseSeeder:
     def seed_mediamtx_server(self) -> None:
         """Inserta un servidor MediaMTX de prueba en la base de datos."""
         try:
-            logger.info("Insertando servidor MediaMTX de prueba...")
+            logger.info("Insertando servidor MediaMTX de producción...")
             
-            # Datos del servidor MediaMTX remoto
+            # Datos del servidor MediaMTX real proporcionado por el equipo
             server_data = {
-                "server_name": "MediaMTX Remoto - Prueba",
+                "server_name": "MediaMTX Production Server",
                 "rtsp_url": "rtsp://31.220.104.212",
                 "rtsp_port": 8554,
                 "api_url": "http://31.220.104.212:8000",
@@ -485,11 +485,12 @@ class DatabaseSeeder:
                 "health_check_interval": 30,
                 "last_health_status": "unknown",
                 "metadata": json.dumps({
-                    "description": "Servidor MediaMTX remoto para pruebas de integración",
-                    "location": "Cloud",
-                    "environment": "test",
+                    "description": "Servidor MediaMTX de producción - Integración real",
+                    "location": "Cloud Server (31.220.104.212)",
+                    "environment": "production",
                     "capabilities": ["rtsp", "rtmp", "webrtc", "api", "auth"],
-                    "notes": "Credenciales de prueba proporcionadas por el equipo de desarrollo"
+                    "api_version": "v1",
+                    "notes": "Servidor real con autenticación JWT y generación automática de comandos FFmpeg"
                 })
             }
             

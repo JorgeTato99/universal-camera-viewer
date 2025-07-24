@@ -49,22 +49,22 @@ export function useMediaMTXAuth(): UseMediaMTXAuthReturn {
   const loadServers = useCallback(async () => {
     setIsLoading(true);
     try {
-      // TODO: Implementar carga real de servidores
-      // Por ahora, usar datos mock
+      // TODO: Implementar carga real de servidores desde endpoint /api/mediamtx/servers
+      // Por ahora, incluir servidor de producción real
       const mockServers: MediaMTXServer[] = [
         {
           id: 1,
-          name: 'MediaMTX Local',
-          url: 'rtsp://localhost:8554',
-          api_url: 'http://localhost:9997',
-          username: 'admin'
+          name: 'MediaMTX Production Server',
+          url: 'rtsp://31.220.104.212:8554',
+          api_url: 'http://31.220.104.212:8000',
+          username: 'jorge.cliente'
         },
         {
           id: 2,
-          name: 'MediaMTX Cloud',
-          url: 'rtsp://cloud.example.com:8554',
-          api_url: 'https://cloud.example.com/api',
-          username: 'user'
+          name: 'MediaMTX Local Dev',
+          url: 'rtsp://localhost:8554',
+          api_url: 'http://localhost:9997',
+          username: 'admin'
         }
       ];
       

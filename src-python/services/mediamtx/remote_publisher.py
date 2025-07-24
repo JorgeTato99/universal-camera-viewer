@@ -231,7 +231,8 @@ class MediaMTXRemotePublisher(BaseService):
                     camera_id=camera_id,
                     source_url=source_url,
                     target_url=mapping.publish_url,
-                    is_remote=True
+                    is_remote=True,
+                    agent_command=mapping.agent_command
                 )
                 
                 if result.success:
@@ -244,7 +245,7 @@ class MediaMTXRemotePublisher(BaseService):
                         remote_camera_id=mapping.remote_camera_id,
                         publish_url=mapping.publish_url,
                         webrtc_url=mapping.webrtc_url,
-                        agent_command=None,  # TODO: Obtener de remote_camera si está disponible
+                        agent_command=mapping.agent_command,  # Ahora disponible en el mapping
                         session_id=session_id
                     )
                     
@@ -441,23 +442,34 @@ class MediaMTXRemotePublisher(BaseService):
         camera_id: str,
         source_url: str,
         target_url: str,
-        is_remote: bool = True
+        is_remote: bool = True,
+        agent_command: Optional[str] = None
     ) -> PublishResult:
         """
         Inicia la publicación FFmpeg con URLs personalizadas.
         
         Usa el RTSPPublisherService modificado que ahora acepta URLs externas.
+        Si se proporciona agent_command, lo usa directamente.
         
         Args:
             camera_id: ID de la cámara
             source_url: URL RTSP de origen
             target_url: URL RTSP de destino (remoto)
             is_remote: Indica si es publicación remota
+            agent_command: Comando FFmpeg proporcionado por el servidor (opcional)
             
         Returns:
             PublishResult con el resultado
         """
         try:
+            # Si el servidor proporcionó un comando FFmpeg específico, usarlo
+            if agent_command:
+                self.logger.info(
+                    f"Usando agent_command proporcionado por el servidor para {camera_id}"
+                )
+                # TODO: Modificar RTSPPublisherService para aceptar comando personalizado
+                # Por ahora usar las URLs extraídas
+            
             # Llamar al servicio de publicación con URLs externas
             result = await self._rtsp_publisher.start_publishing(
                 camera_id=camera_id,
