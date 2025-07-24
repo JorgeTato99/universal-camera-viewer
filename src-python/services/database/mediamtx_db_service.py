@@ -2539,7 +2539,8 @@ def get_mediamtx_db_service(db_path: Optional[str] = None) -> MediaMTXDatabaseSe
     
     if _mediamtx_db_service is None:
         if db_path is None:
-            db_path = "data/camera_data.db"
+            # Usar ruta absoluta desde src-python
+            db_path = str(Path(__file__).parent.parent.parent / "data" / "camera_data.db")
         _mediamtx_db_service = MediaMTXDatabaseService(db_path)
         
     return _mediamtx_db_service

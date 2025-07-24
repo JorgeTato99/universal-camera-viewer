@@ -12,8 +12,8 @@ from datetime import datetime
 
 from presenters.base_presenter import BasePresenter
 from services.database.mediamtx_db_service import get_mediamtx_db_service
-from services.mediamtx.auth_service import get_mediamtx_auth_service
-from services.encryption_service import EncryptionServiceV2
+from services.mediamtx.auth_service import get_auth_service as get_mediamtx_auth_service
+from services.encryption_service_v2 import EncryptionServiceV2
 from services.logging_service import get_secure_logger
 from utils.exceptions import ValidationError, ServiceError
 from utils.sanitizers import sanitize_url

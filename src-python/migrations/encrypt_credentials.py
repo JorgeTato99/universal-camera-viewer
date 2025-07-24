@@ -382,7 +382,7 @@ async def main():
         '--db-path',
         type=str,
         help='Ruta a la base de datos SQLite',
-        default=str(Path(__file__).parent.parent.parent / "data" / "camera_data.db")
+        default=str(Path(__file__).parent.parent / "data" / "camera_data.db")
     )
     parser.add_argument(
         '--backup-dir',

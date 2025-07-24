@@ -8,3 +8,4 @@ export { usePublishingMetrics } from './usePublishingMetrics';
 export { usePublishingHealth } from './usePublishingHealth';
 export { useRemotePublishing } from './useRemotePublishing';
 export { useMediaMTXAuth } from './useMediaMTXAuth';
+export { useUnifiedPublishing } from './useUnifiedPublishing';

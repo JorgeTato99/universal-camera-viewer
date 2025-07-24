@@ -7,14 +7,11 @@
  * - Acciones de control (start/stop/restart)
  * - Estado de carga y errores
  * - Métricas en tiempo real
+ * - Integración completa con el store unificado
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { usePublishingStore } from '../../../stores/publishingStore';
-import { 
-  mediamtxRemoteService,
-  RemotePublishStatus 
-} from '../../../services/publishing/mediamtxRemoteService';
 import { PublishingStatus } from '../types';
 
 interface UseRemotePublishingOptions {
@@ -25,7 +22,7 @@ interface UseRemotePublishingOptions {
 
 interface UseRemotePublishingReturn {
   // Estado
-  remotePublication: RemotePublishStatus | undefined;
+  remotePublication: ReturnType<typeof usePublishingStore>['getRemotePublicationByCameraId'] extends (cameraId: string) => infer R ? R : undefined;
   isPublishing: boolean;
   isLoading: boolean;
   error: string | null;
@@ -44,19 +41,27 @@ interface UseRemotePublishingReturn {
 
 /**
  * Hook para gestión de publicación remota de una cámara
+ * Usa el store unificado para estado centralizado
  */
 export function useRemotePublishing({
   cameraId,
   autoRefresh = true,
   refreshInterval = 5000
 }: UseRemotePublishingOptions): UseRemotePublishingReturn {
-  // Estado local
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Estado desde el store unificado
+  const remotePublication = usePublishingStore((state) => state.getRemotePublicationByCameraId(cameraId));
+  const isLoadingMap = usePublishingStore((state) => state.isPublishing);
+  const error = usePublishingStore((state) => state.error);
+  const selectedServerId = usePublishingStore((state) => state.remote.selectedServerId);
   
-  // Estado global (si se integra con el store extendido)
-  // Por ahora, usamos el servicio directamente
-  const [remotePublication, setRemotePublication] = useState<RemotePublishStatus | undefined>();
+  // Acciones del store
+  const startRemotePublishing = usePublishingStore((state) => state.startRemotePublishing);
+  const stopRemotePublishing = usePublishingStore((state) => state.stopRemotePublishing);
+  const fetchRemotePublications = usePublishingStore((state) => state.fetchRemotePublications);
+  const clearError = usePublishingStore((state) => state.clearError);
+  
+  // Estado derivado
+  const isLoading = isLoadingMap.get(cameraId) || false;
   
   // Verificar si está publicando
   const isPublishing = remotePublication?.status === PublishingStatus.PUBLISHING;
@@ -85,102 +90,65 @@ export function useRemotePublishing({
     }
   };
   
-  // Refrescar estado
+  // Refrescar estado (usa store)
   const refreshStatus = useCallback(async () => {
     try {
-      const cached = mediamtxRemoteService.getCachedRemotePublication(cameraId);
-      if (cached) {
-        setRemotePublication(cached);
-      }
-      
-      // Obtener estado actualizado del servidor
-      const response = await mediamtxRemoteService.getRemotePublicationStatus(cameraId);
-      if (response.success && response.data) {
-        setRemotePublication(response.data);
-        setError(null);
-      }
+      await fetchRemotePublications();
     } catch (err) {
-      // Si es 404, no hay publicación activa
-      if (err instanceof Error && err.message.includes('404')) {
-        setRemotePublication(undefined);
-      } else {
-        console.error('Error refrescando estado:', err);
-      }
+      console.error('Error refrescando publicaciones remotas:', err);
     }
-  }, [cameraId]);
+  }, [fetchRemotePublications]);
   
-  // Iniciar publicación
+  // Iniciar publicación (usa store)
   const startPublishing = useCallback(async (
     serverId: number,
     customName?: string
   ): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
+    clearError();
     
     try {
-      const response = await mediamtxRemoteService.startRemotePublishing({
-        camera_id: cameraId,
-        server_id: serverId,
-        custom_name: customName
-      });
-      
-      if (response.success && response.data) {
-        setRemotePublication(response.data);
-        return true;
-      } else {
-        setError(response.error || 'Error al iniciar publicación');
-        return false;
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [cameraId]);
-  
-  // Detener publicación
-  const stopPublishing = useCallback(async (): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await mediamtxRemoteService.stopRemotePublishing(cameraId);
-      setRemotePublication(undefined);
+      // TODO: Implementar soporte para customName en el store
+      await startRemotePublishing(cameraId, serverId);
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [cameraId]);
+  }, [cameraId, startRemotePublishing, clearError]);
+  
+  // Detener publicación (usa store)
+  const stopPublishing = useCallback(async (): Promise<boolean> => {
+    clearError();
+    
+    try {
+      await stopRemotePublishing(cameraId);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }, [cameraId, stopRemotePublishing, clearError]);
   
   // Reiniciar publicación
   const restartPublishing = useCallback(async (): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
+    if (!remotePublication) {
+      return false;
+    }
+    
+    clearError();
     
     try {
-      const response = await mediamtxRemoteService.restartRemotePublishing(cameraId);
+      // Detener primero
+      await stopRemotePublishing(cameraId);
       
-      if (response.success && response.data) {
-        setRemotePublication(response.data);
-        return true;
-      } else {
-        setError(response.error || 'Error al reiniciar publicación');
-        return false;
-      }
+      // Esperar un momento
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Volver a iniciar con el mismo servidor
+      await startRemotePublishing(cameraId, remotePublication.server_id);
+      return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [cameraId]);
+  }, [cameraId, remotePublication, startRemotePublishing, stopRemotePublishing, clearError]);
   
   // Auto-refresh
   useEffect(() => {

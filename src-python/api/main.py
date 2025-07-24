@@ -34,6 +34,7 @@ from api.routers.publishing_viewers import router as viewers_router
 from api.routers.publishing_paths import router as paths_router
 from api.routers.mediamtx_auth import router as mediamtx_auth_router
 from api.routers.mediamtx_cameras import router as mediamtx_cameras_router
+from api.routers.mediamtx_remote_publishing import router as mediamtx_remote_publishing_router
 from services.camera_manager_service import camera_manager_service
 from websocket.handlers.publishing_handler import get_publishing_ws_handler
 
@@ -289,12 +290,19 @@ app.include_router(mediamtx_cameras_router)
 from api.routers.mediamtx_servers import router as mediamtx_servers_router
 app.include_router(mediamtx_servers_router)
 
+# MediaMTX remote publishing router (nuevo)
+app.include_router(mediamtx_remote_publishing_router)
+
 # Publishing unified router (nuevo)
 from api.routers.publishing_unified import router as publishing_unified_router
 app.include_router(publishing_unified_router)
 
 # WebSocket routers (sin prefijo API)
 app.include_router(streaming.router, prefix="/ws")
+
+# Publishing WebSocket router
+from api.routers.publishing_websocket import router as publishing_ws_router
+app.include_router(publishing_ws_router, prefix="/ws")
 
 
 if __name__ == "__main__":

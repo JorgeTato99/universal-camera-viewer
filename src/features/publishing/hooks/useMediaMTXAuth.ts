@@ -9,9 +9,9 @@
  * - Lista de servidores autenticados
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
+import { usePublishingStore } from '../../../stores/publishingStore';
 import { 
-  mediamtxRemoteService,
   MediaMTXServer,
   AuthStatus 
 } from '../../../services/publishing/mediamtxRemoteService';
@@ -37,166 +37,53 @@ interface UseMediaMTXAuthReturn {
 
 /**
  * Hook para gestión de autenticación MediaMTX
+ * Conecta con el publishingStore para estado centralizado
  */
 export function useMediaMTXAuth(): UseMediaMTXAuthReturn {
-  // Estado local
-  const [servers, setServers] = useState<MediaMTXServer[]>([]);
-  const [authStatuses, setAuthStatuses] = useState<Map<number, AuthStatus>>(new Map());
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState<Map<number, boolean>>(new Map());
+  // Obtener estado y acciones del store
+  const servers = usePublishingStore((state) => state.remote.servers);
+  const authStatuses = usePublishingStore((state) => state.remote.authStatuses);
+  const isLoadingServers = usePublishingStore((state) => state.remote.isLoadingServers);
+  const isLoadingAuth = usePublishingStore((state) => state.remote.isLoadingAuth);
   
-  // Cargar servidores
-  const loadServers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // TODO: Implementar carga real de servidores desde endpoint /api/mediamtx/servers
-      // Por ahora, incluir servidor de producción real
-      const mockServers: MediaMTXServer[] = [
-        {
-          id: 1,
-          name: 'MediaMTX Production Server',
-          url: 'rtsp://31.220.104.212:8554',
-          api_url: 'http://31.220.104.212:8000',
-          username: 'jorge.cliente'
-        },
-        {
-          id: 2,
-          name: 'MediaMTX Local Dev',
-          url: 'rtsp://localhost:8554',
-          api_url: 'http://localhost:9997',
-          username: 'admin'
-        }
-      ];
-      
-      setServers(mockServers);
-      
-      // Cargar estados de autenticación
-      await refreshAuthStatus();
-    } catch (error) {
-      console.error('Error cargando servidores:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const fetchRemoteServers = usePublishingStore((state) => state.fetchRemoteServers);
+  const authenticateServer = usePublishingStore((state) => state.authenticateServer);
+  const logoutServer = usePublishingStore((state) => state.logoutServer);
+  const isServerAuthenticated = usePublishingStore((state) => state.isServerAuthenticated);
+  const getAuthenticatedServers = usePublishingStore((state) => state.getAuthenticatedServers);
   
-  // Autenticar servidor
+  // Autenticar servidor (usa store)
   const authenticate = useCallback(async (
     serverId: number,
     username: string,
     password: string
   ): Promise<boolean> => {
-    setIsAuthenticating(prev => new Map(prev).set(serverId, true));
-    
-    try {
-      const response = await mediamtxRemoteService.authenticate({
-        server_id: serverId,
-        username,
-        password
-      });
-      
-      if (response.success && response.data) {
-        // Actualizar estado de autenticación
-        setAuthStatuses(prev => new Map(prev).set(serverId, response.data!));
-        
-        // Actualizar servidor
-        setServers(prev => prev.map(server =>
-          server.id === serverId
-            ? { ...server, is_authenticated: true, username }
-            : server
-        ));
-        
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error autenticando:', error);
-      return false;
-    } finally {
-      setIsAuthenticating(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(serverId);
-        return newMap;
-      });
-    }
-  }, []);
+    return await authenticateServer(serverId, username, password);
+  }, [authenticateServer]);
   
-  // Cerrar sesión
+  // Cerrar sesión (usa store)
   const logout = useCallback(async (serverId: number) => {
-    try {
-      await mediamtxRemoteService.logout(serverId);
-      
-      // Limpiar estado local
-      setAuthStatuses(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(serverId);
-        return newMap;
-      });
-      
-      // Actualizar servidor
-      setServers(prev => prev.map(server =>
-        server.id === serverId
-          ? { ...server, is_authenticated: false }
-          : server
-      ));
-    } catch (error) {
-      console.error('Error cerrando sesión:', error);
-    }
-  }, []);
+    await logoutServer(serverId);
+  }, [logoutServer]);
   
   // Validar conexión
   const validateConnection = useCallback(async (serverId: number): Promise<boolean> => {
-    try {
-      const response = await mediamtxRemoteService.validateConnection(serverId);
-      
-      if (response.success && response.data) {
-        setAuthStatuses(prev => new Map(prev).set(serverId, response.data!));
-        return response.data.is_authenticated;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error validando conexión:', error);
-      return false;
-    }
-  }, []);
+    // TODO: Implementar validación real conectada con el store
+    // Por ahora verificar el estado de autenticación local
+    return isServerAuthenticated(serverId);
+  }, [isServerAuthenticated]);
   
   // Refrescar estado de autenticación
   const refreshAuthStatus = useCallback(async (serverId?: number) => {
-    try {
-      const response = await mediamtxRemoteService.getAuthStatus(serverId);
-      
-      if (response.success && response.data) {
-        if (Array.isArray(response.data)) {
-          // Múltiples estados
-          const newStatuses = new Map<number, AuthStatus>();
-          response.data.forEach(status => {
-            newStatuses.set(status.server_id, status);
-          });
-          setAuthStatuses(newStatuses);
-        } else {
-          // Estado único
-          setAuthStatuses(prev => new Map(prev).set(response.data.server_id, response.data));
-        }
-      }
-    } catch (error) {
-      console.error('Error refrescando estado de autenticación:', error);
-    }
+    // TODO: Implementar refresh real de estado de autenticación
+    // Esto debería ser manejado por el store con polling o WebSocket
+    console.log('Refreshing auth status for server:', serverId);
   }, []);
   
-  // Obtener servidores autenticados
-  const getAuthenticatedServers = useCallback(() => {
-    return servers.filter(server => {
-      const authStatus = authStatuses.get(server.id);
-      return authStatus?.is_authenticated;
-    });
-  }, [servers, authStatuses]);
-  
-  // Verificar si un servidor está autenticado
+  // Verificar si un servidor está autenticado (usa store)
   const isAuthenticated = useCallback((serverId: number): boolean => {
-    const authStatus = authStatuses.get(serverId);
-    return authStatus?.is_authenticated || false;
-  }, [authStatuses]);
+    return isServerAuthenticated(serverId);
+  }, [isServerAuthenticated]);
   
   // Obtener error de autenticación
   const getAuthError = useCallback((serverId: number): string | undefined => {
@@ -206,27 +93,18 @@ export function useMediaMTXAuth(): UseMediaMTXAuthReturn {
   
   // Cargar servidores al montar
   useEffect(() => {
-    loadServers();
-  }, [loadServers]);
-  
-  // Actualizar cache del servicio cuando cambian los estados
-  useEffect(() => {
-    // Sincronizar con el cache del servicio
-    authStatuses.forEach((status, serverId) => {
-      const cached = mediamtxRemoteService.getCachedAuthStatus(serverId);
-      if (!cached || cached.last_check < status.last_check) {
-        // El estado local es más reciente, no hacer nada
-        // (el servicio ya tiene el estado actualizado)
-      }
-    });
-  }, [authStatuses]);
+    // Solo cargar si no hay servidores
+    if (servers.length === 0 && !isLoadingServers) {
+      fetchRemoteServers();
+    }
+  }, [servers.length, isLoadingServers, fetchRemoteServers]);
   
   return {
     // Estado
     servers,
     authStatuses,
-    isLoading,
-    isAuthenticating,
+    isLoading: isLoadingServers,
+    isAuthenticating: isLoadingAuth,
     
     // Acciones
     authenticate,

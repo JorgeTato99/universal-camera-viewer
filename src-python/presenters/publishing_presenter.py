@@ -289,14 +289,21 @@ class PublishingPresenter(BasePresenter):
         camera_id: str
     ) -> Optional[PublisherProcess]:
         """Obtiene estado de publicación de una cámara."""
+        if not self._publisher_service:
+            return None
         return self._publisher_service.get_camera_status(camera_id)
         
     async def get_all_status(self) -> Dict[str, PublisherProcess]:
         """Obtiene estado de todas las publicaciones."""
+        if not self._publisher_service:
+            # Si el servicio aún no está inicializado, retornar diccionario vacío
+            return {}
         return self._publisher_service.get_publishing_status()
         
     async def get_active_count(self) -> int:
         """Obtiene el número de publicaciones activas."""
+        if not self._publisher_service:
+            return 0
         all_status = self._publisher_service.get_publishing_status()
         return sum(1 for p in all_status.values() if p.is_active)
     
@@ -309,6 +316,8 @@ class PublishingPresenter(BasePresenter):
         """
         try:
             # Obtener estado de todas las publicaciones
+            if not self._publisher_service:
+                return []
             all_status = self._publisher_service.get_publishing_status()
             
             active_publications = []
