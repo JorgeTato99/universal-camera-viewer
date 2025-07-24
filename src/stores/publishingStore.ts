@@ -17,13 +17,13 @@ import {
 import { publishingService } from "../services/publishing";
 import { notificationStore } from "./notificationStore";
 import { mapBackendToFrontendPublishingStatus } from "../utils/statusLabels";
-import { apiClient } from "../services/api/apiClient";
 import { 
   mediamtxRemoteService,
-  MediaMTXServer,
   AuthStatus,
   RemotePublishStatus
 } from "../services/publishing/mediamtxRemoteService";
+import { mediamtxServerService, type MediaMTXServer } from "../services/publishing/mediamtxServerService";
+import { publishingUnifiedService } from "../services/publishing/publishingUnifiedService";
 
 interface PublishingState {
   // === ESTADO PRINCIPAL ===
@@ -184,6 +184,9 @@ interface PublishingState {
   
   // Verificar si un servidor está autenticado
   isServerAuthenticated: (serverId: number) => boolean;
+  
+  // Actualizar estado de publicación desde WebSocket
+  updatePublicationStatus: (cameraId: string, status: any) => void;
   
   // Obtener publicación unificada (local + remota)
   getUnifiedPublication: (cameraId: string) => {
@@ -370,7 +373,7 @@ export const usePublishingStore = create<PublishingState>()(
           response.data.forEach((pub) => {
             // Mapear estado del backend al frontend
             const context = {
-              isReconnecting: pub.metrics?.is_reconnecting || false,
+              isReconnecting: false, // Esta propiedad no viene del backend
               isStopping: false // El backend no envía STOPPING
             };
             
@@ -753,43 +756,36 @@ export const usePublishingStore = create<PublishingState>()(
       }));
 
       try {
-        // Cargar servidores desde el endpoint real
-        const response = await apiClient.get<MediaMTXServer[]>('/mediamtx/servers');
+        // Cargar servidores usando el servicio dedicado
+        const response = await mediamtxServerService.getServers(1, 100);
         
-        if (response.success && response.data) {
-          set((state) => ({
-            remote: {
-              ...state.remote,
-              servers: response.data!,
-              isLoadingServers: false,
-            },
-          }));
-          
-          // Cargar estados de autenticación para cada servidor
-          const authPromises = response.data.map(server => 
-            mediamtxRemoteService.getAuthStatus(server.id)
-          );
-          
-          const authResponses = await Promise.allSettled(authPromises);
-          
-          // Actualizar estados de autenticación
-          const authStatuses = new Map<number, AuthStatus>();
-          authResponses.forEach((result, index) => {
-            if (result.status === 'fulfilled' && result.value.success && result.value.data) {
-              const serverId = response.data![index].id;
-              authStatuses.set(serverId, result.value.data as AuthStatus);
-            }
-          });
-          
-          set((state) => ({
-            remote: {
-              ...state.remote,
-              authStatuses,
-            },
-          }));
-        } else {
-          throw new Error('Error cargando servidores');
-        }
+        set((state) => ({
+          remote: {
+            ...state.remote,
+            servers: response.items,
+            isLoadingServers: false,
+          },
+        }));
+        
+        // Actualizar estados de autenticación basándose en is_authenticated
+        const authStatuses = new Map<number, AuthStatus>();
+        response.items.forEach((server: MediaMTXServer) => {
+          if (server.is_authenticated) {
+            authStatuses.set(server.id, {
+              is_authenticated: true,
+              server_id: server.id,
+              token_expires_at: undefined, // TODO: Implementar cuando backend soporte tokens con expiración
+              last_check: new Date().toISOString(),
+            });
+          }
+        });
+        
+        set((state) => ({
+          remote: {
+            ...state.remote,
+            authStatuses,
+          },
+        }));
         
       } catch (error) {
         console.error('Error cargando servidores:', error);
@@ -903,25 +899,43 @@ export const usePublishingStore = create<PublishingState>()(
       }));
       
       try {
-        const response = await mediamtxRemoteService.startRemotePublishing({
-          camera_id: cameraId,
-          server_id: serverId,
-        });
+        // Usar el servicio unificado para publicación remota
+        const publication = await publishingUnifiedService.startRemotePublishing(cameraId, serverId);
         
-        if (response.success && response.data) {
-          set((state) => ({
-            remote: {
-              ...state.remote,
-              publications: new Map(state.remote.publications).set(cameraId, response.data!),
-            },
-            isPublishing: new Map(state.isPublishing).set(cameraId, false),
-          }));
-          
-          // Actualizar métricas unificadas
-          get().updateUnifiedMetrics();
-        } else {
-          throw new Error(response.error || 'Error al iniciar publicación remota');
-        }
+        // Convertir a RemotePublishStatus
+        const remoteStatus: RemotePublishStatus = {
+          camera_id: publication.camera_id,
+          server_id: serverId,
+          server_name: '',
+          status: publication.status as PublishingStatus,
+          publish_path: publication.stream_url || '',
+          uptime_seconds: publication.metrics.uptime_seconds || 0,
+          error_count: publication.error_message ? 1 : 0,
+          last_error: publication.error_message,
+          publish_url: publication.stream_url || '',
+          webrtc_url: publication.webrtc_url || '',
+          is_remote: true,
+          metrics: {
+            fps: publication.metrics.fps,
+            bitrate_kbps: publication.metrics.bitrate_kbps,
+            viewers: publication.metrics.viewers,
+            frames_sent: 0,
+            bytes_sent: 0,
+            timestamp: new Date().toISOString(),
+          },
+        };
+        
+        set((state) => ({
+          remote: {
+            ...state.remote,
+            publications: new Map(state.remote.publications).set(cameraId, remoteStatus),
+          },
+          isPublishing: new Map(state.isPublishing).set(cameraId, false),
+        }));
+        
+        // Actualizar métricas unificadas
+        get().updateUnifiedMetrics();
+        
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
         set((state) => ({
@@ -940,27 +954,30 @@ export const usePublishingStore = create<PublishingState>()(
       }));
       
       try {
-        const response = await mediamtxRemoteService.stopRemotePublishing(cameraId);
-        
-        if (response.success) {
-          set((state) => {
-            const newPublications = new Map(state.remote.publications);
-            newPublications.delete(cameraId);
-            
-            return {
-              remote: {
-                ...state.remote,
-                publications: newPublications,
-              },
-              isPublishing: new Map(state.isPublishing).set(cameraId, false),
-            };
-          });
-          
-          // Actualizar métricas unificadas
-          get().updateUnifiedMetrics();
-        } else {
-          throw new Error(response.error || 'Error al detener publicación remota');
+        // Obtener el servidor de la publicación actual
+        const publication = get().remote.publications.get(cameraId);
+        if (!publication || !publication.server_id) {
+          throw new Error('No se encontró publicación remota activa');
         }
+        
+        await publishingUnifiedService.stopRemotePublishing(cameraId, publication.server_id);
+        
+        set((state) => {
+          const newPublications = new Map(state.remote.publications);
+          newPublications.delete(cameraId);
+          
+          return {
+            remote: {
+              ...state.remote,
+              publications: newPublications,
+            },
+            isPublishing: new Map(state.isPublishing).set(cameraId, false),
+          };
+        });
+        
+        // Actualizar métricas unificadas
+        get().updateUnifiedMetrics();
+        
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
         set((state) => ({
@@ -974,24 +991,47 @@ export const usePublishingStore = create<PublishingState>()(
     // Cargar publicaciones remotas
     fetchRemotePublications: async () => {
       try {
-        const response = await mediamtxRemoteService.listRemotePublications();
+        // Usar el servicio unificado para obtener todas las publicaciones
+        const publications = await publishingUnifiedService.getAllPublications({ type: 'remote' });
         
-        if (response.success && response.data) {
-          const newPublications = new Map<string, RemotePublishStatus>();
-          response.data.forEach(pub => {
-            newPublications.set(pub.camera_id, pub);
-          });
-          
-          set((state) => ({
-            remote: {
-              ...state.remote,
-              publications: newPublications,
-            },
-          }));
-          
-          // Actualizar métricas unificadas
-          get().updateUnifiedMetrics();
-        }
+        const newPublications = new Map<string, RemotePublishStatus>();
+        publications.forEach(pub => {
+          if (pub.publication_type === 'remote' && pub.server_id) {
+            const remoteStatus: RemotePublishStatus = {
+              camera_id: pub.camera_id,
+              server_id: pub.server_id,
+              server_name: pub.server_name || '',
+              status: pub.status as PublishingStatus,
+              publish_path: pub.stream_url || '',
+              uptime_seconds: pub.metrics.uptime_seconds || 0,
+              error_count: pub.error_message ? 1 : 0,
+              last_error: pub.error_message,
+              publish_url: pub.stream_url || '',
+              webrtc_url: pub.webrtc_url || '',
+              is_remote: true,
+              metrics: {
+                fps: pub.metrics.fps,
+                bitrate_kbps: pub.metrics.bitrate_kbps,
+                viewers: pub.metrics.viewers,
+                frames_sent: 0,
+                bytes_sent: 0,
+                timestamp: new Date().toISOString(),
+              },
+            };
+            newPublications.set(pub.camera_id, remoteStatus);
+          }
+        });
+        
+        set((state) => ({
+          remote: {
+            ...state.remote,
+            publications: newPublications,
+          },
+        }));
+        
+        // Actualizar métricas unificadas
+        get().updateUnifiedMetrics();
+        
       } catch (error) {
         console.error('Error cargando publicaciones remotas:', error);
       }
@@ -1004,44 +1044,79 @@ export const usePublishingStore = create<PublishingState>()(
       set({ isLoading: true, error: null });
       
       try {
-        // Usar el endpoint unificado
-        const response = await apiClient.get<{
-          local_publications: PublishStatus[];
-          remote_publications: RemotePublishStatus[];
-          metrics: {
-            total_viewers: number;
-            total_publications: number;
-            local_publications: number;
-            remote_publications: number;
-            total_bandwidth_mbps: number;
-          };
-        }>('/publishing/all');
+        // Cargar publicaciones y resumen en paralelo
+        const [publications, summary] = await Promise.all([
+          publishingUnifiedService.getAllPublications(),
+          publishingUnifiedService.getPublishingSummary()
+        ]);
         
-        if (response.success && response.data) {
-          // Actualizar publicaciones locales
-          const localPubs = new Map<string, PublishStatus>();
-          response.data.local_publications.forEach(pub => {
-            localPubs.set(pub.camera_id, pub);
-          });
-          
-          // Actualizar publicaciones remotas
-          const remotePubs = new Map<string, RemotePublishStatus>();
-          response.data.remote_publications.forEach(pub => {
-            remotePubs.set(pub.camera_id, pub);
-          });
-          
-          set((state) => ({
-            activePublications: localPubs,
-            remote: {
-              ...state.remote,
-              publications: remotePubs,
-            },
-            unifiedMetrics: response.data.metrics,
-            isLoading: false,
-          }));
-        } else {
-          throw new Error('Error cargando publicaciones unificadas');
-        }
+        // Separar publicaciones locales y remotas
+        const localPubs = new Map<string, PublishStatus>();
+        const remotePubs = new Map<string, RemotePublishStatus>();
+        
+        publications.forEach(pub => {
+          if (pub.publication_type === 'local') {
+            // Convertir a PublishStatus local
+            const localStatus: PublishStatus = {
+              camera_id: pub.camera_id,
+              status: pub.status as PublishingStatus,
+              publish_path: pub.stream_url || '',
+              uptime_seconds: pub.metrics.uptime_seconds || 0,
+              error_count: pub.error_message ? 1 : 0,
+              last_error: pub.error_message,
+              metrics: {
+                fps: pub.metrics.fps,
+                bitrate_kbps: pub.metrics.bitrate_kbps,
+                viewers: pub.metrics.viewers,
+                frames_sent: 0,
+                bytes_sent: 0,
+                timestamp: new Date().toISOString(),
+              },
+            };
+            localPubs.set(pub.camera_id, localStatus);
+          } else if (pub.publication_type === 'remote' && pub.server_id) {
+            // Convertir a RemotePublishStatus
+            const remoteStatus: RemotePublishStatus = {
+              camera_id: pub.camera_id,
+              server_id: pub.server_id,
+              server_name: pub.server_name || '',
+              status: pub.status as PublishingStatus,
+              publish_path: pub.stream_url || '',
+              uptime_seconds: pub.metrics.uptime_seconds || 0,
+              error_count: pub.error_message ? 1 : 0,
+              last_error: pub.error_message,
+              publish_url: pub.stream_url || '',
+              webrtc_url: pub.webrtc_url || '',
+              is_remote: true,
+              metrics: {
+                fps: pub.metrics.fps,
+                bitrate_kbps: pub.metrics.bitrate_kbps,
+                viewers: pub.metrics.viewers,
+                frames_sent: 0,
+                bytes_sent: 0,
+                timestamp: new Date().toISOString(),
+              },
+            };
+            remotePubs.set(pub.camera_id, remoteStatus);
+          }
+        });
+        
+        set((state) => ({
+          activePublications: localPubs,
+          remote: {
+            ...state.remote,
+            publications: remotePubs,
+          },
+          unifiedMetrics: {
+            totalViewers: summary.total_viewers,
+            totalPublications: summary.total_publications,
+            localPublications: summary.local_publications,
+            remotePublications: summary.remote_publications,
+            totalBandwidthMbps: summary.total_bitrate_mbps,
+          },
+          isLoading: false,
+        }));
+        
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
         set({
@@ -1055,20 +1130,18 @@ export const usePublishingStore = create<PublishingState>()(
     updatePublicationStatus: (cameraId: string, status: any) => {
       const publication: PublishStatus = {
         camera_id: cameraId,
-        is_active: status.is_active,
         status: status.status,
-        error_message: status.last_error,
         publish_path: '',
-        process_id: status.process_id,
-        start_time: status.start_time,
-        viewers: 0,
+        uptime_seconds: 0,
+        error_count: status.last_error ? 1 : 0,
+        last_error: status.last_error,
         metrics: status.metrics || {
           fps: 0,
           bitrate_kbps: 0,
-          resolution: '',
-          dropped_frames: 0,
-          cpu_percent: 0,
-          memory_mb: 0,
+          viewers: 0,
+          frames_sent: 0,
+          bytes_sent: 0,
+          timestamp: new Date().toISOString(),
         }
       };
       
@@ -1239,7 +1312,7 @@ export const usePublishingStore = create<PublishingState>()(
     },
     
     // Obtener publicación unificada (local + remota)
-    getUnifiedPublication: (cameraId) => {
+    getUnifiedPublication: (cameraId: string) => {
       const state = get();
       const local = state.activePublications.get(cameraId);
       const remote = state.remote.publications.get(cameraId);
@@ -1266,7 +1339,7 @@ export const usePublishingStore = create<PublishingState>()(
       return {
         local,
         remote,
-        isPublishing: isPublishingLocal || isPublishingRemote,
+        isPublishing: Boolean(isPublishingLocal || isPublishingRemote),
         publishingType,
       };
     },
@@ -1524,20 +1597,18 @@ function handleWebSocketMessage(data: any): void {
       if (data.camera_id) {
         const publication: PublishStatus = {
           camera_id: data.camera_id,
-          is_active: data.success,
-          status: data.success ? 'running' : 'error',
-          error_message: data.error,
-          publish_path: data.publish_path,
-          process_id: data.process_id,
-          start_time: new Date().toISOString(),
-          viewers: 0,
+          status: data.success ? PublishingStatus.PUBLISHING : PublishingStatus.ERROR,
+          publish_path: data.publish_path || '',
+          uptime_seconds: 0,
+          error_count: data.error ? 1 : 0,
+          last_error: data.error,
           metrics: {
             fps: 0,
             bitrate_kbps: 0,
-            resolution: '',
-            dropped_frames: 0,
-            cpu_percent: 0,
-            memory_mb: 0,
+            viewers: 0,
+            frames_sent: 0,
+            bytes_sent: 0,
+            timestamp: new Date().toISOString(),
           }
         };
         state.activePublications.set(data.camera_id, publication);
@@ -1568,19 +1639,18 @@ function handleWebSocketMessage(data: any): void {
         data.items.forEach((item: any) => {
           newPublications.set(item.camera_id, {
             camera_id: item.camera_id,
-            is_active: item.is_active,
             status: item.status,
-            error_message: item.last_error,
             publish_path: '',
-            start_time: item.start_time,
-            viewers: 0,
+            uptime_seconds: 0,
+            error_count: item.last_error ? 1 : 0,
+            last_error: item.last_error,
             metrics: item.metrics || {
               fps: 0,
               bitrate_kbps: 0,
-              resolution: '',
-              dropped_frames: 0,
-              cpu_percent: 0,
-              memory_mb: 0,
+              viewers: 0,
+              frames_sent: 0,
+              bytes_sent: 0,
+              timestamp: new Date().toISOString(),
             }
           });
         });

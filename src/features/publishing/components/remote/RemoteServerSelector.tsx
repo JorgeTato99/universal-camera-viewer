@@ -36,7 +36,8 @@ import {
   Refresh,
   VpnKey
 } from '@mui/icons-material';
-import { MediaMTXServer, AuthStatus } from '../../../../services/publishing/mediamtxRemoteService';
+import { AuthStatus } from '../../../../services/publishing/mediamtxRemoteService';
+import type { MediaMTXServer } from '../../../../services/publishing/mediamtxServerService';
 
 interface RemoteServerSelectorProps {
   servers: MediaMTXServer[];

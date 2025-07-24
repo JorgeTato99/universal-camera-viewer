@@ -9,6 +9,7 @@ directamente desde el directorio src-python.
 import uvicorn
 import sys
 from api.config import settings
+from logging_config import configure_logging
 
 # Configurar event loop para Windows antes de cualquier uso de asyncio
 if sys.platform == 'win32':
@@ -18,6 +19,9 @@ if sys.platform == 'win32':
 
 def main():
     """Función principal para ejecutar el servidor."""
+    # Configurar filtros de logging
+    configure_logging()
+    
     print(f"[STARTING] {settings.app_name} v{settings.app_version}")
     print(f"[SERVER] http://{settings.host}:{settings.port}")
     print(f"[DOCS] http://{settings.host}:{settings.port}/docs")

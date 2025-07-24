@@ -42,7 +42,8 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { mediamtxRemoteService, MediaMTXServer } from '../../../../services/publishing/mediamtxRemoteService';
+import { mediamtxRemoteService } from '../../../../services/publishing/mediamtxRemoteService';
+import type { MediaMTXServer } from '../../../../services/publishing/mediamtxServerService';
 import { notificationStore } from '../../../../stores/notificationStore';
 import { validateMediaMTXCredentials } from '../../utils/validation';
 
@@ -92,7 +93,7 @@ export const MediaMTXAuthDialog: React.FC<MediaMTXAuthDialogProps> = ({
     resolver: zodResolver(authFormSchema),
     mode: 'onChange',
     defaultValues: {
-      username: server.username || '',
+      username: '',
       password: ''
     }
   });
@@ -104,7 +105,7 @@ export const MediaMTXAuthDialog: React.FC<MediaMTXAuthDialogProps> = ({
   useEffect(() => {
     if (open) {
       reset({
-        username: server.username || '',
+        username: '',
         password: ''
       });
       setAuthStatus('idle');
@@ -265,11 +266,11 @@ export const MediaMTXAuthDialog: React.FC<MediaMTXAuthDialogProps> = ({
             </Typography>
           </Box>
           <Typography variant="body2" color="text.secondary">
-            {server.url}
+            {server.api_url}
           </Typography>
-          {server.api_url && (
+          {server.rtmp_url && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-              API: {server.api_url}
+              RTMP: {server.rtmp_url}
             </Typography>
           )}
         </Box>

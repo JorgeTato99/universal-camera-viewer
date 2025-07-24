@@ -46,6 +46,9 @@ const PublishingHistory = React.lazy(
 const PathConfiguration = React.lazy(
   () => import("../../features/publishing/pages/PathConfiguration")
 );
+const MediaMTXServersPage = React.lazy(
+  () => import("../../features/publishing/pages/MediaMTXServersPage")
+);
 
 // Precargar páginas críticas para mejorar la experiencia
 const preloadCriticalPages = () => {
@@ -233,6 +236,7 @@ export const AppRouter = memo(() => {
           {/* Publishing routes */}
           <Route path="/publishing" element={<Navigate to="/publishing/dashboard" replace />} />
           <Route path="/publishing/dashboard" element={<PublishingDashboard />} />
+          <Route path="/publishing/servers" element={<MediaMTXServersPage />} />
           <Route path="/publishing/active" element={<ActivePublications />} />
           <Route path="/publishing/metrics" element={<PublishingMetrics />} />
           <Route path="/publishing/history" element={<PublishingHistory />} />

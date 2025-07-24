@@ -3,7 +3,7 @@
  * Panel principal de control para publicaciones MediaMTX
  */
 
-import React, { useEffect, memo } from "react";
+import { useEffect, memo, useState } from "react";
 import {
   Box,
   Container,
@@ -12,27 +12,37 @@ import {
   Paper,
   Fade,
   CircularProgress,
-  useTheme,
   alpha,
   Tooltip,
+  Tabs,
+  Tab,
+  Button,
+  Chip,
 } from "@mui/material";
 import {
   HelpOutline as HelpIcon,
   Warning as WarningIcon,
   CheckCircle as CheckIcon,
+  CloudQueue as CloudIcon,
+  Computer as LocalIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { usePublishingHealth } from "../hooks/usePublishingHealth";
 import { usePublishingStore } from "../../../stores/publishingStore";
 import { colorTokens } from "../../../design-system/tokens";
+import { initializePublishingWebSocket } from "../../../services/websocket/publishingWebSocket";
 
 /**
  * Dashboard principal de publicación MediaMTX
  */
 const PublishingDashboard = memo(() => {
-  const theme = useTheme();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(0);
+  
   const {
     systemHealth,
-    publicationCounts,
     healthIndicators,
     alerts,
     isLoading,
@@ -42,12 +52,33 @@ const PublishingDashboard = memo(() => {
     refreshInterval: 30,
   });
 
-  const { configurations, fetchConfigurations } = usePublishingStore();
+  const { 
+    configurations, 
+    fetchConfigurations,
+    remote,
+    unifiedMetrics,
+    fetchRemoteServers,
+    fetchUnifiedPublications,
+  } = usePublishingStore();
 
-  // Cargar configuraciones al montar
+  // Inicializar WebSocket y cargar datos al montar
   useEffect(() => {
+    // Iniciar WebSocket para eventos en tiempo real
+    initializePublishingWebSocket();
+    
+    // Cargar datos iniciales
     fetchConfigurations();
-  }, [fetchConfigurations]);
+    fetchRemoteServers();
+    fetchUnifiedPublications();
+  }, [fetchConfigurations, fetchRemoteServers, fetchUnifiedPublications]);
+  
+  // Actualizar datos según el tab activo
+  useEffect(() => {
+    if (activeTab === 0) {
+      // Tab de servidores remotos
+      fetchRemoteServers();
+    }
+  }, [activeTab, fetchRemoteServers]);
 
   // Mostrar loader mientras carga
   if (isLoading && !systemHealth) {
@@ -69,15 +100,70 @@ const PublishingDashboard = memo(() => {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Fade in timeout={300}>
         <Box>
-          {/* Header */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h4" gutterBottom>
-              Dashboard de Publicación
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Panel de control MediaMTX - Estado general del sistema
-            </Typography>
+          {/* Header con acciones */}
+          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box>
+              <Typography variant="h4" gutterBottom>
+                Dashboard de Publicación
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Panel de control para servidores MediaMTX locales y remotos
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={() => {
+                  refresh();
+                  fetchUnifiedPublications();
+                }}
+              >
+                Actualizar
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => navigate('/publishing/servers')}
+              >
+                Agregar Servidor
+              </Button>
+            </Box>
           </Box>
+          
+          {/* Tabs para separar contextos */}
+          <Paper sx={{ mb: 3 }}>
+            <Tabs 
+              value={activeTab} 
+              onChange={(_, newValue) => setActiveTab(newValue)}
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab 
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CloudIcon fontSize="small" />
+                    <span>Servidores Remotos</span>
+                    <Chip 
+                      label={remote.servers.length} 
+                      size="small" 
+                      color={remote.servers.length > 0 ? "primary" : "default"}
+                    />
+                  </Box>
+                } 
+              />
+              <Tab 
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocalIcon fontSize="small" />
+                    <span>Servidor Local</span>
+                    {configurations.find(c => c.is_active) && (
+                      <Chip label="Activo" size="small" color="success" />
+                    )}
+                  </Box>
+                } 
+              />
+            </Tabs>
+          </Paper>
 
           {/* Grid de widgets */}
           <Grid container spacing={3}>
@@ -145,16 +231,10 @@ const PublishingDashboard = memo(() => {
                   Publicaciones Activas
                 </Typography>
                 <Typography variant="h4" sx={{ mb: 1 }}>
-                  {publicationCounts.running}
+                  {unifiedMetrics.totalPublications}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {publicationCounts.starting > 0 &&
-                    `${publicationCounts.starting} iniciando • `}
-                  {publicationCounts.error > 0 &&
-                    `${publicationCounts.error} con error`}
-                  {publicationCounts.starting === 0 &&
-                    publicationCounts.error === 0 &&
-                    "Todas funcionando correctamente"}
+                  {unifiedMetrics.localPublications} locales • {unifiedMetrics.remotePublications} remotas
                 </Typography>
               </Paper>
             </Grid>
@@ -177,10 +257,10 @@ const PublishingDashboard = memo(() => {
                   Viewers Totales
                 </Typography>
                 <Typography variant="h4" sx={{ mb: 1 }}>
-                  {systemHealth?.total_viewers || 0}
+                  {unifiedMetrics.totalViewers}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Conectados ahora mismo
+                  {unifiedMetrics.totalBandwidthMbps.toFixed(1)} Mbps total
                 </Typography>
               </Paper>
             </Grid>
@@ -313,66 +393,166 @@ const PublishingDashboard = memo(() => {
               </Paper>
             </Grid>
 
-            {/* Resumen de Configuraciones */}
+            {/* Contenido específico por tab */}
             <Grid size={12}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Configuraciones MediaMTX
-                </Typography>
-                <Grid container spacing={2}>
-                  {configurations.length === 0 ? (
-                    <Grid size={12}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        align="center"
-                      >
-                        No hay configuraciones de servidor disponibles
+              {activeTab === 0 ? (
+                /* Tab de Servidores Remotos */
+                <Paper sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h6">
+                      Servidores MediaMTX Remotos
+                    </Typography>
+                    <Button
+                      size="small"
+                      onClick={() => navigate('/publishing/servers')}
+                    >
+                      Ver todos
+                    </Button>
+                  </Box>
+                  
+                  {remote.isLoadingServers ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                      <CircularProgress size={32} />
+                    </Box>
+                  ) : remote.servers.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <CloudIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No hay servidores remotos configurados
                       </Typography>
-                    </Grid>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Agrega un servidor MediaMTX remoto para comenzar a publicar cámaras
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => navigate('/publishing/servers')}
+                      >
+                        Configurar Primer Servidor
+                      </Button>
+                    </Box>
                   ) : (
-                    configurations.map((config) => (
-                      <Grid size={{ xs: 12, sm: 6, md: 4 }} key={config.id}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            border: 1,
-                            borderColor: config.is_active
-                              ? colorTokens.primary[500]
-                              : "divider",
-                            borderRadius: 1,
-                            bgcolor: config.is_active
-                              ? alpha(colorTokens.primary[500], 0.05)
-                              : "transparent",
-                          }}
-                        >
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ fontWeight: config.is_active ? 600 : 400 }}
+                    <Grid container spacing={2}>
+                      {remote.servers.slice(0, 6).map((server) => (
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={server.id}>
+                          <Box
+                            sx={{
+                              p: 2,
+                              border: 1,
+                              borderColor: server.is_authenticated
+                                ? colorTokens.status.connected
+                                : "divider",
+                              borderRadius: 1,
+                              bgcolor: server.is_authenticated
+                                ? alpha(colorTokens.status.connected, 0.05)
+                                : "transparent",
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                borderColor: colorTokens.primary[500],
+                                bgcolor: alpha(colorTokens.primary[500], 0.05),
+                              }
+                            }}
+                            onClick={() => navigate('/publishing/servers')}
                           >
-                            {config.name}
-                            {config.is_active && " ✓"}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
+                              <Typography variant="subtitle2">
+                                {server.name}
+                              </Typography>
+                              {server.is_authenticated ? (
+                                <CheckIcon sx={{ fontSize: 20, color: colorTokens.status.connected }} />
+                              ) : (
+                                <WarningIcon sx={{ fontSize: 20, color: colorTokens.alert.warning }} />
+                              )}
+                            </Box>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {server.api_url}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                              <Chip 
+                                label={server.is_authenticated ? "Autenticado" : "Sin autenticar"}
+                                size="small"
+                                color={server.is_authenticated ? "success" : "default"}
+                              />
+                              {server.is_active && (
+                                <Chip label="Activo" size="small" color="primary" />
+                              )}
+                            </Box>
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
+                </Paper>
+              ) : (
+                /* Tab de Servidor Local */
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Configuración de Servidor Local
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {configurations.length === 0 ? (
+                      <Grid size={12}>
+                        <Box sx={{ textAlign: 'center', py: 6 }}>
+                          <LocalIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+                          <Typography variant="h6" color="text.secondary" gutterBottom>
+                            No hay configuración local
                           </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                            Configura un servidor MediaMTX local para publicar cámaras
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            onClick={() => navigate('/publishing/config')}
                           >
-                            {config.mediamtx_url}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {config.use_tcp ? "TCP" : "UDP"} •
-                            {config.auth_enabled
-                              ? " Autenticación"
-                              : " Sin auth"}{" "}
-                            •{config.max_reconnects} reintentos
-                          </Typography>
+                            Configurar Servidor Local
+                          </Button>
                         </Box>
                       </Grid>
-                    ))
-                  )}
-                </Grid>
-              </Paper>
+                    ) : (
+                      configurations.map((config) => (
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={config.id}>
+                          <Box
+                            sx={{
+                              p: 2,
+                              border: 1,
+                              borderColor: config.is_active
+                                ? colorTokens.primary[500]
+                                : "divider",
+                              borderRadius: 1,
+                              bgcolor: config.is_active
+                                ? alpha(colorTokens.primary[500], 0.05)
+                                : "transparent",
+                            }}
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              sx={{ fontWeight: config.is_active ? 600 : 400 }}
+                            >
+                              {config.name}
+                              {config.is_active && " ✓"}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              {config.mediamtx_url}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {config.use_tcp ? "TCP" : "UDP"} •
+                              {config.auth_enabled
+                                ? " Autenticación"
+                                : " Sin auth"}{" "}
+                              •{config.max_reconnects} reintentos
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      ))
+                    )}
+                  </Grid>
+                </Paper>
+              )}
             </Grid>
           </Grid>
         </Box>

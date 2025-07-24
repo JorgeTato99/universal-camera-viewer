@@ -3,7 +3,7 @@
  * Control de publicaciones activas hacia MediaMTX
  */
 
-import React, { useEffect, useState, memo, useCallback } from 'react';
+import { useEffect, useState, memo, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -27,7 +27,11 @@ import {
   DialogContent,
   DialogActions,
   Fade,
-  alpha
+  alpha,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
@@ -37,12 +41,15 @@ import {
   Error as ErrorIcon,
   Info as InfoIcon,
   HelpOutline as HelpIcon,
-  Warning as WarningIcon
+  Computer as LocalIcon,
+  CloudQueue as CloudIcon,
 } from '@mui/icons-material';
 import { usePublishingStore } from '../../../stores/publishingStore';
 import { useCameraStoreV2 } from '../../../stores/cameraStore.v2';
 import { PublishingStatus, STATUS_COLORS, STATUS_LABELS } from '../types';
-import { formatDuration, formatBitrate, formatRelativeTime } from '../utils';
+import { formatDuration, formatBitrate } from '../utils';
+import { publishingUnifiedService } from '../../../services/publishing/publishingUnifiedService';
+import type { UnifiedPublication, PublicationType } from '../../../services/publishing/publishingUnifiedService';
 
 /**
  * Página de control de publicaciones activas
@@ -50,12 +57,12 @@ import { formatDuration, formatBitrate, formatRelativeTime } from '../utils';
 const ActivePublications = memo(() => {
   const {
     activePublications,
+    remote,
     isLoading,
     isPublishing,
     startPublishing,
     stopPublishing,
-    fetchPublishingStatus,
-    getPublicationByCameraId
+    fetchUnifiedPublications,
   } = usePublishingStore();
 
   const { cameras, loadCameras } = useCameraStoreV2();
@@ -63,23 +70,39 @@ const ActivePublications = memo(() => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedError, setSelectedError] = useState<{ cameraId: string; error: string } | null>(null);
   const [confirmStop, setConfirmStop] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<PublicationType | 'all'>('all');
+  const [serverFilter, setServerFilter] = useState<number | 'all'>('all');
+  const [, setUnifiedPublications] = useState<UnifiedPublication[]>([]);
 
   // Cargar datos al montar
   useEffect(() => {
     const loadData = async () => {
       await Promise.all([
         loadCameras(),
-        fetchPublishingStatus()
+        fetchUnifiedPublications()
       ]);
     };
     loadData();
-  }, [loadCameras, fetchPublishingStatus]);
+  }, [loadCameras, fetchUnifiedPublications]);
 
   // Auto-refresh cada 5 segundos
   useEffect(() => {
-    const interval = setInterval(fetchPublishingStatus, 5000);
+    const interval = setInterval(fetchUnifiedPublications, 5000);
     return () => clearInterval(interval);
-  }, [fetchPublishingStatus]);
+  }, [fetchUnifiedPublications]);
+  
+  // Cargar publicaciones unificadas cuando cambien los datos
+  useEffect(() => {
+    const loadUnifiedData = async () => {
+      const publications = await publishingUnifiedService.getAllPublications({
+        type: typeFilter === 'all' ? undefined : typeFilter,
+        server_id: serverFilter === 'all' ? undefined : serverFilter,
+        search: searchQuery || undefined,
+      });
+      setUnifiedPublications(publications);
+    };
+    loadUnifiedData();
+  }, [activePublications, remote.publications, typeFilter, serverFilter, searchQuery]);
 
   // Manejar inicio de publicación
   const handleStart = useCallback(async (cameraId: string) => {
@@ -134,28 +157,71 @@ const ActivePublications = memo(() => {
                 Publicaciones Activas
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Control de streaming hacia servidores MediaMTX
+                Control de streaming hacia servidores MediaMTX locales y remotos
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Tipo</InputLabel>
+                <Select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as PublicationType | 'all')}
+                  label="Tipo"
+                >
+                  <MenuItem value="all">Todos</MenuItem>
+                  <MenuItem value="local">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LocalIcon fontSize="small" />
+                      Local
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="remote">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CloudIcon fontSize="small" />
+                      Remoto
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+              
+              {remote.servers.length > 0 && (
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel>Servidor</InputLabel>
+                  <Select
+                    value={serverFilter}
+                    onChange={(e) => setServerFilter(e.target.value as number | 'all')}
+                    label="Servidor"
+                  >
+                    <MenuItem value="all">Todos los servidores</MenuItem>
+                    {remote.servers.map(server => (
+                      <MenuItem key={server.id} value={server.id}>
+                        {server.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+              
               <TextField
                 size="small"
                 placeholder="Buscar cámara..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  )
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    )
+                  }
                 }}
                 sx={{ width: 250 }}
               />
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
-                onClick={fetchPublishingStatus}
+                onClick={fetchUnifiedPublications}
                 disabled={isLoading}
               >
                 Actualizar
@@ -172,6 +238,14 @@ const ActivePublications = memo(() => {
                   <TableCell>Dirección IP</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Servidor
+                      <Tooltip title="Servidor MediaMTX donde se está publicando" arrow placement="top">
+                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       Estado
                       <Tooltip title="Estado actual de la publicación hacia MediaMTX. Verde = Activo, Amarillo = Iniciando, Rojo = Error" arrow placement="top">
                         <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
@@ -186,38 +260,9 @@ const ActivePublications = memo(() => {
                       </Tooltip>
                     </Box>
                   </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                      FPS
-                      <Tooltip title="Frames por segundo actuales. Valores normales: 15-30 FPS" arrow placement="top">
-                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                      Bitrate
-                      <Tooltip title="Tasa de bits actual del stream. Mayor bitrate = mejor calidad pero más ancho de banda" arrow placement="top">
-                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                      Viewers
-                      <Tooltip title="Número de clientes conectados viendo este stream en tiempo real" arrow placement="top">
-                        <HelpIcon sx={{ fontSize: 16, cursor: 'help', color: 'action.disabled' }} />
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                      Errores
-                      <Tooltip title="Cantidad de errores ocurridos durante la publicación. Click para ver detalles" arrow placement="top">
-                        <WarningIcon sx={{ fontSize: 16, cursor: 'help', color: 'warning.main' }} />
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
+                  <TableCell align="center">FPS</TableCell>
+                  <TableCell align="center">Bitrate</TableCell>
+                  <TableCell align="center">Viewers</TableCell>
                   <TableCell align="center">Acciones</TableCell>
                 </TableRow>
               </TableHead>
@@ -232,7 +277,7 @@ const ActivePublications = memo(() => {
                   </TableRow>
                 ) : (
                   filteredCameras.map((camera) => {
-                    const publication = getPublicationByCameraId(camera.camera_id);
+                    const publication = activePublications.get(camera.camera_id);
                     const isTransitioning = isPublishing.get(camera.camera_id) || false;
                     const isActive = publication && (
                       publication.status === PublishingStatus.PUBLISHING ||

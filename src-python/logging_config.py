@@ -25,20 +25,12 @@ class ReducePollingLogsFilter(logging.Filter):
     ]
     
     def filter(self, record):
-        # Solo mostrar cada 10 peticiones de polling
+        # Ignorar completamente logs de polling exitosos (200 OK)
         if hasattr(record, 'args') and record.args:
+            message = str(record.args)
             for endpoint in self.POLLING_ENDPOINTS:
-                if endpoint in str(record.args):
-                    # Usar un contador simple (no thread-safe pero suficiente para logging)
-                    if not hasattr(self, '_counters'):
-                        self._counters = {}
-                    
-                    key = endpoint
-                    self._counters[key] = self._counters.get(key, 0) + 1
-                    
-                    # Solo mostrar cada 10 peticiones
-                    if self._counters[key] % 10 != 0:
-                        return False
+                if endpoint in message and "200 OK" in message:
+                    return False
         return True
 
 
