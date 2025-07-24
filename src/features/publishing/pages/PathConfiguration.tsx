@@ -42,6 +42,11 @@ import {
   LockOpen as LockOpenIcon,
   Settings as SettingsIcon,
   Api as ApiIcon,
+  Computer as ComputerIcon,
+  Info as InfoIcon,
+  Home as HomeIcon,
+  Router as RouterIcon,
+  Speed as SpeedIcon,
 } from "@mui/icons-material";
 import { usePublishingStore } from "../../../stores/publishingStore";
 import { PublishConfiguration, CreateConfigurationRequest } from "../types";
@@ -247,6 +252,76 @@ const PathConfiguration = memo(() => {
             </Button>
           </Box>
 
+          {/* Panel informativo */}
+          <Card 
+            sx={{ 
+              mb: 3, 
+              background: (theme) => theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.05) 100%)'
+                : 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+              border: '1px solid',
+              borderColor: (theme) => theme.palette.mode === 'dark'
+                ? 'rgba(76, 175, 80, 0.3)'
+                : 'success.light',
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                <InfoIcon sx={{ color: 'success.main', fontSize: 28, mt: 0.5 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" gutterBottom color="success.dark">
+                    ¿Qué es el Servidor Local?
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    El servidor local te permite ver tus cámaras dentro de tu red doméstica o empresarial 
+                    sin necesidad de internet. Es ideal para monitoreo interno con máxima velocidad y privacidad.
+                  </Typography>
+                  <Grid container spacing={3} sx={{ mt: 1 }}>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <HomeIcon sx={{ color: 'primary.main' }} />
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          Red Local
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Funciona sin internet. Las cámaras solo son visibles dentro de tu red WiFi o cable.
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <SpeedIcon sx={{ color: 'success.main' }} />
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          Máxima Velocidad
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Sin límites de ancho de banda. Video en alta calidad sin retrasos.
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <LockIcon sx={{ color: 'warning.main' }} />
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          100% Privado
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Tus videos nunca salen de tu red. Total control sobre tu privacidad.
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Tip:</strong> Si necesitas ver tus cámaras desde fuera de casa, 
+                      usa los <strong>Servidores Remotos</strong> en el menú anterior.
+                    </Typography>
+                  </Alert>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+
           {/* Error global */}
           {error && (
             <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
@@ -260,12 +335,18 @@ const PathConfiguration = memo(() => {
               <CircularProgress />
             </Box>
           ) : configurations.length === 0 ? (
-            <Paper sx={{ p: 6, textAlign: "center" }}>
-              <Typography variant="body1" color="text.secondary" gutterBottom>
-                No hay configuraciones de servidor
+            <Paper sx={{ p: 6, textAlign: "center", bgcolor: 'background.default' }}>
+              <ComputerIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                No hay configuraciones del servidor local
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+                Crea tu primera configuración para comenzar a transmitir cámaras en tu red local. 
+                Podrás verlas desde cualquier dispositivo conectado a tu WiFi.
               </Typography>
               <Button
-                variant="outlined"
+                variant="contained"
+                size="large"
                 startIcon={<AddIcon />}
                 onClick={handleNewConfig}
                 sx={{ mt: 2 }}

@@ -99,7 +99,7 @@ export interface ServerFilters {
  */
 class MediaMTXServerService {
   private static instance: MediaMTXServerService;
-  private readonly baseUrl = '/api/mediamtx/servers';
+  private readonly baseUrl = '/mediamtx/servers';
   
   // Cache interno para optimizar consultas frecuentes
   private serversCache: Map<number, MediaMTXServer> = new Map();

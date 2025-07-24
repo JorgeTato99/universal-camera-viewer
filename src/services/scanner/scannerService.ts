@@ -27,13 +27,12 @@ import {
   PortScanResult,
   AccessTestConfig,
   AccessTestResult,
-  ScanSpeed,
 } from "../../types/scanner.types";
 
 /**
  * Configuración del servicio
  */
-const SCANNER_API_BASE = "/api/v2/scanner";
+const SCANNER_API_BASE = "/v2/scanner";
 const WEBSOCKET_BASE = "ws://localhost:8000/ws/scanner";
 
 /**
@@ -173,21 +172,30 @@ export class ScannerService {
       console.log(`🔧 MOCK: Obteniendo estado del escaneo ${scanId}`);
       
       return {
-        network_info: {
-          local_ip: "192.168.1.100",
-          network_cidr: "192.168.1.0/24",
-          gateway: "192.168.1.1",
-          interface_name: "eth0"
+        scan_id: scanId,
+        status: ScanStatus.SCANNING,
+        progress: {
+          total_ips: 254,
+          scanned_ips: 100,
+          total_ports: 10,
+          scanned_ports: 10,
+          cameras_found: 5,
+          current_ip: "192.168.1.100",
+          elapsed_time: 45.2,
+          estimated_remaining: 60
         },
-        scan_results: [],
-        scan_stats: {
-          total_scanned: 100,
-          devices_found: 5,
-          scan_duration: 45.2,
-          start_time: new Date().toISOString(),
-          end_time: null
+        results: [],
+        cameras_found: [],
+        scan_range: {
+          start_ip: "192.168.1.1",
+          end_ip: "192.168.1.254",
+          ports: [80, 554, 8080, 2020, 8000],
+          protocols: ["onvif", "rtsp", "http"],
+          timeout: 5
         },
-        status: "scanning" as ScanStatus
+        methods: [],
+        start_time: new Date().toISOString(),
+        duration_seconds: 45.2
       };
     } catch (error) {
       console.error("Error getting scan status:", error);
@@ -210,8 +218,8 @@ export class ScannerService {
    */
   async getScanResults(scanId: string): Promise<DeviceScanResult[]> {
     try {
-      const response = await apiClient.get(`${SCANNER_API_BASE}/results/${scanId}`);
-      return response.data;
+      const response = await apiClient.get<DeviceScanResult[]>(`${SCANNER_API_BASE}/results/${scanId}`);
+      return response.data || [];
     } catch (error) {
       console.error("Error getting scan results:", error);
       throw new Error("Failed to get scan results");
@@ -283,20 +291,20 @@ export class ScannerService {
       
       return [
         {
-          ip,
           port: 80,
+          status: "open",
           protocol: "tcp",
           service: "http",
-          state: "open",
-          banner: "Server: Mini Web Server"
+          banner: "Server: Mini Web Server",
+          confidence: 0.95
         },
         {
-          ip,
           port: 554,
+          status: "open",
           protocol: "tcp",
           service: "rtsp",
-          state: "open",
-          banner: "RTSP/1.0 200 OK"
+          banner: "RTSP/1.0 200 OK",
+          confidence: 0.9
         }
       ];
     } catch (error) {
@@ -349,11 +357,15 @@ export class ScannerService {
       // TODO: Implementar llamada real
       return [
         {
-          ip: config.ip,
-          protocol: "onvif" as any,
-          success: true,
+          protocol: "onvif",
+          port: config.port,
+          status: "success",
           message: "Acceso exitoso (MOCK)",
-          responseTime: 1.2
+          deviceInfo: {
+            manufacturer: "Dahua",
+            model: "IPC-HDW3541T-ZS",
+            firmwareVersion: "2.800.0000000.7.R"
+          }
         }
       ];
     } catch (error) {
@@ -517,49 +529,51 @@ export class ScannerService {
 
   /**
    * Genera configuración por defecto basada en el rango de red
+   * @private - No usado actualmente pero se mantiene para futura implementación
    */
-  private getDefaultScanConfig(networkRange: string): ScanConfig {
-    return {
-      network_ranges: [networkRange],
-      ports: [80, 554, 8080, 2020, 8000], // Puertos comunes de cámaras
-      timeout: 5.0,
-      max_threads: 50,
-      include_onvif: true,
-      include_rtsp: true,
-      include_http: true,
-      include_amcrest: true,
-      test_authentication: false,
-      auto_detect_protocols: true,
-    };
-  }
+  // private getDefaultScanConfig(networkRange: string): ScanConfig {
+  //   return {
+  //     network_ranges: [networkRange],
+  //     ports: [80, 554, 8080, 2020, 8000], // Puertos comunes de cámaras
+  //     timeout: 5.0,
+  //     max_threads: 50,
+  //     include_onvif: true,
+  //     include_rtsp: true,
+  //     include_http: true,
+  //     include_amcrest: true,
+  //     test_authentication: false,
+  //     auto_detect_protocols: true,
+  //   };
+  // }
 
   /**
    * Obtiene lista de puertos basada en la configuración
+   * @private - No usado actualmente pero se mantiene para futura implementación
    */
-  private getPortsFromConfig(config: PortScanConfig): number[] {
-    const ports: number[] = [];
-    
-    if (config.categories.onvif) {
-      ports.push(80, 8080, 2020, 8000);
-    }
-    if (config.categories.rtsp) {
-      ports.push(554, 8554, 5543, 5544);
-    }
-    if (config.categories.http) {
-      ports.push(80, 443, 8080, 8081, 8443);
-    }
-    if (config.categories.proprietary) {
-      ports.push(37777, 37778, 34567, 34568);
-    }
-    
-    // Agregar puertos personalizados
-    if (config.customPorts) {
-      ports.push(...config.customPorts);
-    }
-    
-    // Eliminar duplicados
-    return [...new Set(ports)];
-  }
+  // private getPortsFromConfig(config: PortScanConfig): number[] {
+  //   const ports: number[] = [];
+  //   
+  //   if (config.categories.onvif) {
+  //     ports.push(80, 8080, 2020, 8000);
+  //   }
+  //   if (config.categories.rtsp) {
+  //     ports.push(554, 8554, 5543, 5544);
+  //   }
+  //   if (config.categories.http) {
+  //     ports.push(80, 443, 8080, 8081, 8443);
+  //   }
+  //   if (config.categories.proprietary) {
+  //     ports.push(37777, 37778, 34567, 34568);
+  //   }
+  //   
+  //   // Agregar puertos personalizados
+  //   if (config.customPorts) {
+  //     ports.push(...config.customPorts);
+  //   }
+  //   
+  //   // Eliminar duplicados
+  //   return [...new Set(ports)];
+  // }
 }
 
 // Exportar instancia singleton

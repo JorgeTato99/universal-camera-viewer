@@ -29,7 +29,7 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   getRowId: (row: T) => string;
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
   emptyAction?: React.ReactNode;
 }
 
@@ -44,9 +44,13 @@ export function DataTable<T>({
     return (
       <Paper>
         <Box sx={{ p: 6, textAlign: 'center' }}>
-          <Typography variant="body1" color="text.secondary" gutterBottom>
-            {emptyMessage}
-          </Typography>
+          {typeof emptyMessage === 'string' ? (
+            <Typography variant="body1" color="text.secondary" gutterBottom>
+              {emptyMessage}
+            </Typography>
+          ) : (
+            emptyMessage
+          )}
           {emptyAction && <Box sx={{ mt: 2 }}>{emptyAction}</Box>}
         </Box>
       </Paper>

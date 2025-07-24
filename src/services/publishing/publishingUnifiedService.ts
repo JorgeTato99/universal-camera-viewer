@@ -141,7 +141,7 @@ class PublishingUnifiedService {
       if (filters?.search) params.append('search', filters.search);
 
       const response = await apiClient.get<ApiResponse<UnifiedPublication[]>>(
-        `/api/publishing/all?${params.toString()}`
+        `/publishing/all?${params.toString()}`
       );
 
       if (response.data?.success && response.data?.data) {
@@ -162,7 +162,7 @@ class PublishingUnifiedService {
   async getPublishingSummary(): Promise<PublishingSummary> {
     try {
       const response = await apiClient.get<ApiResponse<PublishingSummary>>(
-        '/api/publishing/summary'
+        '/publishing/summary'
       );
 
       if (response.data?.success && response.data?.data) {
@@ -192,7 +192,7 @@ class PublishingUnifiedService {
       };
 
       const response = await apiClient.post<ApiResponse<UnifiedPublication>>(
-        `/api/v1/cameras/${cameraId}/publish`,
+        `/v1/cameras/${cameraId}/publish`,
         payload
       );
 
@@ -223,7 +223,7 @@ class PublishingUnifiedService {
   async stopRemotePublishing(cameraId: string, serverId: number): Promise<void> {
     try {
       const response = await apiClient.post<ApiResponse<void>>(
-        `/api/v1/cameras/${cameraId}/unpublish`,
+        `/v1/cameras/${cameraId}/unpublish`,
         { server_id: serverId }
       );
 
@@ -254,7 +254,7 @@ class PublishingUnifiedService {
   async startLocalPublishing(cameraId: string): Promise<UnifiedPublication> {
     try {
       const response = await apiClient.post<ApiResponse<UnifiedPublication>>(
-        '/api/publishing/start',
+        '/publishing/start',
         { camera_id: cameraId }
       );
 
@@ -286,7 +286,7 @@ class PublishingUnifiedService {
   async stopLocalPublishing(cameraId: string): Promise<void> {
     try {
       const response = await apiClient.post<ApiResponse<void>>(
-        '/api/publishing/stop',
+        '/publishing/stop',
         { camera_id: cameraId }
       );
 
