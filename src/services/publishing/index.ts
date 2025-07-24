@@ -4,6 +4,7 @@
  */
 
 export { publishingService, default as PublishingService } from './publishingService';
+export { mediamtxRemoteService } from './mediamtxRemoteService';
 
 // Re-exportar tipos comunes para conveniencia
 export type {
@@ -14,3 +15,13 @@ export type {
   PublishingHistorySession,
   MediaMTXPath
 } from '../../features/publishing/types';
+
+// Re-exportar tipos de servicio remoto
+export type {
+  MediaMTXServer,
+  AuthStatus,
+  AuthRequest,
+  RemotePublishStatus,
+  RemotePublishRequest,
+  RemotePublishMetrics
+} from './mediamtxRemoteService';
