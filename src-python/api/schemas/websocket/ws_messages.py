@@ -69,6 +69,13 @@ class EventType(str, Enum):
     RECORDING_STARTED = "recording_started"
     RECORDING_STOPPED = "recording_stopped"
     ERROR_OCCURRED = "error_occurred"
+    
+    # Eventos de publicación remota
+    REMOTE_PUBLICATION_STARTED = "remote_publication_started"
+    REMOTE_PUBLICATION_STOPPED = "remote_publication_stopped"
+    REMOTE_PUBLICATION_ERROR = "remote_publication_error"
+    REMOTE_SERVER_CONNECTED = "remote_server_connected"
+    REMOTE_SERVER_DISCONNECTED = "remote_server_disconnected"
 
 
 # === Mensajes Cliente → Servidor ===

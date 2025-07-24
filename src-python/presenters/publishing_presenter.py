@@ -299,6 +299,74 @@ class PublishingPresenter(BasePresenter):
         """Obtiene el número de publicaciones activas."""
         all_status = self._publisher_service.get_publishing_status()
         return sum(1 for p in all_status.values() if p.is_active)
+    
+    async def get_active_publications(self) -> List[Dict]:
+        """
+        Obtiene las publicaciones activas en el servidor MediaMTX local.
+        
+        Returns:
+            Lista de publicaciones activas con información detallada
+        """
+        try:
+            # Obtener estado de todas las publicaciones
+            all_status = self._publisher_service.get_publishing_status()
+            
+            active_publications = []
+            
+            for camera_id, process_info in all_status.items():
+                if process_info.is_active:
+                    # Obtener métricas si están disponibles
+                    metrics = None
+                    if self._metrics_service:
+                        try:
+                            latest_metrics = await self._metrics_service.get_latest_metrics(camera_id)
+                            if latest_metrics:
+                                metrics = {
+                                    'fps': latest_metrics.get('fps', 0),
+                                    'bitrate_kbps': latest_metrics.get('bitrate_kbps', 0),
+                                    'viewers': latest_metrics.get('readers', 0),
+                                    'uptime_seconds': latest_metrics.get('uptime_seconds', 0)
+                                }
+                        except Exception as e:
+                            self.logger.warning(f"Error obteniendo métricas para {camera_id}: {e}")
+                    
+                    # Obtener información de viewers
+                    viewer_info = None
+                    if self._viewer_service:
+                        try:
+                            viewer_data = await self._viewer_service.get_current_viewers(camera_id)
+                            if viewer_data:
+                                viewer_info = {
+                                    'current': viewer_data.get('current_viewers', 0),
+                                    'peak': viewer_data.get('peak_viewers', 0),
+                                    'total_sessions': viewer_data.get('total_sessions', 0)
+                                }
+                        except Exception as e:
+                            self.logger.warning(f"Error obteniendo viewers para {camera_id}: {e}")
+                    
+                    publication = {
+                        'publication_id': process_info.process_id,  # Usar PID como ID temporal
+                        'camera_id': camera_id,
+                        'publish_path': process_info.publish_path or f"ucv_{camera_id}",
+                        'status': process_info.status.value,
+                        'start_time': process_info.started_at.isoformat() if process_info.started_at else None,
+                        'process_pid': process_info.process_id,
+                        'error_count': process_info.error_count,
+                        'last_error': process_info.last_error,
+                        'metrics': metrics,
+                        'viewer_info': viewer_info,
+                        'server_type': 'local',  # Indicar que es del servidor local
+                        'server_name': 'Local MediaMTX'
+                    }
+                    
+                    active_publications.append(publication)
+            
+            self.logger.info(f"Obtenidas {len(active_publications)} publicaciones locales activas")
+            return active_publications
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo publicaciones activas: {e}")
+            return []
         
     async def _verify_path_active(
         self,

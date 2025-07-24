@@ -21,12 +21,19 @@ from presenters.config_presenter import ConfigPresenter
 from presenters.main_presenter import MainPresenter
 from presenters.theme_presenter import ThemePresenter, theme_presenter
 
+# MediaMTX presenters
+from presenters.mediamtx_servers_presenter import (
+    MediaMTXServersPresenter,
+    get_mediamtx_servers_presenter
+)
+
 # Singleton instances para reutilización
 _main_presenter_instance = None
 _camera_presenter_instances = {}
 _scan_presenter_instance = None
 _config_presenter_instance = None
 _theme_presenter_instance = None
+_mediamtx_servers_presenter_instance = None
 
 
 def get_main_presenter() -> MainPresenter:
@@ -140,6 +147,7 @@ __all__ = [
     "ConfigPresenter",
     "MainPresenter",
     "ThemePresenter",
+    "MediaMTXServersPresenter",
     
     # Singleton instances
     "theme_presenter",
@@ -150,5 +158,6 @@ __all__ = [
     "get_scan_presenter",
     "get_config_presenter",
     "get_theme_presenter",
+    "get_mediamtx_servers_presenter",
     "cleanup_all_presenters",
 ] 

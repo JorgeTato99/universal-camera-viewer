@@ -1759,6 +1759,340 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 
         return await asyncio.get_event_loop().run_in_executor(None, _fetch)
     
+    # Alias para compatibilidad con el presenter
+    async def get_servers(self) -> List[Dict[str, Any]]:
+        """Alias de get_all_servers para compatibilidad."""
+        return await self.get_all_servers()
+    
+    async def create_server(self, server_data: Dict[str, Any]) -> int:
+        """
+        Crea un nuevo servidor MediaMTX.
+        
+        Args:
+            server_data: Datos del servidor con campos:
+                - server_name: Nombre del servidor
+                - rtsp_url: URL RTSP
+                - api_url: URL de API
+                - username: Usuario (opcional)
+                - password: Contraseña (opcional)
+                - etc.
+                
+        Returns:
+            ID del servidor creado
+            
+        Raises:
+            ServiceError: Si el servidor ya existe
+        """
+        def _create():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Verificar que no exista
+                cursor.execute("""
+                    SELECT server_id FROM mediamtx_servers
+                    WHERE LOWER(server_name) = LOWER(?)
+                """, (server_data['server_name'],))
+                
+                if cursor.fetchone():
+                    raise ServiceError(
+                        f"Ya existe un servidor con el nombre '{server_data['server_name']}'",
+                        error_code="SERVER_EXISTS"
+                    )
+                
+                # Encriptar contraseña si se proporciona
+                password_encrypted = None
+                if server_data.get('password'):
+                    from services.encryption_service import EncryptionServiceV2
+                    encryption_service = EncryptionServiceV2()
+                    password_encrypted = encryption_service.encrypt_password(server_data['password'])
+                
+                # Si es el primer servidor o se marca como default, desmarcar otros
+                if server_data.get('is_default', False):
+                    cursor.execute("""
+                        UPDATE mediamtx_servers 
+                        SET is_default = 0
+                        WHERE is_default = 1
+                    """)
+                
+                # Insertar servidor
+                cursor.execute("""
+                    INSERT INTO mediamtx_servers (
+                        server_name, rtsp_url, rtsp_port, api_url, api_port,
+                        api_enabled, username, password_encrypted, auth_enabled,
+                        use_tcp, max_reconnects, reconnect_delay,
+                        publish_path_template, is_active, is_default,
+                        health_check_interval, last_health_status,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, (
+                    server_data['server_name'],
+                    server_data['rtsp_url'],
+                    server_data.get('rtsp_port', 8554),
+                    server_data['api_url'],
+                    server_data.get('api_port', 8000),
+                    server_data.get('api_enabled', True),
+                    server_data.get('username'),
+                    password_encrypted,
+                    server_data.get('auth_enabled', True),
+                    server_data.get('use_tcp', True),
+                    server_data.get('max_reconnects', 3),
+                    server_data.get('reconnect_delay', 5.0),
+                    server_data.get('publish_path_template', 'ucv_{camera_code}'),
+                    server_data.get('is_active', True),
+                    server_data.get('is_default', False),
+                    server_data.get('health_check_interval', 30),
+                    'unknown'
+                ))
+                
+                return cursor.lastrowid
+                
+        server_id = await asyncio.get_event_loop().run_in_executor(None, _create)
+        self.logger.info(f"Servidor MediaMTX creado con ID {server_id}")
+        return server_id
+    
+    async def update_server(self, server_id: int, updates: Dict[str, Any]) -> bool:
+        """
+        Actualiza un servidor MediaMTX existente.
+        
+        Args:
+            server_id: ID del servidor
+            updates: Campos a actualizar
+            
+        Returns:
+            True si se actualizó correctamente
+            
+        Raises:
+            ServiceError: Si el servidor no existe
+        """
+        def _update():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Verificar que existe
+                cursor.execute("""
+                    SELECT server_id FROM mediamtx_servers
+                    WHERE server_id = ?
+                """, (server_id,))
+                
+                if not cursor.fetchone():
+                    raise ServiceError(
+                        f"Servidor {server_id} no encontrado",
+                        error_code="SERVER_NOT_FOUND"
+                    )
+                
+                # Si se actualiza el nombre, verificar unicidad
+                if 'server_name' in updates:
+                    cursor.execute("""
+                        SELECT server_id FROM mediamtx_servers
+                        WHERE LOWER(server_name) = LOWER(?) AND server_id != ?
+                    """, (updates['server_name'], server_id))
+                    
+                    if cursor.fetchone():
+                        raise ServiceError(
+                            f"Ya existe otro servidor con el nombre '{updates['server_name']}'",
+                            error_code="SERVER_NAME_EXISTS"
+                        )
+                
+                # Construir query dinámicamente
+                set_clauses = []
+                params = []
+                
+                # Mapeo de campos permitidos
+                field_map = {
+                    'server_name': 'server_name',
+                    'rtsp_url': 'rtsp_url',
+                    'rtsp_port': 'rtsp_port',
+                    'api_url': 'api_url',
+                    'api_port': 'api_port',
+                    'api_enabled': 'api_enabled',
+                    'username': 'username',
+                    'auth_enabled': 'auth_enabled',
+                    'use_tcp': 'use_tcp',
+                    'max_reconnects': 'max_reconnects',
+                    'reconnect_delay': 'reconnect_delay',
+                    'publish_path_template': 'publish_path_template',
+                    'is_active': 'is_active',
+                    'is_default': 'is_default',
+                    'health_check_interval': 'health_check_interval'
+                }
+                
+                for field, db_field in field_map.items():
+                    if field in updates:
+                        set_clauses.append(f"{db_field} = ?")
+                        params.append(updates[field])
+                
+                # Manejar contraseña separadamente (necesita encriptación)
+                if 'password' in updates:
+                    from services.encryption_service import EncryptionServiceV2
+                    encryption_service = EncryptionServiceV2()
+                    password_encrypted = encryption_service.encrypt_password(updates['password'])
+                    set_clauses.append("password_encrypted = ?")
+                    params.append(password_encrypted)
+                
+                # Si se marca como default, desmarcar otros
+                if updates.get('is_default', False):
+                    cursor.execute("""
+                        UPDATE mediamtx_servers 
+                        SET is_default = 0
+                        WHERE is_default = 1 AND server_id != ?
+                    """, (server_id,))
+                
+                if not set_clauses:
+                    return False
+                
+                # Agregar updated_at
+                set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+                
+                query = f"""
+                    UPDATE mediamtx_servers
+                    SET {', '.join(set_clauses)}
+                    WHERE server_id = ?
+                """
+                params.append(server_id)
+                
+                cursor.execute(query, params)
+                return cursor.rowcount > 0
+                
+        updated = await asyncio.get_event_loop().run_in_executor(None, _update)
+        if updated:
+            self.logger.info(f"Servidor {server_id} actualizado")
+        return updated
+    
+    async def delete_server(self, server_id: int) -> bool:
+        """
+        Elimina un servidor MediaMTX.
+        
+        Args:
+            server_id: ID del servidor
+            
+        Returns:
+            True si se eliminó correctamente
+            
+        Raises:
+            ServiceError: Si el servidor tiene publicaciones activas
+        """
+        def _delete():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Verificar que no tenga publicaciones activas
+                cursor.execute("""
+                    SELECT COUNT(*) as active_count
+                    FROM camera_publications
+                    WHERE server_id = ? AND is_active = 1
+                """, (server_id,))
+                
+                active_count = cursor.fetchone()['active_count']
+                if active_count > 0:
+                    raise ServiceError(
+                        f"No se puede eliminar el servidor porque tiene {active_count} publicaciones activas",
+                        error_code="SERVER_HAS_ACTIVE_PUBLICATIONS"
+                    )
+                
+                # Eliminar registros relacionados en cascada
+                # 1. Tokens de autenticación
+                cursor.execute("""
+                    DELETE FROM mediamtx_auth_tokens
+                    WHERE server_id = ?
+                """, (server_id,))
+                
+                # 2. Paths del servidor
+                cursor.execute("""
+                    DELETE FROM mediamtx_paths
+                    WHERE server_id = ?
+                """, (server_id,))
+                
+                # 3. Publicaciones inactivas (historial se mantiene)
+                cursor.execute("""
+                    DELETE FROM camera_publications
+                    WHERE server_id = ? AND is_active = 0
+                """, (server_id,))
+                
+                # 4. Finalmente eliminar el servidor
+                cursor.execute("""
+                    DELETE FROM mediamtx_servers
+                    WHERE server_id = ?
+                """, (server_id,))
+                
+                return cursor.rowcount > 0
+                
+        deleted = await asyncio.get_event_loop().run_in_executor(None, _delete)
+        if deleted:
+            self.logger.info(f"Servidor {server_id} eliminado junto con sus datos relacionados")
+        return deleted
+    
+    async def get_server_metrics(self, server_id: int) -> Dict[str, Any]:
+        """
+        Obtiene métricas agregadas de un servidor.
+        
+        Args:
+            server_id: ID del servidor
+            
+        Returns:
+            Dict con métricas del servidor
+        """
+        def _fetch():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Publicaciones totales
+                cursor.execute("""
+                    SELECT 
+                        COUNT(DISTINCT cp.publication_id) as total_publications,
+                        COUNT(DISTINCT CASE WHEN cp.is_active = 1 THEN cp.publication_id END) as active_publications,
+                        COUNT(DISTINCT cp.camera_id) as total_cameras
+                    FROM camera_publications cp
+                    WHERE cp.server_id = ?
+                """, (server_id,))
+                
+                pub_stats = cursor.fetchone()
+                
+                # Historial de publicaciones (últimos 30 días)
+                cursor.execute("""
+                    SELECT 
+                        COUNT(*) as total_sessions,
+                        AVG(duration_seconds) as avg_duration,
+                        SUM(total_data_mb) as total_data_mb,
+                        AVG(average_fps) as avg_fps,
+                        MAX(max_viewers) as peak_viewers
+                    FROM publication_history
+                    WHERE server_id = ? AND start_time > datetime('now', '-30 days')
+                """, (server_id,))
+                
+                history_stats = cursor.fetchone()
+                
+                # Última publicación
+                cursor.execute("""
+                    SELECT 
+                        camera_id,
+                        start_time
+                    FROM publication_history
+                    WHERE server_id = ?
+                    ORDER BY start_time DESC
+                    LIMIT 1
+                """, (server_id,))
+                
+                last_pub = cursor.fetchone()
+                
+                return {
+                    'total_publications': pub_stats['total_publications'] or 0,
+                    'active_publications': pub_stats['active_publications'] or 0,
+                    'total_cameras': pub_stats['total_cameras'] or 0,
+                    'last_publication': {
+                        'camera_id': last_pub['camera_id'] if last_pub else None,
+                        'start_time': last_pub['start_time'] if last_pub else None
+                    },
+                    'last_30_days': {
+                        'total_sessions': history_stats['total_sessions'] or 0,
+                        'avg_duration_seconds': round(history_stats['avg_duration'] or 0, 2),
+                        'total_data_gb': round((history_stats['total_data_mb'] or 0) / 1024, 2),
+                        'avg_fps': round(history_stats['avg_fps'] or 0, 2),
+                        'peak_viewers': history_stats['peak_viewers'] or 0
+                    }
+                }
+                
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    
     async def get_active_auth_tokens(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los tokens activos.

@@ -301,29 +301,38 @@ class BasePresenter(ABC, Generic[ViewType]):
             event_type: Tipo de evento
             data: Datos del evento
         """
-        if event_type not in self._event_handlers:
-            return
+        # Primero emitir a manejadores locales si existen
+        if event_type in self._event_handlers:
+            event = PresenterEvent(
+                event_type=event_type,
+                source=self.__class__.__name__,
+                data=data or {}
+            )
+            
+            self._metrics["events_processed"] += 1
+            self._metrics["last_activity"] = datetime.now()
+            
+            # Llamar manejadores de forma asíncrona
+            handlers = self._event_handlers[event_type].copy()
+            for handler in handlers:
+                try:
+                    if asyncio.iscoroutinefunction(handler):
+                        await handler(event)
+                    else:
+                        handler(event)
+                except Exception as e:
+                    self.logger.error(f"Error in event handler for '{event_type}': {e}")
+                    self._metrics["errors_count"] += 1
         
-        event = PresenterEvent(
-            event_type=event_type,
-            source=self.__class__.__name__,
-            data=data or {}
-        )
-        
-        self._metrics["events_processed"] += 1
-        self._metrics["last_activity"] = datetime.now()
-        
-        # Llamar manejadores de forma asíncrona
-        handlers = self._event_handlers[event_type].copy()
-        for handler in handlers:
-            try:
-                if asyncio.iscoroutinefunction(handler):
-                    await handler(event)
-                else:
-                    handler(event)
-            except Exception as e:
-                self.logger.error(f"Error in event handler for '{event_type}': {e}")
-                self._metrics["errors_count"] += 1
+        # También emitir a través del sistema WebSocket si está disponible
+        try:
+            from api.websocket_events import emit_event
+            await emit_event(event_type, data or {})
+        except ImportError:
+            # WebSocket events no disponible, continuar sin error
+            pass
+        except Exception as e:
+            self.logger.debug(f"Error emitiendo evento WebSocket '{event_type}': {e}")
     
     # === Gestión de tareas de fondo ===
     
