@@ -7,7 +7,13 @@ directamente desde el directorio src-python.
 """
 
 import uvicorn
+import sys
 from api.config import settings
+
+# Configurar event loop para Windows antes de cualquier uso de asyncio
+if sys.platform == 'win32':
+    from utils.async_helpers import setup_windows_event_loop
+    setup_windows_event_loop()
 
 
 def main():

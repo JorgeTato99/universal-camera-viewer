@@ -128,7 +128,10 @@ class RTSPPublisherService(BaseService):
     async def start_publishing(
         self,
         camera_id: str,
-        force_restart: bool = False
+        force_restart: bool = False,
+        target_url: Optional[str] = None,
+        source_url: Optional[str] = None,
+        is_remote: bool = False
     ) -> PublishResult:
         """
         Inicia la publicación de una cámara específica a MediaMTX.
@@ -136,6 +139,9 @@ class RTSPPublisherService(BaseService):
         Args:
             camera_id: Identificador único de la cámara
             force_restart: Si True, reinicia la publicación aunque ya esté activa
+            target_url: URL de destino personalizada (para publicación remota)
+            source_url: URL de origen personalizada (opcional)
+            is_remote: Indica si es una publicación remota
             
         Returns:
             PublishResult con el estado de la operación
@@ -174,11 +180,20 @@ class RTSPPublisherService(BaseService):
                     error_type=PublishErrorType.STREAM_UNAVAILABLE
                 )
             
-            # Construir URLs
-            source_url = await self._build_source_url(camera)
-            target_url = self._build_target_url(camera_id)
+            # Construir URLs (usar las proporcionadas o construir las normales)
+            if not source_url:
+                source_url = await self._build_source_url(camera)
+            else:
+                self.logger.debug(f"Usando URL de origen externa: {sanitize_url(source_url)}")
+                
+            if not target_url:
+                target_url = self._build_target_url(camera_id)
+            else:
+                self.logger.debug(f"Usando URL de destino externa: {sanitize_url(target_url)}")
             
-            self.logger.debug(f"URLs construidas - Origen: {source_url}, Destino: {target_url}")
+            self.logger.debug(f"URLs finales - Origen: {sanitize_url(source_url)}, "
+                            f"Destino: {sanitize_url(target_url)}, "
+                            f"Es remoto: {is_remote}")
             
             # Crear proceso con session_id único
             process = PublisherProcess(
@@ -196,7 +211,9 @@ class RTSPPublisherService(BaseService):
             self.logger.info(f"Iniciando proceso FFmpeg para cámara {camera_id}")
             self.logger.debug(f"Comando FFmpeg: {sanitize_command(' '.join(cmd))}")
             
-            proc = await asyncio.create_subprocess_exec(
+            # Usar helper para compatibilidad con Windows y Python 3.13+
+            from utils.async_helpers import create_subprocess_safely
+            proc = await create_subprocess_safely(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,

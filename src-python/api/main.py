@@ -13,6 +13,11 @@ from pathlib import Path
 # Agregar src-python al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Configurar event loop para Windows ANTES de cualquier import de asyncio
+if sys.platform == 'win32':
+    import asyncio
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 from api.config import settings
 from api.middleware import setup_middleware
 from api.dependencies import cleanup_services, create_response

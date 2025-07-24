@@ -8,8 +8,11 @@ el servicio principal limpio y enfocado.
 import asyncio
 import re
 import shutil
+import sys
 from typing import Dict, Optional, Any
 from services.logging_service import get_secure_logger
+from utils.async_helpers import create_subprocess_safely
+from services.publishing.ffmpeg_checker import check_ffmpeg_sync
 
 class FFmpegManager:
     """
@@ -40,8 +43,8 @@ class FFmpegManager:
         """
         Verifica que FFmpeg esté instalado y accesible.
         
-        Busca FFmpeg en el PATH del sistema y verifica que funcione
-        correctamente ejecutando un comando de versión.
+        Usa verificación síncrona para evitar problemas con asyncio
+        en Python 3.13+ en Windows.
         
         Returns:
             True si FFmpeg está disponible y funcional
@@ -52,67 +55,20 @@ class FFmpegManager:
         self.logger.debug("Verificando disponibilidad de FFmpeg")
         
         try:
-            # Intentar encontrar ffmpeg en PATH
-            self._ffmpeg_path = shutil.which('ffmpeg')
+            # Usar verificación síncrona para evitar problemas con Python 3.13
+            available, ffmpeg_path, version = check_ffmpeg_sync()
             
-            if not self._ffmpeg_path:
+            if not available:
                 self.logger.error(
-                    "FFmpeg no encontrado en PATH. "
+                    "FFmpeg no está disponible. "
                     "Instala FFmpeg desde https://ffmpeg.org/download.html"
                 )
                 return False
-                
-            self.logger.debug(f"FFmpeg encontrado en: {self._ffmpeg_path}")
             
-            # Verificar que funciona ejecutando -version
-            try:
-                proc = await asyncio.create_subprocess_exec(
-                    self._ffmpeg_path, '-version',
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                
-                # Timeout de 5 segundos para el comando version
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(),
-                    timeout=5.0
-                )
-                
-            except asyncio.TimeoutError:
-                self.logger.error("Timeout ejecutando 'ffmpeg -version'")
-                return False
-                
-            if proc.returncode == 0:
-                output = stdout.decode('utf-8', errors='ignore')
-                
-                # Parsear versión completa
-                version_match = re.search(
-                    r'ffmpeg version ([^\s]+)',
-                    output
-                )
-                
-                if version_match:
-                    version = version_match.group(1)
-                    self.logger.info(f"FFmpeg {version} disponible en {self._ffmpeg_path}")
-                    
-                    # Verificar si es una versión muy antigua
-                    major_version_match = re.search(r'^(\d+)', version)
-                    if major_version_match:
-                        major = int(major_version_match.group(1))
-                        if major < 4:
-                            self.logger.warning(
-                                f"FFmpeg versión {version} es antigua. "
-                                "Se recomienda actualizar a versión 4.0 o superior"
-                            )
-                else:
-                    self.logger.warning("No se pudo parsear la versión de FFmpeg")
-                    
-                return True
-            else:
-                stderr_text = stderr.decode('utf-8', errors='ignore')
-                self.logger.error(f"FFmpeg no funciona correctamente. Código: {proc.returncode}, "
-                                f"Error: {stderr_text[:200]}")
-                return False
+            self._ffmpeg_path = ffmpeg_path
+            self.logger.info(f"FFmpeg {version} disponible en {self._ffmpeg_path}")
+            
+            return True
                 
         except Exception as e:
             self.logger.exception("Error inesperado verificando FFmpeg")

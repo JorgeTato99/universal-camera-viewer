@@ -38,6 +38,13 @@ class PublishErrorType(Enum):
     STREAM_UNAVAILABLE = "stream_unavailable"
     MEDIAMTX_UNREACHABLE = "mediamtx_unreachable"
     PROCESS_CRASHED = "process_crashed"
+    LIMIT_EXCEEDED = "limit_exceeded"
+    ALREADY_PUBLISHING = "already_publishing"
+    NOT_PUBLISHING = "not_publishing"
+    REMOTE_ERROR = "remote_error"
+    INTERNAL_ERROR = "internal_error"
+    AUTH_FAILED = "auth_failed"
+    CONFIG_ERROR = "config_error"
     UNKNOWN = "unknown"
 
 
@@ -164,3 +171,8 @@ class PublishResult:
     error: Optional[str] = None
     error_type: Optional[PublishErrorType] = None
     process_id: Optional[int] = None
+    # Campos adicionales para publicación remota
+    publish_url: Optional[str] = None
+    webrtc_url: Optional[str] = None
+    message: Optional[str] = None
+    session_id: Optional[str] = None
