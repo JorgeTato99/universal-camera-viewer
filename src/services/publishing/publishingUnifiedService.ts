@@ -17,6 +17,7 @@
 import { apiClient } from '../api/apiClient';
 import { notificationStore } from '../../stores/notificationStore';
 import type { ApiResponse } from '../../types/api.types';
+import type { PublishMetrics } from '../../features/publishing/types';
 
 // ====================================================================
 // Types & Interfaces
@@ -245,6 +246,73 @@ class PublishingUnifiedService {
   }
 
   /**
+   * Obtiene métricas en tiempo real de una publicación
+   */
+  async getPublicationMetrics(
+    cameraId: string,
+    publicationId: string
+  ): Promise<PublishMetrics | null> {
+    try {
+      const response = await apiClient.get<ApiResponse<any>>(
+        `/v2/cameras/${cameraId}/publications/${publicationId}/metrics`
+      );
+
+      if (response.data?.success && response.data?.data) {
+        const metrics = response.data.data.metrics;
+        return {
+          fps: metrics.fps || 0,
+          bitrate_kbps: metrics.bitrate_kbps || 0,
+          viewers: 0, // TODO: Implementar viewers cuando esté disponible
+          frames_sent: metrics.frames_sent || 0,
+          bytes_sent: metrics.bytes_sent || 0,
+          timestamp: new Date().toISOString(),
+          frames_dropped: metrics.frames_dropped || 0,
+          duration_seconds: metrics.duration_seconds || 0,
+          status: metrics.status || 'unknown',
+          is_running: metrics.is_running || false,
+        };
+      }
+
+      return null;
+    } catch (error: any) {
+      console.error('Error obteniendo métricas:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Reinicia el streaming de una publicación
+   */
+  async restartPublication(
+    cameraId: string,
+    publicationId: string
+  ): Promise<boolean> {
+    try {
+      const response = await apiClient.post<ApiResponse<any>>(
+        `/v2/cameras/${cameraId}/publications/${publicationId}/restart`
+      );
+
+      if (response.data?.success) {
+        notificationStore.addNotification({
+          type: 'success',
+          title: 'Streaming reiniciado',
+          message: 'El streaming se ha reiniciado correctamente',
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      notificationStore.addNotification({
+        type: 'error',
+        title: 'Error al reiniciar',
+        message: error.response?.data?.detail || 'No se pudo reiniciar el streaming',
+      });
+      return false;
+    }
+  }
+
+  /**
    * Detiene publicación remota para una cámara
    */
   async stopRemotePublishing(cameraId: string, serverId: number): Promise<void> {
@@ -365,9 +433,9 @@ class PublishingUnifiedService {
   }
 
   /**
-   * Reinicia una publicación (local o remota)
+   * Reinicia una publicación (local o remota) - versión legacy
    */
-  async restartPublication(
+  async restartPublicationLegacy(
     cameraId: string, 
     type: PublicationType,
     serverId?: number
@@ -395,10 +463,10 @@ class PublishingUnifiedService {
   }
 
   /**
-   * Obtiene métricas detalladas de una publicación
+   * Obtiene métricas detalladas de una publicación - versión legacy
    * TODO: Implementar cuando el backend proporcione endpoint específico
    */
-  async getPublicationMetrics(
+  async getPublicationMetricsLegacy(
     cameraId: string,
     type: PublicationType,
     serverId?: number

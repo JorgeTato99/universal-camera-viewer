@@ -31,7 +31,6 @@ import {
   Checkbox,
   Alert,
   Chip,
-  Fade,
   CircularProgress,
   Menu,
   MenuItem,
@@ -951,7 +950,7 @@ const MediaMTXServersPage = memo(() => {
                 name: selectedServer.name || selectedServer.server_name || "",
                 apiUrl: selectedServer.api_url,
                 isAuthenticated: selectedServer.is_authenticated,
-                lastAuthError: selectedServer.last_error,
+                lastAuthError: undefined,
               }}
               onClose={() => {
                 setAuthDialogOpen(false);

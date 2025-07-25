@@ -157,8 +157,7 @@ MEDIAMTX_AUTH_TOKENS_TABLE = """
         is_active BOOLEAN DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (server_id) REFERENCES mediamtx_servers (server_id) ON DELETE CASCADE,
-        UNIQUE(server_id, is_active)
+        FOREIGN KEY (server_id) REFERENCES mediamtx_servers (server_id) ON DELETE CASCADE
     )
 """
 

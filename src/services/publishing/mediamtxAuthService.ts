@@ -86,7 +86,7 @@ class MediaMTXAuthService {
     password: string
   ): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post<ApiResponse<LoginResponse>>(
+      const response = await apiClient.post<LoginResponse>(
         '/mediamtx/auth/login',
         {
           server_id: serverId,
@@ -95,9 +95,18 @@ class MediaMTXAuthService {
         }
       );
 
-      if (response.data?.success && response.data?.data) {
-        const result = response.data.data;
-        
+      const result = response.data;
+
+      if (!result) {
+        return {
+          success: false,
+          server_id: serverId,
+          server_name: '',
+          error: 'Respuesta vacía del servidor',
+        };
+      }
+
+      if (result.success) {
         // Actualizar cache
         this.updateAuthCache(serverId, {
           success: true,
@@ -116,12 +125,11 @@ class MediaMTXAuthService {
         return result;
       }
 
-      const errorData = response.data?.data as LoginResponse;
       return {
         success: false,
         server_id: serverId,
         server_name: '',
-        error: errorData?.error || 'Error de autenticación',
+        error: result.error || 'Error de autenticación',
       };
     } catch (error: any) {
       const errorMsg = error.response?.data?.detail || error.message || 'Error de conexión';
@@ -146,7 +154,7 @@ class MediaMTXAuthService {
    */
   async logout(serverId: number): Promise<boolean> {
     try {
-      const response = await apiClient.post<ApiResponse<any>>(
+      const response = await apiClient.post<LoginResponse>(
         '/mediamtx/auth/logout',
         { server_id: serverId }
       );

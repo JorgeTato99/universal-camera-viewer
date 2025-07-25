@@ -69,6 +69,10 @@ export interface PublishMetrics {
   frames_sent: number;
   bytes_sent: number;
   timestamp: string;
+  frames_dropped?: number;
+  duration_seconds?: number;
+  status?: string;
+  is_running?: boolean;
 }
 
 /**

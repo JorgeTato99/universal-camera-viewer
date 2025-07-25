@@ -1659,23 +1659,24 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Desactivar tokens previos del servidor
-                cursor.execute("""
-                    UPDATE mediamtx_auth_tokens
-                    SET is_active = 0, updated_at = CURRENT_TIMESTAMP
-                    WHERE server_id = ? AND is_active = 1
-                """, (token_data['server_id'],))
-                
-                # Commit para asegurar que se aplicó el UPDATE antes del INSERT
-                conn.commit()
-                
-                # Insertar nuevo token
-                cursor.execute("""
-                    INSERT INTO mediamtx_auth_tokens (
-                        server_id, access_token, token_type, expires_at,
-                        refresh_token, refresh_expires_at, username, role,
-                        user_id, is_active
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                try:
+                    # Iniciar transacción explícita
+                    cursor.execute("BEGIN EXCLUSIVE")
+                    
+                    # Desactivar tokens previos del servidor
+                    cursor.execute("""
+                        UPDATE mediamtx_auth_tokens
+                        SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+                        WHERE server_id = ? AND is_active = 1
+                    """, (token_data['server_id'],))
+                    
+                    # Insertar nuevo token
+                    cursor.execute("""
+                        INSERT INTO mediamtx_auth_tokens (
+                            server_id, access_token, token_type, expires_at,
+                            refresh_token, refresh_expires_at, username, role,
+                            user_id, is_active
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 """, (
                     token_data['server_id'],
                     token_data['access_token'],
@@ -1688,7 +1689,15 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                     token_data.get('user_id')
                 ))
                 
-                return cursor.lastrowid
+                    # Confirmar transacción
+                    conn.commit()
+                    
+                    return cursor.lastrowid
+                    
+                except Exception as e:
+                    # Revertir en caso de error
+                    conn.rollback()
+                    raise e
                 
         token_id = await asyncio.get_event_loop().run_in_executor(None, _save)
         self.logger.info(f"Token guardado con ID {token_id} para servidor {token_data['server_id']}")

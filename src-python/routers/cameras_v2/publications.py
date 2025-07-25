@@ -29,6 +29,10 @@ from presenters.mediamtx_remote_publishing_presenter import (
     MediaMTXRemotePublishingPresenter,
     get_mediamtx_remote_publishing_presenter
 )
+from presenters.mediamtx_publishing_presenter import (
+    MediaMTXPublishingPresenter,
+    get_mediamtx_publishing_presenter
+)
 from services.camera_manager_service import camera_manager_service
 from utils.exceptions import (
     CameraNotFoundError,
@@ -575,6 +579,138 @@ async def stop_publication(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al detener publicación"
+        )
+
+
+# ====================================================================
+# Métricas y Control de Streaming
+# ====================================================================
+
+@router.get("/{camera_id}/publications/{publication_id}/metrics", response_model=Dict[str, Any])
+@read_limit()
+async def get_publication_metrics(
+    request: Request,
+    camera_id: str,
+    publication_id: str,
+    mediamtx_presenter: MediaMTXPublishingPresenter = Depends(get_mediamtx_publishing_presenter)
+):
+    """
+    Obtener métricas en tiempo real de una publicación activa.
+    
+    Args:
+        camera_id: ID de la cámara
+        publication_id: ID de la publicación
+        
+    Returns:
+        Métricas del streaming (FPS, bitrate, frames, etc.)
+    """
+    try:
+        # Por ahora solo soportamos publicaciones remotas
+        if not publication_id.startswith('remote_'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Solo se soportan métricas para publicaciones remotas"
+            )
+        
+        # Obtener métricas del presenter
+        result = await mediamtx_presenter.get_streaming_metrics(camera_id)
+        
+        if result.get('success'):
+            return create_response(
+                success=True,
+                data=result.get('metrics'),
+                message="Métricas obtenidas exitosamente"
+            )
+        else:
+            error_code = result.get('error_code', 'UNKNOWN_ERROR')
+            
+            if error_code == 'NOT_PUBLISHED':
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Publicación no encontrada"
+                )
+            elif error_code == 'NO_STREAM':
+                return create_response(
+                    success=False,
+                    message="No hay streaming activo",
+                    error="Streaming no está activo para esta publicación"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get('error', 'Error obteniendo métricas')
+                )
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obteniendo métricas: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener métricas"
+        )
+
+
+@router.post("/{camera_id}/publications/{publication_id}/restart")
+@write_limit()
+async def restart_publication(
+    request: Request,
+    camera_id: str,
+    publication_id: str,
+    mediamtx_presenter: MediaMTXPublishingPresenter = Depends(get_mediamtx_publishing_presenter)
+):
+    """
+    Reiniciar el streaming de una publicación activa.
+    
+    Args:
+        camera_id: ID de la cámara
+        publication_id: ID de la publicación
+        
+    Returns:
+        Confirmación de reinicio del streaming
+    """
+    try:
+        # Por ahora solo soportamos publicaciones remotas
+        if not publication_id.startswith('remote_'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Solo se puede reiniciar streaming de publicaciones remotas"
+            )
+        
+        # Reiniciar streaming
+        result = await mediamtx_presenter.restart_streaming(camera_id)
+        
+        if result.get('success'):
+            return create_response(
+                success=True,
+                message=result.get('message', 'Streaming reiniciado exitosamente')
+            )
+        else:
+            error_code = result.get('error_code', 'UNKNOWN_ERROR')
+            
+            if error_code == 'NOT_PUBLISHED':
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Publicación no encontrada"
+                )
+            elif error_code == 'NO_STREAM':
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No hay streaming activo para reiniciar"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result.get('error', 'Error reiniciando streaming')
+                )
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reiniciando streaming: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al reiniciar streaming"
         )
 
 

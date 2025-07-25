@@ -19,6 +19,7 @@ from services.mediamtx.remote_models import (
 )
 from services.database.mediamtx_db_service import get_mediamtx_db_service
 from services.camera_manager_service import camera_manager_service
+from services.publishing.stream_service import get_publishing_stream_service
 from services.logging_service import get_secure_logger
 from utils.exceptions import ValidationError, ServiceError, MediaMTXAPIError, MediaMTXAuthenticationError
 from utils.sanitizers import sanitize_url
@@ -49,6 +50,7 @@ class MediaMTXPublishingPresenter(BasePresenter):
         self._auth_service = get_auth_service()
         self._db_service = get_mediamtx_db_service()
         self._camera_manager = camera_manager_service
+        self._stream_service = get_publishing_stream_service()
         
         # Estado interno
         self._active_publications: Dict[str, Dict[str, Any]] = {}
@@ -60,6 +62,7 @@ class MediaMTXPublishingPresenter(BasePresenter):
         # Inicializar servicios si es necesario
         await self._api_client.initialize()
         await self._auth_service.initialize()
+        await self._stream_service.initialize()
         
         # Cargar publicaciones activas de la BD
         await self._load_active_publications()
@@ -70,6 +73,7 @@ class MediaMTXPublishingPresenter(BasePresenter):
         
         # Limpiar recursos
         await self._api_client.cleanup()
+        await self._stream_service.cleanup()
         self._active_publications.clear()
     
     async def _load_active_publications(self) -> None:
@@ -188,13 +192,42 @@ class MediaMTXPublishingPresenter(BasePresenter):
             # Guardar en base de datos
             await self._save_publication_to_db(camera_id, server_id, mapping, remote_camera)
             
+            # Generar session_id único
+            import uuid
+            session_id = str(uuid.uuid4())
+            
+            # Iniciar streaming con FFmpeg
+            stream_started = False
+            stream_message = ""
+            
+            try:
+                success, message = await self._stream_service.start_stream(
+                    session_id=session_id,
+                    camera_id=camera_id,
+                    server_id=server_id,
+                    agent_command=remote_camera.agent_command
+                )
+                
+                if success:
+                    stream_started = True
+                    stream_message = "Streaming iniciado"
+                    self.logger.info(f"Stream iniciado para cámara {camera_id} - Sesión: {session_id}")
+                else:
+                    stream_message = f"Advertencia: No se pudo iniciar streaming - {message}"
+                    self.logger.warning(stream_message)
+                    
+            except Exception as e:
+                stream_message = f"Error iniciando streaming: {str(e)}"
+                self.logger.error(stream_message)
+            
             # Actualizar estado interno
             self._active_publications[camera_id] = {
                 'server_id': server_id,
                 'remote_id': remote_camera.id,
                 'publish_url': remote_camera.publish_url,
                 'webrtc_url': remote_camera.webrtc_url,
-                'status': 'created',
+                'status': 'streaming' if stream_started else 'created',
+                'session_id': session_id if stream_started else None,
                 'created_at': datetime.utcnow()
             }
             
@@ -204,7 +237,8 @@ class MediaMTXPublishingPresenter(BasePresenter):
                 'server_id': server_id,
                 'remote_id': remote_camera.id,
                 'publish_url': sanitize_url(remote_camera.publish_url),
-                'webrtc_url': sanitize_url(remote_camera.webrtc_url)
+                'webrtc_url': sanitize_url(remote_camera.webrtc_url),
+                'streaming': stream_started
             })
             
             return {
@@ -214,7 +248,9 @@ class MediaMTXPublishingPresenter(BasePresenter):
                 'publish_url': remote_camera.publish_url,
                 'webrtc_url': remote_camera.webrtc_url,
                 'agent_command': remote_camera.agent_command,
-                'message': f'Cámara publicada exitosamente en {server["server_name"]}'
+                'streaming': stream_started,
+                'session_id': session_id if stream_started else None,
+                'message': f'Cámara publicada exitosamente en {server["server_name"]}. {stream_message}'
             }
             
         except ValidationError as e:
@@ -402,6 +438,17 @@ class MediaMTXPublishingPresenter(BasePresenter):
                 f"Despublicando cámara {camera_id} (remoto: {remote_id})"
             )
             
+            # Detener streaming si está activo
+            if publication.get('session_id'):
+                try:
+                    await self._stream_service.stop_stream(
+                        publication['session_id'],
+                        reason="User requested unpublish"
+                    )
+                    self.logger.info(f"Stream detenido para cámara {camera_id}")
+                except Exception as e:
+                    self.logger.error(f"Error deteniendo stream: {str(e)}")
+            
             # Eliminar del servidor remoto
             success = await self._api_client.delete_camera(
                 server_id=server_id,
@@ -482,6 +529,121 @@ class MediaMTXPublishingPresenter(BasePresenter):
             'is_published': False,
             'publication': None
         }
+    
+    async def get_streaming_metrics(
+        self,
+        camera_id: str
+    ) -> Dict[str, Any]:
+        """
+        Obtiene métricas en tiempo real del streaming de una cámara.
+        
+        Args:
+            camera_id: ID de la cámara local
+            
+        Returns:
+            Dict con métricas del streaming o error
+        """
+        try:
+            publication = self._active_publications.get(camera_id)
+            if not publication:
+                return {
+                    'success': False,
+                    'error': 'Cámara no está publicada',
+                    'error_code': 'NOT_PUBLISHED'
+                }
+            
+            session_id = publication.get('session_id')
+            if not session_id:
+                return {
+                    'success': False,
+                    'error': 'No hay streaming activo para esta cámara',
+                    'error_code': 'NO_STREAM'
+                }
+            
+            # Obtener métricas del servicio de streaming
+            metrics = await self._stream_service.get_stream_metrics(session_id)
+            
+            if metrics:
+                return {
+                    'success': True,
+                    'camera_id': camera_id,
+                    'metrics': metrics
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'No se pudieron obtener métricas',
+                    'error_code': 'METRICS_ERROR'
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error obteniendo métricas: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Error interno: {str(e)}',
+                'error_code': 'INTERNAL_ERROR'
+            }
+    
+    async def restart_streaming(
+        self,
+        camera_id: str
+    ) -> Dict[str, Any]:
+        """
+        Reinicia el streaming de una cámara publicada.
+        
+        Args:
+            camera_id: ID de la cámara local
+            
+        Returns:
+            Dict con resultado de la operación
+        """
+        try:
+            publication = self._active_publications.get(camera_id)
+            if not publication:
+                return {
+                    'success': False,
+                    'error': 'Cámara no está publicada',
+                    'error_code': 'NOT_PUBLISHED'
+                }
+            
+            session_id = publication.get('session_id')
+            if not session_id:
+                return {
+                    'success': False,
+                    'error': 'No hay streaming activo para reiniciar',
+                    'error_code': 'NO_STREAM'
+                }
+            
+            self.logger.info(f"Reiniciando streaming para cámara {camera_id}")
+            
+            # Reiniciar stream
+            success, message = await self._stream_service.restart_stream(session_id)
+            
+            if success:
+                # Emitir evento
+                await self._emit_event('stream_restarted', {
+                    'camera_id': camera_id,
+                    'session_id': session_id
+                })
+                
+                return {
+                    'success': True,
+                    'message': 'Streaming reiniciado exitosamente'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': message,
+                    'error_code': 'RESTART_FAILED'
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error reiniciando streaming: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Error interno: {str(e)}',
+                'error_code': 'INTERNAL_ERROR'
+            }
     
     async def list_published_cameras(
         self,

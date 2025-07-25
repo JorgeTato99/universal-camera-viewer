@@ -48,6 +48,9 @@ class MediaMTXServersPresenter(BasePresenter):
         self._auth_service = get_mediamtx_auth_service()
         self._encryption_service = EncryptionServiceV2()
         
+        # Inicializar el servicio de autenticación
+        await self._auth_service.initialize()
+        
         self.logger.info("MediaMTXServersPresenter inicializado")
         
     async def _cleanup_presenter(self) -> None:

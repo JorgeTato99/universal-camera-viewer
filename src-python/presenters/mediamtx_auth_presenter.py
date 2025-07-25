@@ -101,6 +101,10 @@ class MediaMTXAuthPresenter(BasePresenter):
         try:
             await self.set_busy(True)
             
+            # Asegurar que el servicio de autenticación esté inicializado
+            if not self._auth_service._initialized:
+                await self._auth_service.initialize()
+            
             # Validar servidor existe
             server = await self._db_service.get_server_by_id(server_id)
             if not server:
