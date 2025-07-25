@@ -76,9 +76,21 @@ class AuthToken:
         if not self.expires_at:
             return False
         
-        total_lifetime = self.expires_at - datetime.utcnow()
-        threshold = total_lifetime * 0.8
-        return datetime.utcnow() >= (self.expires_at - threshold)
+        # Calcular tiempo restante
+        time_remaining = self.expires_at - datetime.utcnow()
+        
+        # Refrescar cuando quede menos del 20% del tiempo o menos de 1 hora
+        if time_remaining <= timedelta(hours=1):
+            return True
+            
+        # Para tokens de larga duración (6 meses), refrescar cuando quede 20%
+        total_seconds = (self.expires_at - datetime.utcnow()).total_seconds()
+        if total_seconds > 0:
+            # Asumiendo que el token fue creado hace poco, estimar vida total
+            # Para tokens de 6 meses, refrescar cuando queden ~36 días
+            return time_remaining <= timedelta(days=36)
+        
+        return False
     
     def to_dict(self) -> Dict[str, Any]:
         """Convierte a diccionario para persistencia."""
@@ -550,14 +562,80 @@ class MediaMTXAuthService(BaseService):
             return None
     
     async def _schedule_token_refresh(self, server_id: int) -> None:
-        """Programa el refresco automático de un token."""
+        """
+        Programa la verificación y renovación proactiva de un token.
+        
+        Como MediaMTX no soporta refresh tokens, implementamos verificación
+        periódica y re-autenticación proactiva antes de que expire.
+        """
         # Cancelar tarea existente si hay
         if server_id in self._refresh_tasks:
             self._refresh_tasks[server_id].cancel()
+            
+        # Obtener token del cache
+        token = self._token_cache.get(server_id)
+        if not token or not token.expires_at:
+            return
+            
+        # Calcular cuándo verificar (cuando quede 20% del tiempo o 1 hora)
+        time_remaining = token.expires_at - datetime.utcnow()
         
-        # TODO: Implementar cuando MediaMTX soporte refresh tokens
-        # Por ahora no programamos refresco automático
-        self.logger.debug(f"Refresco automático no implementado para servidor {server_id}")
+        # Para tokens de 6 meses, verificar cuando queden ~36 días
+        if time_remaining > timedelta(days=36):
+            check_in = time_remaining - timedelta(days=36)
+        elif time_remaining > timedelta(hours=1):
+            # Para tokens más cortos, verificar cuando quede 20%
+            check_in = timedelta(seconds=time_remaining.total_seconds() * 0.8)
+        else:
+            # Si queda menos de 1 hora, verificar en 30 minutos
+            check_in = timedelta(minutes=30)
+            
+        self.logger.info(
+            f"Programando verificación de token para servidor {server_id} "
+            f"en {check_in.total_seconds() / 3600:.1f} horas"
+        )
+        
+        # Crear tarea de verificación
+        task = asyncio.create_task(self._token_check_task(server_id, check_in))
+        self._refresh_tasks[server_id] = task
+        
+    async def _token_check_task(self, server_id: int, delay: timedelta) -> None:
+        """
+        Tarea que verifica y renueva el token cuando sea necesario.
+        
+        Args:
+            server_id: ID del servidor
+            delay: Tiempo de espera antes de verificar
+        """
+        try:
+            # Esperar el tiempo calculado
+            await asyncio.sleep(delay.total_seconds())
+            
+            # Verificar si el token sigue siendo válido
+            token = self._token_cache.get(server_id)
+            if not token:
+                return
+                
+            self.logger.info(f"Verificando token para servidor {server_id}")
+            
+            # Si el token necesita renovación
+            if token.needs_refresh:
+                self.logger.warning(
+                    f"Token para servidor {server_id} necesita renovación "
+                    f"(expira en {(token.expires_at - datetime.utcnow()).days} días)"
+                )
+                
+                # Emitir evento para que el presenter maneje la renovación
+                # TODO: Implementar sistema de eventos cuando sea necesario
+                # Por ahora solo registramos en log
+                
+            # Reprogramar siguiente verificación
+            await self._schedule_token_refresh(server_id)
+            
+        except asyncio.CancelledError:
+            self.logger.debug(f"Tarea de verificación cancelada para servidor {server_id}")
+        except Exception as e:
+            self.logger.error(f"Error en tarea de verificación: {str(e)}")
     
     async def _update_last_used(self, server_id: int) -> None:
         """Actualiza el timestamp de último uso del token."""

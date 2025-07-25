@@ -20,7 +20,7 @@ from services.mediamtx.remote_models import (
 from services.database.mediamtx_db_service import get_mediamtx_db_service
 from services.camera_manager_service import camera_manager_service
 from services.logging_service import get_secure_logger
-from utils.exceptions import ValidationError, ServiceError, MediaMTXAPIError
+from utils.exceptions import ValidationError, ServiceError, MediaMTXAPIError, MediaMTXAuthenticationError
 from utils.sanitizers import sanitize_url
 
 
@@ -149,11 +149,34 @@ class MediaMTXPublishingPresenter(BasePresenter):
                 custom_description
             )
             
-            # Crear cámara en servidor remoto
-            remote_camera = await self._api_client.create_camera(
-                server_id=server_id,
-                camera_data=camera_request
-            )
+            # Crear cámara en servidor remoto con manejo de autenticación
+            try:
+                remote_camera = await self._api_client.create_camera(
+                    server_id=server_id,
+                    camera_data=camera_request
+                )
+            except MediaMTXAuthenticationError as e:
+                # Error de autenticación - token inválido o expirado
+                self.logger.warning(f"Error de autenticación creando cámara: {str(e)}")
+                
+                # Eliminar token del cache para forzar re-autenticación
+                await self._auth_service.logout(server_id)
+                
+                return {
+                    'success': False,
+                    'error': 'Sesión expirada. Por favor, autentique nuevamente con el servidor.',
+                    'error_code': 'AUTH_EXPIRED',
+                    'server_id': server_id
+                }
+            except MediaMTXAPIError as e:
+                # Otros errores de API
+                self.logger.error(f"Error de API creando cámara: {str(e)}")
+                return {
+                    'success': False,
+                    'error': f'Error del servidor remoto: {str(e)}',
+                    'error_code': 'API_ERROR',
+                    'details': e.response_data if hasattr(e, 'response_data') else None
+                }
             
             # Crear mapeo local-remoto
             mapping = await self._api_client.map_local_to_remote(

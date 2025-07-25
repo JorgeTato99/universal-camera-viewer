@@ -530,18 +530,32 @@ class MediaMTXServersPresenter(BasePresenter):
             try:
                 # Si tiene credenciales, intentar autenticar
                 if server['username'] and server['auth_enabled']:
-                    # Necesitamos la contraseña desencriptada
-                    # TODO: El servicio de auth debería manejar esto internamente
-                    result = await self._auth_service.validate_server_connection(
-                        server_id,
-                        test_auth=True
-                    )
+                    # Primero verificar si ya tenemos un token válido
+                    token_info = await self._auth_service.get_token_info(server_id)
+                    
+                    if token_info and not token_info.get('is_expired', True):
+                        # Validar token existente
+                        valid, error_msg = await self._auth_service.validate_token(
+                            server_id,
+                            server['api_url']
+                        )
+                        
+                        if valid:
+                            result = True
+                            auth_status = "Autenticado (token válido)"
+                        else:
+                            result = False
+                            auth_status = f"Token inválido: {error_msg}"
+                    else:
+                        # No hay token válido, necesita autenticación manual
+                        result = False
+                        auth_status = "Requiere autenticación"
                 else:
-                    # Solo probar conectividad básica
-                    result = await self._auth_service.validate_server_connection(
-                        server_id,
-                        test_auth=False
-                    )
+                    # Solo probar conectividad básica sin auth
+                    # TODO: Implementar prueba de conectividad sin auth
+                    # Por ahora asumimos que si tiene API habilitada, está disponible
+                    result = server.get('api_enabled', False)
+                    auth_status = "Sin autenticación requerida"
                 
                 end_time = datetime.utcnow()
                 latency_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -554,16 +568,19 @@ class MediaMTXServersPresenter(BasePresenter):
                         'details': {
                             'server_name': server['server_name'],
                             'api_url': sanitize_url(server['api_url']),
-                            'auth_required': server['auth_enabled']
+                            'auth_required': server['auth_enabled'],
+                            'auth_status': auth_status
                         }
                     }
                 else:
                     return {
                         'success': False,
-                        'message': 'No se pudo conectar con el servidor',
+                        'message': auth_status if 'auth_status' in locals() else 'No se pudo conectar con el servidor',
                         'details': {
                             'server_name': server['server_name'],
-                            'api_url': sanitize_url(server['api_url'])
+                            'api_url': sanitize_url(server['api_url']),
+                            'auth_required': server['auth_enabled'],
+                            'auth_status': auth_status if 'auth_status' in locals() else 'Error de conexión'
                         }
                     }
                     

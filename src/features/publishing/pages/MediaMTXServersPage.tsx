@@ -60,7 +60,7 @@ import {
 } from "@mui/icons-material";
 import { DataTable } from "../../../components/common/DataTable";
 import { ConfirmationDialog } from "../../../components/common/ConfirmationDialog";
-import { MediaMTXAuthDialog } from "../components/auth/MediaMTXAuthDialog";
+import { ServerAuthDialog } from "../components/ServerAuthDialog";
 import { usePublishingStore } from "../../../stores/publishingStore";
 import { mediamtxServerService } from "../../../services/publishing/mediamtxServerService";
 import { colorTokens } from "../../../design-system/tokens";
@@ -114,11 +114,11 @@ const ServerFormDialog = memo<{
   useEffect(() => {
     if (server) {
       setFormData({
-        name: server.name,
+        name: server.name || server.server_name || "",
         api_url: server.api_url,
         rtmp_url: server.rtmp_url,
         rtsp_url: server.rtsp_url,
-        auth_required: server.auth_required,
+        auth_required: server.auth_required ?? false,
         username: "", // No cargamos credenciales por seguridad
         password: "",
       });
@@ -470,7 +470,7 @@ const MediaMTXServersPage = memo(() => {
   const [testingConnection, setTestingConnection] = useState<number | null>(
     null
   );
-  
+
   // Hook para detectar usuarios nuevos
   const { shouldShowWizard, markOnboardingComplete } = useFirstTimeUser();
 
@@ -545,7 +545,17 @@ const MediaMTXServersPage = memo(() => {
   const handleTestConnection = useCallback(async (server: MediaMTXServer) => {
     setTestingConnection(server.id);
     try {
-      await mediamtxServerService.testConnection(server.id);
+      const result = await mediamtxServerService.testConnection(server.id);
+
+      // Si requiere autenticación y no está autenticado, abrir diálogo
+      // TODO: Verificar estructura de respuesta con backend
+      if (
+        (result as any).details?.auth_required &&
+        !(result as any).details?.auth_status?.includes("Autenticado")
+      ) {
+        setSelectedServer(server);
+        setAuthDialogOpen(true);
+      }
     } catch (error) {
       console.error("Error probando conexión:", error);
     } finally {
@@ -757,69 +767,97 @@ const MediaMTXServersPage = memo(() => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <Card 
-              sx={{ 
-              mb: 3, 
-              background: (theme) => theme.palette.mode === 'dark' 
-                ? 'linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%)'
-                : 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-              border: '1px solid',
-              borderColor: (theme) => theme.palette.mode === 'dark'
-                ? 'rgba(33, 150, 243, 0.3)'
-                : 'primary.light',
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                <InfoIcon sx={{ color: 'primary.main', fontSize: 28, mt: 0.5 }} />
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    ¿Qué son los Servidores Remotos?
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 2 }}>
-                    Los servidores remotos te permiten transmitir las cámaras de tu red local hacia internet, 
-                    haciéndolas accesibles desde cualquier lugar del mundo de forma segura.
-                  </Typography>
-                  <Grid container spacing={3} sx={{ mt: 1 }}>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <PublicIcon sx={{ color: 'success.main' }} />
-                        <Typography variant="subtitle2" fontWeight={600}>
-                          Acceso Global
+            <Card
+              sx={{
+                mb: 3,
+                background: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%)"
+                    : "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)",
+                border: "1px solid",
+                borderColor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(33, 150, 243, 0.3)"
+                    : "primary.light",
+              }}
+            >
+              <CardContent>
+                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+                  <InfoIcon
+                    sx={{ color: "primary.main", fontSize: 28, mt: 0.5 }}
+                  />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" gutterBottom color="primary">
+                      ¿Qué son los Servidores Remotos?
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                      Los servidores remotos te permiten transmitir las cámaras
+                      de tu red local hacia internet, haciéndolas accesibles
+                      desde cualquier lugar del mundo de forma segura.
+                    </Typography>
+                    <Grid container spacing={3} sx={{ mt: 1 }}>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <PublicIcon sx={{ color: "success.main" }} />
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            Acceso Global
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Ve tus cámaras desde cualquier dispositivo con
+                          internet, sin configurar tu router.
                         </Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Ve tus cámaras desde cualquier dispositivo con internet, sin configurar tu router.
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <LockIcon sx={{ color: 'warning.main' }} />
-                        <Typography variant="subtitle2" fontWeight={600}>
-                          Seguridad
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <LockIcon sx={{ color: "warning.main" }} />
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            Seguridad
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Conexión encriptada y autenticación para proteger tu
+                          privacidad.
                         </Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Conexión encriptada y autenticación para proteger tu privacidad.
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <CloudIcon sx={{ color: 'info.main' }} />
-                        <Typography variant="subtitle2" fontWeight={600}>
-                          Sin Configuración
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <CloudIcon sx={{ color: "info.main" }} />
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            Sin Configuración
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          No necesitas abrir puertos ni configurar DNS dinámico.
                         </Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        No necesitas abrir puertos ni configurar DNS dinámico.
-                      </Typography>
+                      </Grid>
                     </Grid>
-                  </Grid>
+                  </Box>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Tabla de servidores */}
           {remote.isLoadingServers && remote.servers.length === 0 ? (
@@ -831,14 +869,21 @@ const MediaMTXServersPage = memo(() => {
                 data={remote.servers}
                 getRowId={(row: MediaMTXServer) => row.id.toString()}
                 emptyMessage={
-                  <Box sx={{ textAlign: 'center', py: 2 }}>
-                    <CloudIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                  <Box sx={{ textAlign: "center", py: 2 }}>
+                    <CloudIcon
+                      sx={{ fontSize: 48, color: "text.disabled", mb: 2 }}
+                    />
                     <Typography variant="h6" gutterBottom>
                       No hay servidores remotos configurados
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
-                      Configura tu primer servidor remoto para comenzar a transmitir tus cámaras a internet 
-                      y acceder a ellas desde cualquier lugar.
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 3, maxWidth: 400, mx: "auto" }}
+                    >
+                      Configura tu primer servidor remoto para comenzar a
+                      transmitir tus cámaras a internet y acceder a ellas desde
+                      cualquier lugar.
                     </Typography>
                   </Box>
                 }
@@ -899,9 +944,15 @@ const MediaMTXServersPage = memo(() => {
 
           {/* Diálogo de autenticación */}
           {selectedServer && (
-            <MediaMTXAuthDialog
+            <ServerAuthDialog
               open={authDialogOpen}
-              server={selectedServer}
+              server={{
+                id: selectedServer.id,
+                name: selectedServer.name || selectedServer.server_name || "",
+                apiUrl: selectedServer.api_url,
+                isAuthenticated: selectedServer.is_authenticated,
+                lastAuthError: selectedServer.last_error,
+              }}
               onClose={() => {
                 setAuthDialogOpen(false);
                 setSelectedServer(null);
