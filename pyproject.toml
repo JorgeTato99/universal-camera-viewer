@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "universal-camera-viewer"
-version = "0.9.16"
+version = "0.9.20"
 description = "Visor universal de cámaras IP multi-marca con arquitectura MVP"
 authors = ["Universal Camera Viewer Team"]
 readme = "README.md"

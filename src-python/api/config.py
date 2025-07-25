@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # Servidor
     app_name: str = "Universal Camera Viewer API"
-    app_version: str = "0.8.2"
+    app_version: str = "0.9.20"
     api_prefix: str = "/api"
     host: str = "0.0.0.0"
     port: int = 8000

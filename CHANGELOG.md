@@ -7,6 +7,98 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/spec/v2.0.
 
 ---
 
+## [0.9.20] - 2025-07-24 - 🐛 CORRECCIONES CRÍTICAS DE ERRORES
+
+### 🐛 Fixed - Errores de Validación Pydantic
+
+#### 📊 AlertsListResponse - Error 500 en endpoint de alertas
+
+- **Problema**: Faltaban campos obligatorios `page`, `page_size` y `by_alert_type`
+- **Solución**: Agregados valores por defecto para paginación no real
+- **Archivos**: `api/routers/publishing.py` línea 742-751
+
+#### 📋 PublicationHistoryResponse - Error 500 en historial
+
+- **Problema**: `filters_applied` esperaba `Dict[str, str]` pero recibía valores `None`
+- **Solución**: Convertir todos los valores a strings vacíos cuando son `None`
+- **Archivos**: `services/database/mediamtx_db_service.py` líneas 413-420, 814-821
+
+### 🐛 Fixed - Errores de SQL
+
+#### 🗄️ "no such column: c.name" en consultas de historial
+
+- **Problema**: Las consultas SQL referenciaban `c.name` pero la tabla tiene `c.display_name`
+- **Solución**: Reemplazados 3 referencias de `c.name` por `c.display_name`
+- **Archivos**: `services/database/mediamtx_db_service.py` líneas 599, 786, 855
+
+### 🐛 Fixed - Errores de TypeScript
+
+#### 📝 useRemotePublishing.ts - Error de tipo en getRemotePublicationByCameraId
+
+- **Problema**: Inferencia de tipo incorrecta
+- **Solución**: Cambiar a `usePublishingStore.getState` para obtener tipo correcto
+- **Variables no usadas**: Eliminada `selectedServerId`, prefijo `_` en `customName`
+
+#### 🔧 apiClient.ts - Error de indexación de headers
+
+- **Problema**: `defaultHeaders` tipado como `HeadersInit` no permite indexación
+- **Solución**: Cambiar tipo a `Record<string, string>`
+
+---
+
+## [0.9.19] - 2025-07-24 - 🚀 OPTIMIZACIÓN DE RENDIMIENTO
+
+### ⚡ Performance - Reducción de Polling
+
+#### 🔄 Reducción de carga del servidor en 83%
+
+- **Problema**: Polling global cada 5 segundos generaba 12 llamadas/minuto
+- **Solución**: Aumentado a 30 segundos (2 llamadas/minuto)
+- **Archivos**: `stores/publishingStore.ts` línea 240
+
+#### 📊 Ajuste de intervalos individuales
+
+- **usePublishingHealth**: 30s → 60s
+- **usePublishingMetrics**: 5s → 15s  
+- **useRemotePublishing**: 5s → 30s
+- **ActivePublications**: 5s → 15s (activo) / 30s (inactivo)
+
+### 🐛 Fixed - Métodos Faltantes en API
+
+#### 🔌 publishing_unified.py - Métodos no implementados
+
+- **PublishingPresenter**: Eliminado TODO, llamada real a `get_active_publications()`
+- **MediaMTXRemotePublishingPresenter**: Cambiado de `get_active_publications()` a `list_remote_streams()`
+- **Ajuste de datos**: Corregido acceso a lista en lugar de diccionario
+
+---
+
+## [0.9.18] - 2025-07-24 - 📷 ACTUALIZACIÓN DE DATOS DE CÁMARAS
+
+### ✨ Added - Datos Reales de Cámara
+
+#### 📹 TP-Link C200 Real en Seed Database
+
+- **Reemplazada**: Cámara ficticia Xiaomi por TP-Link C200 real
+- **Datos**: IP 192.168.100.248, credenciales superadmin/superadmin
+- **Endpoints RTSP**: stream1 (HD 1280x720), stream2 (SD 640x360)
+- **Archivos**: `seed_database.py`
+
+### 🐛 Fixed - Errores de Inicialización
+
+#### 🔧 PublishingPresenter - Error de inicialización duplicada
+
+- **Problema**: `initialize() missing 1 required positional argument: 'config'`
+- **Solución**: Eliminada re-inicialización innecesaria en publishing_unified.py
+- **Líneas**: 109-111 comentadas
+
+### 📊 Added - Logging y Debug
+
+#### 🔍 Logging temporal para debug de URLs duplicadas
+
+- **Agregado**: Debug logging en apiClient.ts para rastrear `/api/api/` duplicado
+- **Ubicación**: `apiClient.ts` líneas 49-56
+
 ## [0.9.17] - 2025-07-23 - 🔒 SEGURIDAD CRÍTICA Y AGREGACIÓN DE LOGS
 
 ### 🔒 Security - Implementaciones Críticas Completadas
