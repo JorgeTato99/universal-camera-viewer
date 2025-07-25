@@ -42,7 +42,8 @@
       "Bash(wc:*)",
       "Bash(sqlite3:*)",
       "mcp__ide__executeCode",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "Bash(yarn typecheck:*)"
     ],
     "deny": []
   }

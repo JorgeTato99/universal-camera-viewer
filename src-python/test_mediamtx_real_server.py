@@ -22,7 +22,7 @@ import argparse
 # Agregar rutas al path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from services.mediamtx.auth_service import get_mediamtx_auth_service
+from services.mediamtx.auth_service import get_auth_service as get_mediamtx_auth_service
 from services.mediamtx.api_client import get_mediamtx_api_client
 from services.database.mediamtx_db_service import get_mediamtx_db_service
 from services.logging_service import get_secure_logger
@@ -59,24 +59,32 @@ async def test_server_authentication():
     logger.info(f"URL: {prod_server['api_url']}")
     logger.info(f"Usuario: {prod_server['username']}")
     
+    # Inicializar servicio de autenticación
+    await auth_service.initialize()
+    
     # Intentar autenticar
     try:
-        auth_result = await auth_service.authenticate(
+        success, error_msg = await auth_service.login(
             server_id=prod_server['server_id'],
             username=prod_server['username'],
-            password="easypass123!"  # Contraseña real
+            password="easypass123!",  # Contraseña real
+            api_url=prod_server['api_url']
         )
         
-        if auth_result.success:
-            logger.info("✅ Autenticación exitosa!")
-            logger.info(f"   Token obtenido: {auth_result.access_token[:50]}...")
+        if success:
+            logger.info("[OK] Autenticación exitosa!")
+            # Obtener información del token
+            token_info = await auth_service.get_token_info(prod_server['server_id'])
+            if token_info:
+                logger.info(f"   Usuario: {token_info.get('username', 'N/A')}")
+                logger.info(f"   Rol: {token_info.get('role', 'N/A')}")
             return prod_server['server_id']
         else:
-            logger.error(f"❌ Fallo autenticación: {auth_result.error}")
+            logger.error(f"[ERROR] Fallo autenticación: {error_msg}")
             return None
             
     except Exception as e:
-        logger.error(f"❌ Error durante autenticación: {str(e)}")
+        logger.error(f"[ERROR] Error durante autenticación: {str(e)}")
         return None
 
 
@@ -120,7 +128,7 @@ async def test_camera_creation(server_id: int):
             camera_data=camera_data
         )
         
-        logger.info("✅ Cámara creada exitosamente!")
+        logger.info("[OK] Cámara creada exitosamente!")
         logger.info(f"   ID Remoto: {remote_camera.id}")
         logger.info(f"   Estado: {remote_camera.status}")
         logger.info(f"   Publish URL: {sanitize_url(remote_camera.publish_url)}")
@@ -131,7 +139,7 @@ async def test_camera_creation(server_id: int):
         return remote_camera
         
     except Exception as e:
-        logger.error(f"❌ Error creando cámara: {str(e)}")
+        logger.error(f"[ERROR] Error creando cámara: {str(e)}")
         return None
 
 
@@ -144,9 +152,9 @@ async def test_list_cameras(server_id: int):
     api_client = get_mediamtx_api_client()
     
     try:
-        cameras = await api_client.list_cameras(server_id, limit=10)
+        cameras = await api_client.list_cameras(server_id, per_page=10)
         
-        logger.info(f"✅ Total de cámaras: {cameras.total}")
+        logger.info(f"[OK] Total de cámaras: {cameras.total}")
         
         if cameras.cameras:
             logger.info("\nCámaras encontradas:")
@@ -160,7 +168,7 @@ async def test_list_cameras(server_id: int):
         return True
         
     except Exception as e:
-        logger.error(f"❌ Error listando cámaras: {str(e)}")
+        logger.error(f"[ERROR] Error listando cámaras: {str(e)}")
         return False
 
 
@@ -171,12 +179,20 @@ async def test_validate_token(server_id: int):
     logger.info("=" * 80)
     
     auth_service = get_mediamtx_auth_service()
+    db_service = get_mediamtx_db_service()
     
     try:
-        is_valid = await auth_service.validate_token(server_id)
+        # Obtener información del servidor para tener la API URL
+        server = await db_service.get_server_by_id(server_id)
+        if not server:
+            logger.error(f"[ERROR] No se encontró servidor con ID {server_id}")
+            return False
+            
+        # Validar token con la API URL del servidor
+        is_valid, error_msg = await auth_service.validate_token(server_id, server['api_url'])
         
         if is_valid:
-            logger.info("✅ Token JWT es válido y funcional")
+            logger.info("[OK] Token JWT es válido y funcional")
             
             # Mostrar información del token
             token_info = await auth_service.get_token_info(server_id)
@@ -184,12 +200,12 @@ async def test_validate_token(server_id: int):
                 logger.info(f"   Creado: {token_info.get('created_at', 'N/A')}")
                 logger.info(f"   Expira: {token_info.get('expires_at', 'N/A')}")
         else:
-            logger.error("❌ Token JWT no es válido o ha expirado")
+            logger.error(f"[ERROR] Token JWT no es válido o ha expirado: {error_msg}")
             
         return is_valid
         
     except Exception as e:
-        logger.error(f"❌ Error validando token: {str(e)}")
+        logger.error(f"[ERROR] Error validando token: {str(e)}")
         return False
 
 
@@ -225,23 +241,23 @@ async def main():
             sys.executable, "seed_database.py", "--mediamtx-only"
         ], cwd=Path(__file__).parent)
     
-    logger.info("\n" + "🚀 " * 20)
+    logger.info("\n" + "=" * 80)
     logger.info("INICIANDO PRUEBAS CON SERVIDOR MEDIAMTX REAL")
     logger.info("Servidor: http://31.220.104.212:8000")
     logger.info("Usuario: jorge.cliente")
-    logger.info("🚀 " * 20 + "\n")
+    logger.info("=" * 80 + "\n")
     
     # 1. Autenticación
     server_id = await test_server_authentication()
     if not server_id:
-        logger.error("\n❌ Fallo en autenticación. Abortando pruebas.")
+        logger.error("\n[ERROR] Fallo en autenticación. Abortando pruebas.")
         return
     
     # 2. Crear cámara (opcional)
     if not args.skip_creation:
         remote_camera = await test_camera_creation(server_id)
         if remote_camera:
-            logger.info("\n💡 SIGUIENTE PASO:")
+            logger.info("\n[INFO] SIGUIENTE PASO:")
             logger.info("Para publicar video a esta cámara, ejecuta:")
             logger.info(f"\n{remote_camera.agent_command}\n")
     
@@ -251,16 +267,16 @@ async def main():
     # 4. Validar token
     await test_validate_token(server_id)
     
-    logger.info("\n" + "✅ " * 20)
+    logger.info("\n" + "=" * 80)
     logger.info("PRUEBAS COMPLETADAS")
-    logger.info("✅ " * 20 + "\n")
+    logger.info("=" * 80 + "\n")
     
-    logger.info("📌 RESUMEN:")
-    logger.info("- Autenticación JWT: ✅")
-    logger.info("- Creación de cámaras: ✅")
-    logger.info("- Listado de cámaras: ✅")
-    logger.info("- Validación de token: ✅")
-    logger.info("\n🎯 El sistema está listo para publicar video al servidor remoto!")
+    logger.info("[RESUMEN]:")
+    logger.info("- Autenticación JWT: OK")
+    logger.info("- Creación de cámaras: OK")
+    logger.info("- Listado de cámaras: OK")
+    logger.info("- Validación de token: OK")
+    logger.info("\n[LISTO] El sistema está listo para publicar video al servidor remoto!")
 
 
 if __name__ == "__main__":

@@ -23,6 +23,7 @@ from .credentials import router as credentials_router
 from .protocols import router as protocols_router
 from .capabilities import router as capabilities_router
 from .monitoring import router as monitoring_router
+from .publications import router as publications_router
 
 # Crear router principal
 router = APIRouter(
@@ -52,6 +53,9 @@ try:
     
     router.include_router(monitoring_router)
     logger.debug("Subrouter Monitoring registrado con éxito")
+    
+    router.include_router(publications_router)
+    logger.debug("Subrouter Publications registrado con éxito")
     
     logger.info("Todos los subrouters de cameras_v2 registrados exitosamente")
     

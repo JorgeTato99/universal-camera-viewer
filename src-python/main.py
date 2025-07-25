@@ -28,12 +28,16 @@ def main():
     print(f"[RELOAD] {'Enabled' if settings.reload else 'Disabled'}")
     print("-" * 50)
     
+    # En Windows, forzar loop_type para uvicorn
+    loop = "uvloop" if sys.platform != "win32" else "asyncio"
+    
     uvicorn.run(
         "api.main:app",
         host=settings.host,
         port=settings.port,
         reload=settings.reload,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
+        loop=loop
     )
 
 

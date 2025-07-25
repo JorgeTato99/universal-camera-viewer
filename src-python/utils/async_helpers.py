@@ -8,7 +8,96 @@ de Python y sistemas operativos, especialmente para subprocess en Windows.
 import asyncio
 import sys
 import subprocess
+import logging
 from typing import List, Optional, Tuple
+
+# Configurar logger
+logger = logging.getLogger(__name__)
+
+# Importar ProactorEventLoop para verificación de tipo
+if sys.platform == 'win32':
+    from asyncio.windows_events import ProactorEventLoop
+
+
+class StreamReaderWrapper:
+    """Wrapper para streams de subprocess que simula asyncio.StreamReader."""
+    
+    def __init__(self, stream):
+        self._stream = stream
+        self._loop = None
+    
+    async def readline(self):
+        """Lee una línea del stream de forma asíncrona."""
+        if self._loop is None:
+            self._loop = asyncio.get_running_loop()
+        
+        if self._stream is None:
+            return b''
+        
+        # Leer en un executor para no bloquear
+        line = await self._loop.run_in_executor(None, self._stream.readline)
+        return line
+    
+    async def read(self, n=-1):
+        """Lee n bytes del stream de forma asíncrona."""
+        if self._loop is None:
+            self._loop = asyncio.get_running_loop()
+        
+        if self._stream is None:
+            return b''
+        
+        # Leer en un executor para no bloquear
+        data = await self._loop.run_in_executor(None, self._stream.read, n)
+        return data
+
+
+class SubprocessWrapper:
+    """
+    Wrapper para subprocess.Popen que simula la interfaz de asyncio.subprocess.Process.
+    
+    Usado en Windows para evitar problemas con el event loop.
+    """
+    
+    def __init__(self, process: subprocess.Popen):
+        self._process = process
+        self.pid = process.pid
+        # Envolver los streams
+        self.stdout = StreamReaderWrapper(process.stdout) if process.stdout else None
+        self.stderr = StreamReaderWrapper(process.stderr) if process.stderr else None
+    
+    @property
+    def returncode(self):
+        """Obtiene el código de retorno del proceso."""
+        return self._process.poll()
+    
+    async def wait(self):
+        """Espera a que el proceso termine."""
+        loop = asyncio.get_running_loop()
+        # Ejecutar wait() en un thread para no bloquear
+        returncode = await loop.run_in_executor(None, self._process.wait)
+        return returncode
+    
+    def terminate(self):
+        """Termina el proceso."""
+        try:
+            self._process.terminate()
+        except:
+            pass
+    
+    def kill(self):
+        """Mata el proceso."""
+        try:
+            self._process.kill()
+        except:
+            pass
+    
+    async def communicate(self, input=None):
+        """Lee stdout y stderr del proceso."""
+        loop = asyncio.get_running_loop()
+        stdout, stderr = await loop.run_in_executor(
+            None, self._process.communicate, input
+        )
+        return stdout, stderr
 
 
 def setup_windows_event_loop():
@@ -31,11 +120,12 @@ async def create_subprocess_safely(
     stderr=None,
     stdin=None,
     **kwargs
-) -> asyncio.subprocess.Process:
+):
     """
     Crea un subprocess de forma segura y compatible.
     
     Maneja las diferencias entre Windows y Unix, y entre versiones de Python.
+    En Windows, usa un enfoque diferente para evitar problemas con el event loop.
     
     Args:
         *args: Comando y argumentos
@@ -45,10 +135,13 @@ async def create_subprocess_safely(
         **kwargs: Argumentos adicionales
         
     Returns:
-        Proceso asyncio
+        Proceso (asyncio.subprocess.Process o SubprocessWrapper en Windows)
     """
     if sys.platform == 'win32':
-        # En Windows, configurar para evitar ventanas de consola
+        # En Windows, usar subprocess.Popen con un wrapper
+        # para evitar problemas con ProactorEventLoop
+        
+        # Configurar para evitar ventanas de consola
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
@@ -56,15 +149,19 @@ async def create_subprocess_safely(
         # Configurar creationflags para evitar nueva consola
         creationflags = subprocess.CREATE_NO_WINDOW
         
-        return await asyncio.create_subprocess_exec(
-            *args,
-            stdout=stdout,
-            stderr=stderr,
-            stdin=stdin,
+        # Crear el proceso con subprocess.Popen
+        proc = subprocess.Popen(
+            args,
+            stdout=stdout if stdout == subprocess.PIPE else None,
+            stderr=stderr if stderr == subprocess.PIPE else None,
+            stdin=subprocess.DEVNULL,  # Siempre usar DEVNULL para stdin
             startupinfo=startupinfo,
             creationflags=creationflags,
             **kwargs
         )
+        
+        # Retornar un wrapper que simula asyncio.subprocess.Process
+        return SubprocessWrapper(proc)
     else:
         # En Unix/Linux/Mac, usar configuración estándar
         return await asyncio.create_subprocess_exec(

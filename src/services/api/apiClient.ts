@@ -123,8 +123,17 @@ export class ApiClient {
       // Parsear respuesta JSON
       const data = await response.json();
       
-      // Las respuestas de nuestra API siempre tienen el formato ApiResponse
-      return data as ApiResponse<T>;
+      // Si la respuesta ya tiene el formato ApiResponse, devolverla tal cual
+      if (data && typeof data === 'object' && 'success' in data && 'timestamp' in data) {
+        return data as ApiResponse<T>;
+      }
+      
+      // Si no, envolver los datos en ApiResponse
+      return {
+        success: true,
+        data: data as T,
+        timestamp: new Date().toISOString()
+      } as ApiResponse<T>;
       
     } catch (error) {
       if (error instanceof ApiError) {

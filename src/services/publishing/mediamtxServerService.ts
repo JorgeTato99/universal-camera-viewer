@@ -7,7 +7,7 @@
 
 import { apiClient } from '../api/apiClient';
 import { notificationStore } from '../../stores/notificationStore';
-import type { ApiResponse, PaginatedResponse } from '../../types/api.types';
+import type { PaginatedResponse } from '../../types/api.types';
 
 // ====================================================================
 // Types & Interfaces
@@ -18,16 +18,38 @@ import type { ApiResponse, PaginatedResponse } from '../../types/api.types';
  */
 export interface MediaMTXServer {
   id: number;
-  name: string;
+  server_id?: number; // Backend puede devolver server_id en lugar de id
+  server_name: string;
+  name?: string; // Alias para compatibilidad
   api_url: string;
   rtmp_url: string;
   rtsp_url: string;
-  auth_required: boolean;
+  rtsp_port?: number;
+  api_port?: number;
+  api_enabled?: boolean;
+  username?: string;
+  auth_enabled?: boolean;
+  auth_required?: boolean;
+  use_tcp?: boolean;
+  max_reconnects?: number;
+  reconnect_delay?: number;
+  publish_path_template?: string;
+  health_check_interval?: number;
   is_authenticated: boolean;
   is_active: boolean;
+  is_default?: boolean;
+  auth_expires_at?: string | null;
+  last_health_status?: string;
   last_health_check: string | null;
   created_at: string;
   updated_at: string;
+  metadata?: Record<string, any>;
+  metrics?: {
+    total_publications?: number;
+    active_publications?: number;
+    total_cameras?: number;
+    last_publication?: string | null;
+  };
 }
 
 /**
@@ -159,21 +181,31 @@ class MediaMTXServerService {
         params.append('search', filters.search);
       }
 
-      const response = await apiClient.get<ApiResponse<PaginatedResponse<MediaMTXServer>>>(
+      const response = await apiClient.get<PaginatedResponse<MediaMTXServer>>(
         `${this.baseUrl}/?${params.toString()}`
       );
 
-      if (response.data?.success && response.data?.data) {
+      if (response.success && response.data) {
+        // Mapear server_id a id si es necesario
+        const mappedItems = response.data.items.map((server: any) => ({
+          ...server,
+          id: server.id || server.server_id,
+          name: server.name || server.server_name
+        }));
+        
         // Actualizar cache con los servidores obtenidos
-        response.data.data.items.forEach((server: MediaMTXServer) => {
+        mappedItems.forEach((server: MediaMTXServer) => {
           this.serversCache.set(server.id, server);
         });
         this.cacheTimestamp = Date.now();
         
-        return response.data!.data!;
+        return {
+          ...response.data,
+          items: mappedItems
+        };
       }
 
-      throw new Error('Error al obtener la lista de servidores');
+      throw new Error(response.error || 'Error al obtener la lista de servidores');
     } catch (error: any) {
       notificationStore.addNotification({
         type: 'error',
@@ -194,14 +226,21 @@ class MediaMTXServerService {
         return this.serversCache.get(id)!;
       }
 
-      const response = await apiClient.get<ApiResponse<MediaMTXServer>>(
+      const response = await apiClient.get<MediaMTXServer>(
         `${this.baseUrl}/${id}`
       );
 
-      if (response.data?.success && response.data?.data) {
+      if (response.success && response.data) {
+        // Mapear server_id a id si es necesario
+        const mappedServer = {
+          ...response.data,
+          id: response.data.id || (response.data as any).server_id,
+          name: response.data.name || (response.data as any).server_name
+        };
+        
         // Actualizar cache
-        this.serversCache.set(id, response.data.data);
-        return response.data!.data!;
+        this.serversCache.set(id, mappedServer);
+        return mappedServer;
       }
 
       throw new Error('Servidor no encontrado');
@@ -220,13 +259,20 @@ class MediaMTXServerService {
    */
   async createServer(data: CreateServerDto): Promise<MediaMTXServer> {
     try {
-      const response = await apiClient.post<ApiResponse<MediaMTXServer>>(
+      const response = await apiClient.post<MediaMTXServer>(
         `${this.baseUrl}/`,
         data
       );
 
-      if (response.data?.success && response.data?.data) {
+      if (response.success && response.data) {
         this.invalidateCache();
+        
+        // Mapear server_id a id si es necesario
+        const mappedServer = {
+          ...response.data,
+          id: response.data.id || (response.data as any).server_id,
+          name: response.data.name || (response.data as any).server_name
+        };
         
         notificationStore.addNotification({
           type: 'success',
@@ -234,7 +280,7 @@ class MediaMTXServerService {
           message: `El servidor "${data.name}" se creó correctamente`,
         });
         
-        return response.data!.data!;
+        return mappedServer;
       }
 
       throw new Error('Error al crear el servidor');
@@ -253,13 +299,20 @@ class MediaMTXServerService {
    */
   async updateServer(id: number, data: UpdateServerDto): Promise<MediaMTXServer> {
     try {
-      const response = await apiClient.put<ApiResponse<MediaMTXServer>>(
+      const response = await apiClient.put<MediaMTXServer>(
         `${this.baseUrl}/${id}`,
         data
       );
 
-      if (response.data?.success && response.data?.data) {
+      if (response.success && response.data) {
         this.invalidateCache();
+        
+        // Mapear server_id a id si es necesario
+        const mappedServer = {
+          ...response.data,
+          id: response.data.id || (response.data as any).server_id,
+          name: response.data.name || (response.data as any).server_name
+        };
         
         notificationStore.addNotification({
           type: 'success',
@@ -267,7 +320,7 @@ class MediaMTXServerService {
           message: 'Los cambios se guardaron correctamente',
         });
         
-        return response.data!.data!;
+        return mappedServer;
       }
 
       throw new Error('Error al actualizar el servidor');
@@ -286,23 +339,18 @@ class MediaMTXServerService {
    */
   async deleteServer(id: number): Promise<void> {
     try {
-      const response = await apiClient.delete<ApiResponse<void>>(
+      await apiClient.delete<void>(
         `${this.baseUrl}/${id}`
       );
 
-      if (response.data?.success) {
-        this.invalidateCache();
-        
-        notificationStore.addNotification({
-          type: 'success',
-          title: 'Servidor eliminado',
-          message: 'El servidor se eliminó correctamente',
-        });
-        
-        return;
-      }
-
-      throw new Error('Error al eliminar el servidor');
+      // Si llegamos aquí, la eliminación fue exitosa
+      this.invalidateCache();
+      
+      notificationStore.addNotification({
+        type: 'success',
+        title: 'Servidor eliminado',
+        message: 'El servidor se eliminó correctamente',
+      });
     } catch (error: any) {
       notificationStore.addNotification({
         type: 'error',
@@ -318,12 +366,12 @@ class MediaMTXServerService {
    */
   async getServerStatus(id: number): Promise<ServerStatus> {
     try {
-      const response = await apiClient.get<ApiResponse<ServerStatus>>(
+      const response = await apiClient.get<ServerStatus>(
         `${this.baseUrl}/${id}/status`
       );
 
-      if (response.data?.success && response.data?.data) {
-        return response.data!.data!;
+      if (response.success && response.data) {
+        return response.data;
       }
 
       throw new Error('Error al obtener el estado del servidor');
@@ -338,12 +386,12 @@ class MediaMTXServerService {
    */
   async testConnection(id: number): Promise<ConnectionTestResult> {
     try {
-      const response = await apiClient.post<ApiResponse<ConnectionTestResult>>(
+      const response = await apiClient.post<ConnectionTestResult>(
         `${this.baseUrl}/${id}/test`
       );
 
-      if (response.data?.success && response.data?.data) {
-        const result = response.data.data;
+      if (response.success && response.data) {
+        const result = response.data;
         
         if (result.success) {
           notificationStore.addNotification({

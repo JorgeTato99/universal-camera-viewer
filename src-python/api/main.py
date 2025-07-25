@@ -16,7 +16,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Configurar event loop para Windows ANTES de cualquier import de asyncio
 if sys.platform == 'win32':
     import asyncio
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    # Verificar si ya hay un event loop configurado
+    try:
+        loop = asyncio.get_event_loop()
+        if not isinstance(loop, asyncio.ProactorEventLoop):
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    except RuntimeError:
+        # No hay event loop, configurar ProactorEventLoop
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from api.config import settings
 from api.middleware import setup_middleware

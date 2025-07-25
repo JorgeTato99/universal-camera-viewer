@@ -440,8 +440,17 @@ export const usePublishingStore = create<PublishingState>()(
         ]);
 
         if (configsResponse.success && configsResponse.data) {
+          // Las configuraciones pueden venir como array directo o como objeto con items
+          let configsArray: PublishConfiguration[] = [];
+          
+          if (Array.isArray(configsResponse.data)) {
+            configsArray = configsResponse.data;
+          } else if (configsResponse.data && typeof configsResponse.data === 'object' && 'items' in configsResponse.data) {
+            configsArray = (configsResponse.data as any).items || [];
+          }
+          
           set({
-            configurations: configsResponse.data,
+            configurations: configsArray,
             activeConfig: activeResponse?.data || null,
           });
         }
@@ -481,8 +490,17 @@ export const usePublishingStore = create<PublishingState>()(
         const response = await publishingService.getAlerts();
 
         if (response.success && response.data) {
+          // Las alertas pueden venir como array directo o como objeto con items
+          let alertsArray: any[] = [];
+          
+          if (Array.isArray(response.data)) {
+            alertsArray = response.data;
+          } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+            alertsArray = (response.data as any).items || [];
+          }
+          
           set({
-            alerts: response.data.map((alert) => ({
+            alerts: alertsArray.map((alert) => ({
               ...alert,
               severity: alert.severity as "info" | "warning" | "error" | "critical",
               alert_type: (alert as any).alert_type || "general",

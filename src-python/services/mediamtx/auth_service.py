@@ -149,7 +149,7 @@ class MediaMTXAuthService(BaseService):
         # Cliente HTTP compartido
         self._session: Optional[aiohttp.ClientSession] = None
         
-        self._initialized = True
+        self._initialized = False
         
     async def initialize(self) -> None:
         """Inicializa el servicio y carga tokens existentes."""
@@ -354,6 +354,52 @@ class MediaMTXAuthService(BaseService):
             'Authorization': f'Bearer {token}'
         }
     
+    async def get_token_info(self, server_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene información sobre el token de un servidor.
+        
+        Args:
+            server_id: ID del servidor
+            
+        Returns:
+            Dict con información del token o None si no existe
+        """
+        try:
+            # Primero verificar cache
+            if server_id in self._token_cache:
+                token = self._token_cache[server_id]
+                return {
+                    'server_id': server_id,
+                    'expires_at': token.expires_at.isoformat() if token.expires_at else None,
+                    'is_expired': token.is_expired,
+                    'username': token.username,
+                    'role': token.role,
+                    'user_id': token.user_id
+                }
+            
+            # Si no está en cache, intentar cargar de BD
+            token_data = await self._db_service.get_auth_token(server_id)
+            if token_data:
+                # No desencriptar el token completo, solo devolver metadatos
+                expires_at = token_data.get('expires_at')
+                created_at = token_data.get('created_at')
+                
+                return {
+                    'server_id': server_id,
+                    'expires_at': expires_at.isoformat() if expires_at and hasattr(expires_at, 'isoformat') else expires_at,
+                    'created_at': created_at.isoformat() if created_at and hasattr(created_at, 'isoformat') else created_at,
+                    'username': token_data.get('username'),
+                    'role': token_data.get('role'),
+                    'user_id': token_data.get('user_id'),
+                    'is_active': token_data.get('is_active', True)
+                }
+            
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo información del token: {str(e)}")
+            return None
+    
     async def validate_token(self, server_id: int, api_url: str) -> Tuple[bool, Optional[str]]:
         """
         Valida un token realizando una petición de prueba a la API.
@@ -425,11 +471,19 @@ class MediaMTXAuthService(BaseService):
                 encrypted_token = token_data['access_token']
                 decrypted_token = self._encryption_service.decrypt(encrypted_token)
                 
+                # Convertir expires_at a datetime si es string
+                expires_at = token_data.get('expires_at')
+                if expires_at and isinstance(expires_at, str):
+                    try:
+                        expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    except:
+                        expires_at = None
+                
                 # Crear objeto token
                 token = AuthToken(
                     access_token=decrypted_token,
                     token_type=token_data.get('token_type', 'bearer'),
-                    expires_at=token_data.get('expires_at'),
+                    expires_at=expires_at,
                     username=token_data.get('username'),
                     role=token_data.get('role'),
                     user_id=token_data.get('user_id')

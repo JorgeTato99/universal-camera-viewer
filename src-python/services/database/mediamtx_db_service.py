@@ -1666,6 +1666,9 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                     WHERE server_id = ? AND is_active = 1
                 """, (token_data['server_id'],))
                 
+                # Commit para asegurar que se aplicó el UPDATE antes del INSERT
+                conn.commit()
+                
                 # Insertar nuevo token
                 cursor.execute("""
                     INSERT INTO mediamtx_auth_tokens (

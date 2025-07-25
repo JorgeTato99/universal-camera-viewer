@@ -99,22 +99,34 @@ class MediaMTXServersPresenter(BasePresenter):
             end_idx = offset + page_size
             paginated_servers = servers[start_idx:end_idx]
             
-            # Enriquecer con estado de autenticación si se solicita
-            if include_auth_status:
-                for server in paginated_servers:
+            # Procesar cada servidor
+            for server in paginated_servers:
+                # Parsear metadata JSON si existe
+                if server.get('metadata'):
+                    try:
+                        import json
+                        server['metadata'] = json.loads(server['metadata'])
+                    except:
+                        server['metadata'] = {}
+                else:
+                    server['metadata'] = {}
+                
+                # Enriquecer con estado de autenticación si se solicita
+                if include_auth_status:
                     server_id = server['server_id']
                     
                     # Obtener estado de autenticación
                     auth_info = await self._auth_service.get_token_info(server_id)
                     server['is_authenticated'] = auth_info is not None
+                    # auth_info.get('expires_at') ya es un string isoformat, no datetime
                     server['auth_expires_at'] = auth_info.get('expires_at') if auth_info else None
-                    
-                    # Sanitizar URLs para logs/respuesta
-                    server['api_url'] = sanitize_url(server['api_url'])
-                    server['rtsp_url'] = sanitize_url(server['rtsp_url'])
-                    
-                    # No incluir contraseña en respuesta
-                    server.pop('password_encrypted', None)
+                
+                # Sanitizar URLs para logs/respuesta
+                server['api_url'] = sanitize_url(server['api_url'])
+                server['rtsp_url'] = sanitize_url(server['rtsp_url'])
+                
+                # No incluir contraseña en respuesta
+                server.pop('password_encrypted', None)
             
             self.logger.info(
                 f"Obtenidos {len(paginated_servers)} servidores "
@@ -152,6 +164,16 @@ class MediaMTXServersPresenter(BasePresenter):
             server = await self._db_service.get_server_by_id(server_id)
             if not server:
                 return None
+            
+            # Parsear metadata JSON si existe
+            if server.get('metadata'):
+                try:
+                    import json
+                    server['metadata'] = json.loads(server['metadata'])
+                except:
+                    server['metadata'] = {}
+            else:
+                server['metadata'] = {}
             
             # Enriquecer con estado de autenticación
             auth_info = await self._auth_service.get_token_info(server_id)
@@ -256,6 +278,15 @@ class MediaMTXServersPresenter(BasePresenter):
                 'api_url': sanitize_url(created_server['api_url'])
             })
             
+            # Parsear metadata JSON si existe
+            metadata = {}
+            if created_server.get('metadata'):
+                try:
+                    import json
+                    metadata = json.loads(created_server['metadata'])
+                except:
+                    metadata = {}
+            
             # Formatear respuesta
             return {
                 'server_id': created_server['server_id'],
@@ -272,6 +303,7 @@ class MediaMTXServersPresenter(BasePresenter):
                 'last_health_check': created_server['last_health_check'],
                 'created_at': created_server['created_at'],
                 'updated_at': created_server['updated_at'],
+                'metadata': metadata,
                 'metrics': {
                     'total_publications': 0,
                     'active_publications': 0,
@@ -370,12 +402,23 @@ class MediaMTXServersPresenter(BasePresenter):
             # Obtener métricas
             metrics = await self._db_service.get_server_metrics(server_id)
             
+            # Parsear metadata JSON si existe
+            metadata = {}
+            if updated_server.get('metadata'):
+                try:
+                    import json
+                    metadata = json.loads(updated_server['metadata'])
+                except:
+                    metadata = {}
+            
             # Formatear respuesta
             return {
                 'server_id': updated_server['server_id'],
                 'server_name': updated_server['server_name'],
                 'api_url': sanitize_url(updated_server['api_url']),
                 'rtsp_url': sanitize_url(updated_server['rtsp_url']),
+                'rtsp_port': updated_server.get('rtsp_port', 8554),
+                'api_port': updated_server.get('api_port', 9997),
                 'is_active': updated_server['is_active'],
                 'is_default': updated_server['is_default'],
                 'is_authenticated': auth_info is not None,
@@ -384,6 +427,7 @@ class MediaMTXServersPresenter(BasePresenter):
                 'last_health_check': updated_server['last_health_check'],
                 'created_at': updated_server['created_at'],
                 'updated_at': updated_server['updated_at'],
+                'metadata': metadata,
                 'metrics': metrics
             }
             

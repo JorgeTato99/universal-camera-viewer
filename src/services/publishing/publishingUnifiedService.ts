@@ -186,13 +186,20 @@ class PublishingUnifiedService {
     options?: Partial<RemotePublishCommand>
   ): Promise<UnifiedPublication> {
     try {
-      const payload: RemotePublishCommand = {
-        server_id: serverId,
-        ...options
+      // Usar nuevo endpoint v2 con estructura unificada
+      const payload = {
+        type: 'remote' as const,
+        target_server_id: serverId,
+        stream_key: options?.stream_key,
+        options: {
+          custom_name: options?.metadata?.custom_name,
+          custom_description: options?.metadata?.custom_description,
+          ...options?.metadata
+        }
       };
 
-      const response = await apiClient.post<ApiResponse<UnifiedPublication>>(
-        `/v1/cameras/${cameraId}/publish`,
+      const response = await apiClient.post<ApiResponse<any>>(
+        `/v2/cameras/${cameraId}/publications`,
         payload
       );
 
@@ -203,7 +210,27 @@ class PublishingUnifiedService {
           message: 'La cámara está siendo publicada al servidor remoto',
         });
         
-        return response.data.data;
+        // Mapear respuesta del nuevo formato al formato esperado
+        const publicationData = response.data.data;
+        return {
+          camera_id: publicationData.camera_id,
+          publication_type: 'remote' as PublicationType,
+          server_id: publicationData.server_id,
+          server_name: publicationData.server_name,
+          status: publicationData.status as PublicationStatus,
+          started_at: publicationData.started_at,
+          metrics: publicationData.metrics || {
+            fps: 0,
+            bitrate_kbps: 0,
+            viewers: 0,
+            uptime_seconds: 0,
+            latency_ms: 0
+          },
+          stream_url: publicationData.stream_url || '',
+          webrtc_url: publicationData.webrtc_url,
+          camera_name: publicationData.camera_name,
+          camera_ip: publicationData.camera_ip
+        };
       }
 
       throw new Error('Error al iniciar publicación remota');
@@ -222,9 +249,11 @@ class PublishingUnifiedService {
    */
   async stopRemotePublishing(cameraId: string, serverId: number): Promise<void> {
     try {
-      const response = await apiClient.post<ApiResponse<void>>(
-        `/v1/cameras/${cameraId}/unpublish`,
-        { server_id: serverId }
+      // Construir el publication_id según el formato esperado
+      const publicationId = `remote_${cameraId}_${serverId}`;
+      
+      const response = await apiClient.delete<ApiResponse<void>>(
+        `/v2/cameras/${cameraId}/publications/${publicationId}`
       );
 
       if (response.data?.success) {
@@ -249,13 +278,19 @@ class PublishingUnifiedService {
 
   /**
    * Inicia publicación local para una cámara
-   * TODO: Implementar cuando el backend soporte publicación local unificada
    */
   async startLocalPublishing(cameraId: string): Promise<UnifiedPublication> {
     try {
-      const response = await apiClient.post<ApiResponse<UnifiedPublication>>(
-        '/publishing/start',
-        { camera_id: cameraId }
+      // Usar nuevo endpoint v2 con estructura unificada
+      const payload = {
+        type: 'local' as const,
+        target_server_id: null,
+        options: {}
+      };
+
+      const response = await apiClient.post<ApiResponse<any>>(
+        `/v2/cameras/${cameraId}/publications`,
+        payload
       );
 
       if (response.data?.success && response.data?.data) {
@@ -265,7 +300,25 @@ class PublishingUnifiedService {
           message: 'La cámara está siendo publicada al servidor local',
         });
         
-        return response.data.data;
+        // Mapear respuesta del nuevo formato al formato esperado
+        const publicationData = response.data.data;
+        return {
+          camera_id: publicationData.camera_id,
+          publication_type: 'local' as PublicationType,
+          server_name: publicationData.server_name || 'MediaMTX Local',
+          status: publicationData.status as PublicationStatus,
+          started_at: publicationData.started_at,
+          metrics: publicationData.metrics || {
+            fps: 0,
+            bitrate_kbps: 0,
+            viewers: 0,
+            uptime_seconds: 0,
+            latency_ms: 0
+          },
+          stream_url: publicationData.stream_url || '',
+          camera_name: publicationData.camera_name,
+          camera_ip: publicationData.camera_ip
+        };
       }
 
       throw new Error('Error al iniciar publicación local');
@@ -281,13 +334,14 @@ class PublishingUnifiedService {
 
   /**
    * Detiene publicación local para una cámara
-   * TODO: Implementar cuando el backend soporte publicación local unificada
    */
   async stopLocalPublishing(cameraId: string): Promise<void> {
     try {
-      const response = await apiClient.post<ApiResponse<void>>(
-        '/publishing/stop',
-        { camera_id: cameraId }
+      // Construir el publication_id según el formato esperado
+      const publicationId = `local_${cameraId}_0`;
+      
+      const response = await apiClient.delete<ApiResponse<void>>(
+        `/v2/cameras/${cameraId}/publications/${publicationId}`
       );
 
       if (response.data?.success) {

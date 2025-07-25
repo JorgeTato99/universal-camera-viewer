@@ -3,7 +3,7 @@
  * Panel principal de control para publicaciones MediaMTX
  */
 
-import { useEffect, memo, useState } from "react";
+import { useEffect, memo, useState, useCallback } from "react";
 import {
   Box,
   Container,
@@ -18,6 +18,9 @@ import {
   Tab,
   Button,
   Chip,
+  Fab,
+  Badge,
+  Zoom,
 } from "@mui/material";
 import {
   HelpOutline as HelpIcon,
@@ -27,12 +30,16 @@ import {
   Computer as LocalIcon,
   Add as AddIcon,
   Refresh as RefreshIcon,
+  Videocam as PublishIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { usePublishingHealth } from "../hooks/usePublishingHealth";
 import { usePublishingStore } from "../../../stores/publishingStore";
+import { useCameraStoreV2 } from "../../../stores/cameraStore.v2";
+import { ConnectionStatus } from "../../../types/camera.types.v2";
 import { colorTokens } from "../../../design-system/tokens";
 import { initializePublishingWebSocket } from "../../../services/websocket/publishingWebSocket";
+import { PublishCameraModal } from "../components/PublishCameraModal";
 
 /**
  * Dashboard principal de publicación MediaMTX
@@ -40,6 +47,7 @@ import { initializePublishingWebSocket } from "../../../services/websocket/publi
 const PublishingDashboard = memo(() => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
   
   const {
     systemHealth,
@@ -61,6 +69,8 @@ const PublishingDashboard = memo(() => {
     fetchUnifiedPublications,
   } = usePublishingStore();
 
+  const { cameras, loadCameras } = useCameraStoreV2();
+
   // Inicializar WebSocket y cargar datos al montar
   useEffect(() => {
     // Iniciar WebSocket para eventos en tiempo real
@@ -70,7 +80,19 @@ const PublishingDashboard = memo(() => {
     fetchConfigurations();
     fetchRemoteServers();
     fetchUnifiedPublications();
-  }, [fetchConfigurations, fetchRemoteServers, fetchUnifiedPublications]);
+    loadCameras();
+  }, [fetchConfigurations, fetchRemoteServers, fetchUnifiedPublications, loadCameras]);
+
+  // Calcular cámaras disponibles para publicar
+  const availableCamerasCount = Array.from(cameras.values()).filter(
+    camera => camera.status === ConnectionStatus.CONNECTED
+  ).length;
+
+  // Handlers
+  const handlePublishSuccess = useCallback((cameraId: string, serverId: number) => {
+    // Navegar a publicaciones activas después de publicar
+    navigate('/publishing/active');
+  }, [navigate]);
   
   // Actualizar datos según el tab activo
   useEffect(() => {
@@ -557,6 +579,44 @@ const PublishingDashboard = memo(() => {
           </Grid>
         </Box>
       </Fade>
+
+      {/* FAB para publicar cámara */}
+      <Zoom in={remote.servers.some(s => s.is_authenticated) && availableCamerasCount > 0}>
+        <Tooltip 
+          title={
+            availableCamerasCount > 0
+              ? `${availableCamerasCount} cámara${availableCamerasCount > 1 ? 's' : ''} disponible${availableCamerasCount > 1 ? 's' : ''} para publicar`
+              : "No hay cámaras disponibles"
+          }
+          placement="left"
+        >
+          <Fab
+            color="primary"
+            sx={{
+              position: 'fixed',
+              bottom: 24,
+              right: 24,
+              boxShadow: 4,
+            }}
+            onClick={() => setPublishModalOpen(true)}
+          >
+            <Badge 
+              badgeContent={availableCamerasCount} 
+              color="secondary"
+              max={9}
+            >
+              <PublishIcon />
+            </Badge>
+          </Fab>
+        </Tooltip>
+      </Zoom>
+
+      {/* Modal de publicación */}
+      <PublishCameraModal
+        open={publishModalOpen}
+        onClose={() => setPublishModalOpen(false)}
+        onPublishSuccess={handlePublishSuccess}
+      />
     </Container>
   );
 });

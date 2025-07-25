@@ -117,6 +117,7 @@ def run_migration(db_path: str, force: bool = False, no_backup: bool = False) ->
         logger.info("Insertando datos iniciales (SEED)...")
         seeder = DatabaseSeeder(str(db_path))
         seeder.seed_cameras()
+        seeder.seed_mediamtx_server()  # Agregar servidor MediaMTX
         seeder.close()
         
         logger.info("✅ Datos iniciales insertados")
