@@ -57,6 +57,8 @@ import { useCameraStoreV2 } from '../../../stores/cameraStore.v2';
 import { formatDuration, formatBitrate } from '../utils';
 import { publishingUnifiedService } from '../../../services/publishing/publishingUnifiedService';
 import { RemoteServerSelector } from '../components/remote/RemoteServerSelector';
+import { PublishCameraModal } from '../components/PublishCameraModal';
+import { notificationStore } from '../../../stores/notificationStore';
 import type { UnifiedPublication, PublicationType } from '../../../services/publishing/publishingUnifiedService';
 
 /**
@@ -82,40 +84,46 @@ const ActivePublicationsUnified = memo(() => {
   const [typeFilter, setTypeFilter] = useState<PublicationType | 'all'>('all');
   const [serverFilter, setServerFilter] = useState<number | 'all'>('all');
   const [unifiedPublications, setUnifiedPublications] = useState<UnifiedPublication[]>([]);
+  
+  // Log para debug
+  useEffect(() => {
+    console.log('[ActivePublicationsUnified] unifiedPublications actualizado:', unifiedPublications);
+  }, [unifiedPublications]);
   const [selectedCameraForRemote, setSelectedCameraForRemote] = useState<string | null>(null);
   const [selectedServerId, setSelectedServerId] = useState<number | null>(null);
   const [confirmStop, setConfirmStop] = useState<{ cameraId: string; type: PublicationType } | null>(null);
   const [selectedError, setSelectedError] = useState<{ cameraId: string; error: string } | null>(null);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [preselectedCameraId, setPreselectedCameraId] = useState<string | null>(null);
 
   // Cargar datos al montar
   useEffect(() => {
+    console.log('[ActivePublicationsUnified] Montando componente, cargando datos...');
     const loadData = async () => {
       await Promise.all([
         loadCameras(),
         fetchRemoteServers(),
         fetchUnifiedPublications()
       ]);
+      console.log('[ActivePublicationsUnified] Datos cargados');
     };
     loadData();
   }, [loadCameras, fetchRemoteServers, fetchUnifiedPublications]);
 
   // Auto-refresh cada 30 segundos (reducido desde 5 segundos para mejorar performance)
   useEffect(() => {
-    // Solo hacer polling si hay publicaciones activas o si estamos cargando
+    // Solo hacer polling si hay publicaciones activas
     const hasActivePublications = unifiedPublications.some(pub => 
       pub.status === 'publishing' || pub.status === 'starting'
     );
     
-    if (hasActivePublications || isLoading) {
-      // Polling más frecuente (15s) cuando hay actividad
-      const interval = setInterval(fetchUnifiedPublications, 15000);
-      return () => clearInterval(interval);
-    } else {
-      // Polling menos frecuente (30s) cuando no hay actividad
-      const interval = setInterval(fetchUnifiedPublications, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [fetchUnifiedPublications, unifiedPublications, isLoading]);
+    // Configurar intervalo según el estado
+    const intervalTime = hasActivePublications ? 10000 : 30000; // 10s si hay activas, 30s si no
+    
+    const interval = setInterval(fetchUnifiedPublications, intervalTime);
+    
+    return () => clearInterval(interval);
+  }, [fetchUnifiedPublications, unifiedPublications.length]);
 
   // Cargar publicaciones unificadas cuando cambien los filtros
   useEffect(() => {
@@ -134,14 +142,43 @@ const ActivePublicationsUnified = memo(() => {
     loadUnifiedData();
   }, [typeFilter, serverFilter, searchQuery]);
 
-  // Manejar inicio de publicación local
-  const handleStartLocal = useCallback(async (cameraId: string) => {
-    try {
-      await startPublishing(cameraId);
-    } catch (error) {
-      console.error('Error al iniciar publicación local:', error);
+  /**
+   * Maneja el inicio de publicación de forma inteligente
+   * Si hay servidores remotos autenticados, usa publicación remota
+   * Si no, muestra advertencia
+   * 
+   * @todo En el futuro, soportar publicación local cuando se implemente
+   */
+  const handleSmartPublish = useCallback(async (cameraId: string) => {
+    // Obtener servidores autenticados
+    const authenticatedServers = Array.from(remote.authStatuses.entries())
+      .filter(([_, status]) => status.is_authenticated)
+      .map(([serverId, _]) => remote.servers.find(s => s.id === serverId))
+      .filter(Boolean);
+
+    if (authenticatedServers.length === 0) {
+      // No hay servidores autenticados
+      notificationStore.addNotification({
+        type: 'warning',
+        title: 'Sin servidores configurados',
+        message: 'Debes configurar y autenticarte en al menos un servidor remoto antes de publicar',
+      });
+      return;
     }
-  }, [startPublishing]);
+
+    if (authenticatedServers.length === 1) {
+      // Solo hay un servidor, publicar directamente ahí
+      try {
+        await startRemotePublishing(cameraId, authenticatedServers[0]!.id);
+      } catch (error) {
+        console.error('Error al iniciar publicación remota:', error);
+      }
+    } else {
+      // Hay múltiples servidores, abrir modal de selección
+      setPreselectedCameraId(cameraId);
+      setShowPublishModal(true);
+    }
+  }, [remote.authStatuses, remote.servers, startRemotePublishing]);
 
   // Manejar inicio de publicación remota
   const handleStartRemote = useCallback(async (cameraId: string, serverId: number) => {
@@ -374,9 +411,7 @@ const ActivePublicationsUnified = memo(() => {
                             variant="contained"
                             startIcon={<PlayIcon />}
                             onClick={() => {
-                              if (availableCameras.length > 0) {
-                                handleStartLocal(availableCameras[0].camera_id);
-                              }
+                              setShowPublishModal(true);
                             }}
                           >
                             Iniciar Primera Publicación
@@ -480,7 +515,8 @@ const ActivePublicationsUnified = memo(() => {
                                   color="success"
                                   onClick={() => {
                                     if (publication.publication_type === 'local') {
-                                      handleStartLocal(publication.camera_id);
+                                      // @todo Implementar reconexión local cuando esté disponible
+                                      handleSmartPublish(publication.camera_id);
                                     } else {
                                       setSelectedCameraForRemote(publication.camera_id);
                                     }
@@ -626,6 +662,28 @@ const ActivePublicationsUnified = memo(() => {
               </Button>
             </DialogActions>
           </Dialog>
+
+          {/* Modal de publicación remota */}
+          <PublishCameraModal
+            open={showPublishModal}
+            onClose={() => {
+              setShowPublishModal(false);
+              setPreselectedCameraId(null);
+            }}
+            onPublishSuccess={async (cameraId, serverId) => {
+              setShowPublishModal(false);
+              setPreselectedCameraId(null);
+              // Actualizar la lista de publicaciones inmediatamente
+              await fetchUnifiedPublications();
+              // Mostrar notificación de éxito
+              notificationStore.addNotification({
+                type: 'success',
+                title: 'Publicación exitosa',
+                message: 'La cámara está siendo publicada al servidor remoto',
+              });
+            }}
+            preselectedCameraId={preselectedCameraId || undefined}
+          />
         </Box>
       </Fade>
     </Container>

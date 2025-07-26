@@ -120,14 +120,18 @@ async def get_all_publications(
         # Obtener publicaciones remotas
         remote_publications = []
         try:
+            # El presenter ya está inicializado por su factory method
             remote_pubs = await remote_presenter.list_remote_streams()
+            
+            logger.debug(f"Publicaciones remotas obtenidas: {len(remote_pubs)}")
             
             # Formatear publicaciones remotas
             for pub_data in remote_pubs:
                 remote_publications.append({
                     'camera_id': pub_data.get('camera_id'),
                     'camera_name': pub_data.get('camera_name', pub_data.get('camera_id')),
-                    'status': pub_data.get('status', 'active'),
+                    'camera_ip': pub_data.get('camera_ip', ''),  # Agregar IP de la cámara
+                    'status': pub_data.get('status', 'publishing'),
                     'type': 'remote',
                     'server_name': pub_data.get('server_name', 'Unknown Server'),
                     'server_id': pub_data.get('server_id', 0),
@@ -148,6 +152,10 @@ async def get_all_publications(
             f"Retornando publicaciones unificadas - "
             f"Local: {len(local_publications)}, Remoto: {len(remote_publications)}"
         )
+        
+        # Log de debug para publicaciones remotas
+        if remote_publications:
+            logger.debug(f"Publicaciones remotas: {remote_publications}")
         
         return UnifiedPublishingResponse(
             local=local_publications,

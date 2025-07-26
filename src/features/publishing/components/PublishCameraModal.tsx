@@ -67,6 +67,7 @@ interface PublishCameraModalProps {
   open: boolean;
   onClose: () => void;
   onPublishSuccess?: (cameraId: string, serverId: number) => void;
+  preselectedCameraId?: string;
 }
 
 const STEPS = ['Seleccionar Cámara', 'Elegir Servidor', 'Confirmar y Publicar'];
@@ -77,6 +78,7 @@ export const PublishCameraModal: React.FC<PublishCameraModalProps> = ({
   open,
   onClose,
   onPublishSuccess,
+  preselectedCameraId,
 }) => {
   // Estado del componente
   const [activeStep, setActiveStep] = useState(0);
@@ -106,32 +108,44 @@ export const PublishCameraModal: React.FC<PublishCameraModalProps> = ({
     }
   }, [open, loadCameras, fetchRemoteServers]);
 
-  // Obtener cámaras disponibles (no publicadas y online)
+  // Obtener cámaras disponibles
   const availableCameras = useMemo(() => {
-    return Array.from(cameras.values()).filter(camera => {
-      // TODO: Implementar filtrado de cámaras ya publicadas
-      // Necesita integración con el estado de publicaciones activas
-      // para evitar publicar la misma cámara dos veces
-      // Pseudocódigo:
-      // const isAlreadyPublishing = publishingMap.has(camera.camera_id);
-      // return camera.status === ConnectionStatus.CONNECTED && !isAlreadyPublishing;
-      
-      // Por ahora, mostrar todas las cámaras con estado 'connected'
-      return camera.status === ConnectionStatus.CONNECTED;
-    });
-  }, [cameras]);
+    const allCameras = Array.from(cameras.values());
+    
+    // Filtrar cámaras que ya están siendo publicadas
+    const publishingCameraIds = new Set(
+      Array.from(remote.publications.values())
+        .filter(pub => pub.status === 'publishing' || pub.status === 'starting')
+        .map(pub => pub.camera_id)
+    );
+    
+    return allCameras.filter(camera => !publishingCameraIds.has(camera.camera_id));
+  }, [cameras, remote.publications]);
 
   // Obtener servidores autenticados
   const authenticatedServers = useMemo(() => {
     return remote.servers.filter(server => server.is_authenticated);
   }, [remote.servers]);
 
+  // Manejar preselección de cámara
+  useEffect(() => {
+    if (preselectedCameraId && open) {
+      setSelectedCameraId(preselectedCameraId);
+      // Si ya hay una cámara preseleccionada, ir directo al paso de servidor
+      setActiveStep(1);
+    }
+  }, [preselectedCameraId, open]);
+
   // Auto-seleccionar servidor si solo hay uno
   useEffect(() => {
     if (authenticatedServers.length === 1 && !selectedServerId) {
       setSelectedServerId(authenticatedServers[0].id);
+      // Si ya hay cámara seleccionada y solo un servidor, ir al último paso
+      if (selectedCameraId && activeStep === 1) {
+        setActiveStep(2);
+      }
     }
-  }, [authenticatedServers, selectedServerId]);
+  }, [authenticatedServers, selectedServerId, selectedCameraId, activeStep]);
 
   // Handlers
   const handleCameraSelect = useCallback((cameraId: string) => {
@@ -274,7 +288,8 @@ export const PublishCameraModal: React.FC<PublishCameraModalProps> = ({
                       <CameraIcon 
                         sx={{ 
                           fontSize: 40, 
-                          color: camera.status === ConnectionStatus.CONNECTED 
+                          color: camera.status === ConnectionStatus.CONNECTED || 
+                                 camera.status === ConnectionStatus.STREAMING
                             ? colorTokens.status.connected 
                             : 'text.disabled' 
                         }} 
@@ -292,14 +307,30 @@ export const PublishCameraModal: React.FC<PublishCameraModalProps> = ({
                             size="small" 
                             variant="outlined" 
                           />
-                          {camera.status === ConnectionStatus.CONNECTED && (
-                            <Chip 
-                              label="En línea" 
-                              size="small" 
-                              color="success" 
-                              icon={<CheckIcon />}
-                            />
-                          )}
+                          <Chip 
+                            label={
+                              camera.status === ConnectionStatus.DISCONNECTED ? "Desconectada" :
+                              camera.status === ConnectionStatus.CONNECTED ? "Conectada" :
+                              camera.status === ConnectionStatus.STREAMING ? "Transmitiendo" :
+                              camera.status === ConnectionStatus.CONNECTING ? "Conectando" :
+                              camera.status === ConnectionStatus.ERROR ? "Error" :
+                              camera.status.charAt(0).toUpperCase() + camera.status.slice(1)
+                            } 
+                            size="small" 
+                            color={
+                              camera.status === ConnectionStatus.CONNECTED ? "success" :
+                              camera.status === ConnectionStatus.STREAMING ? "success" :
+                              camera.status === ConnectionStatus.CONNECTING ? "warning" :
+                              camera.status === ConnectionStatus.ERROR ? "error" :
+                              "default"
+                            }
+                            icon={
+                              camera.status === ConnectionStatus.CONNECTED || 
+                              camera.status === ConnectionStatus.STREAMING ? <CheckIcon /> : 
+                              camera.status === ConnectionStatus.DISCONNECTED ? <CameraOffIcon /> :
+                              undefined
+                            }
+                          />
                         </Box>
                       </Box>
                     </Box>

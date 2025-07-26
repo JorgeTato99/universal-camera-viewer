@@ -133,6 +133,7 @@ class PublishingUnifiedService {
    * Obtiene todas las publicaciones activas (local + remoto)
    */
   async getAllPublications(filters?: PublicationFilters): Promise<UnifiedPublication[]> {
+    console.log('[PublishingUnifiedService] getAllPublications called with filters:', filters);
     try {
       // Construir parámetros de consulta
       const params = new URLSearchParams();
@@ -141,12 +142,37 @@ class PublishingUnifiedService {
       if (filters?.status) params.append('status', filters.status);
       if (filters?.search) params.append('search', filters.search);
 
-      const response = await apiClient.get<ApiResponse<UnifiedPublication[]>>(
-        `/publishing/all?${params.toString()}`
-      );
+      const url = `/publishing/all?${params.toString()}`;
+      console.log('[PublishingUnifiedService] Fetching from:', url);
+      
+      const response = await apiClient.get<any>(url);
 
-      if (response.data?.success && response.data?.data) {
-        return response.data.data;
+      // El backend devuelve UnifiedPublishingResponse con estructura:
+      // { local: [], remote: [], summary: {...} }
+      if (response.data) {
+        const publications: UnifiedPublication[] = [];
+        
+        // Agregar publicaciones locales con el tipo correcto
+        if (response.data.local) {
+          response.data.local.forEach((pub: any) => {
+            publications.push({
+              ...pub,
+              publication_type: 'local' as PublicationType  // Asegurar tipo correcto
+            });
+          });
+        }
+        
+        // Agregar publicaciones remotas con el tipo correcto
+        if (response.data.remote) {
+          response.data.remote.forEach((pub: any) => {
+            publications.push({
+              ...pub,
+              publication_type: 'remote' as PublicationType  // Asegurar tipo correcto
+            });
+          });
+        }
+        
+        return publications;
       }
 
       return [];
@@ -199,20 +225,20 @@ class PublishingUnifiedService {
         }
       };
 
-      const response = await apiClient.post<ApiResponse<any>>(
+      const response = await apiClient.post<any>(
         `/v2/cameras/${cameraId}/publications`,
         payload
       );
 
-      if (response.data?.success && response.data?.data) {
+      if (response.data) {
         notificationStore.addNotification({
           type: 'success',
           title: 'Publicación iniciada',
           message: 'La cámara está siendo publicada al servidor remoto',
         });
         
-        // Mapear respuesta del nuevo formato al formato esperado
-        const publicationData = response.data.data;
+        // La respuesta ahora viene directamente, no envuelta en ApiResponse
+        const publicationData = response.data;
         return {
           camera_id: publicationData.camera_id,
           publication_type: 'remote' as PublicationType,

@@ -50,6 +50,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
             db_path = str(Path(__file__).parent.parent.parent / "data" / "camera_data.db")
         super().__init__(db_path)
         self.logger = logger
+        self._lock = asyncio.Lock()  # Inicializar lock para operaciones asíncronas
         
     # === Métodos de Métricas ===
     
@@ -1031,9 +1032,9 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 
                 # Preparar metadata
                 metadata = {
-                    'process_pid': pub_row.get('process_pid'),
-                    'ffmpeg_command': pub_row.get('ffmpeg_command'),
-                    'final_error_count': pub_row.get('error_count', 0)
+                    'process_pid': pub_row['process_pid'] if pub_row['process_pid'] is not None else None,
+                    'ffmpeg_command': pub_row['ffmpeg_command'] if pub_row['ffmpeg_command'] is not None else None,
+                    'final_error_count': pub_row['error_count'] if pub_row['error_count'] is not None else 0
                 }
                 
                 # Insertar en historial
@@ -1058,9 +1059,9 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                     round(metrics['avg_bitrate'] or 0, 2) if metrics else 0,
                     round(metrics['total_data_mb'] or 0, 2) if metrics else 0,
                     int(metrics['max_viewers'] or 0) if metrics else 0,
-                    pub_row.get('error_count', 0),
+                    pub_row['error_count'] if pub_row['error_count'] is not None else 0,
                     termination_reason.value,
-                    pub_row.get('last_error'),
+                    pub_row['last_error'] if pub_row['last_error'] is not None else None,
                     json.dumps(metadata)
                 ))
                 
@@ -2452,6 +2453,8 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                 with self._get_connection() as conn:
                     cursor = conn.cursor()
                     
+                    self.logger.info("Consultando publicaciones remotas activas desde BD...")
+                    
                     query = """
                         SELECT 
                             cp.*,
@@ -2463,7 +2466,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                         FROM camera_publications cp
                         JOIN cameras c ON cp.camera_id = c.camera_id
                         JOIN mediamtx_servers s ON cp.server_id = s.server_id
-                        WHERE cp.is_active = 1 AND cp.is_remote = 1
+                        WHERE cp.is_active = 1
                     """
                     
                     params = []
@@ -2473,12 +2476,17 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                     
                     cursor.execute(query, params)
                     
+                    rows = cursor.fetchall()
+                    self.logger.info(f"Publicaciones remotas activas encontradas: {len(rows)}")
+                    
                     publications = []
-                    for row in cursor:
+                    for row in rows:
+                        self.logger.debug(f"Publicación: {dict(row)}")
                         publications.append({
                             'publication_id': row['publication_id'],
                             'camera_id': row['camera_id'],
-                            'camera_name': row['camera_name'],
+                            'camera_name': row['camera_name'] or row['camera_id'],
+                            'camera_ip': '',  # No tenemos IP en esta consulta
                             'camera_brand': row['camera_brand'],
                             'camera_model': row['camera_model'],
                             'server_id': row['server_id'],
@@ -2487,6 +2495,7 @@ class MediaMTXDatabaseService(PublishingDatabaseService):
                             'publish_url': row['publish_url'],
                             'webrtc_url': row['webrtc_url'],
                             'status': row['status'],
+                            'session_id': row['session_id'] if row['session_id'] is not None else '',
                             'start_time': row['start_time'],
                             'error_count': row['error_count'],
                             'last_error': row['last_error']

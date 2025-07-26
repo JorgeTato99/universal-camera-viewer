@@ -142,7 +142,7 @@ class MediaMTXPublishingPresenter(BasePresenter):
                 )
             
             self.logger.info(
-                f"Publicando cámara {camera_id} ({camera.get('display_name', 'Sin nombre')}) "
+                f"Publicando cámara {camera_id} ({camera.display_name or 'Sin nombre'}) "
                 f"a servidor {server['server_name']}"
             )
             
@@ -173,6 +173,21 @@ class MediaMTXPublishingPresenter(BasePresenter):
                     'server_id': server_id
                 }
             except MediaMTXAPIError as e:
+                # Verificar si es error 409 (conflicto - cámara ya existe)
+                if e.status_code == 409:
+                    self.logger.warning(
+                        f"Cámara ya existe en servidor remoto, intentando obtener información"
+                    )
+                    
+                    # TODO: Implementar lógica para obtener la cámara existente
+                    # Por ahora, devolver error específico
+                    return {
+                        'success': False,
+                        'error': 'La cámara ya existe en el servidor remoto. Por favor, elimínela primero o use otro nombre.',
+                        'error_code': 'CAMERA_ALREADY_EXISTS',
+                        'details': e.response_data if hasattr(e, 'response_data') else None
+                    }
+                
                 # Otros errores de API
                 self.logger.error(f"Error de API creando cámara: {str(e)}")
                 return {
@@ -303,35 +318,35 @@ class MediaMTXPublishingPresenter(BasePresenter):
         # Preparar metadatos
         json_data = {
             'features': {
-                'motion_detection': 'motion_detection' in camera.get('capabilities', []),
-                'night_vision': 'night_vision' in camera.get('capabilities', []),
-                'two_way_audio': 'audio' in camera.get('capabilities', []),
-                'ptz': 'ptz' in camera.get('capabilities', [])
+                'motion_detection': False,  # TODO: Implementar detección de movimiento
+                'night_vision': camera.capabilities.has_ir if camera.capabilities else False,
+                'two_way_audio': camera.capabilities.has_audio if camera.capabilities else False,
+                'ptz': camera.capabilities.has_ptz if camera.capabilities else False
             },
             'fps': 30,  # TODO: Obtener FPS real del stream profile
             'location': {
-                'building': camera.get('location', 'Sin ubicación'),
-                'zone': camera.get('location', 'general')
+                'building': camera.location or 'Sin ubicación',
+                'zone': camera.location or 'general'
             },
-            'model': f"{camera.get('brand', 'Unknown')} {camera.get('model', 'Camera')}",
+            'model': f"{camera.brand or 'Unknown'} {camera.model or 'Camera'}",
             'resolution': '1920x1080',  # TODO: Obtener resolución real
-            'local_camera_id': camera['camera_id'],
-            'local_camera_code': camera.get('code', '')
+            'local_camera_id': camera.camera_id,
+            'local_camera_code': ''  # No existe atributo code en CameraModel
         }
         
         return RemoteCameraRequest(
-            name=custom_name or camera.get('display_name', f"Camera {camera['camera_id']}"),
-            description=custom_description or camera.get('description', ''),
+            name=custom_name or camera.display_name or f"Camera {camera.camera_id}",
+            description=custom_description or camera.description or '',
             rtsp_address=rtsp_url,
             json_data=json_data
         )
     
-    async def _get_camera_rtsp_url(self, camera: Dict[str, Any]) -> str:
+    async def _get_camera_rtsp_url(self, camera) -> str:
         """
         Obtiene la URL RTSP de una cámara local.
         
         Args:
-            camera: Datos de la cámara
+            camera: Objeto CameraModel
             
         Returns:
             URL RTSP completa
@@ -339,28 +354,34 @@ class MediaMTXPublishingPresenter(BasePresenter):
         Raises:
             ValidationError: Si no se puede obtener la URL
         """
-        # TODO: Implementar lógica real para obtener RTSP URL
-        # Por ahora usar un patrón genérico
+        # TODO: Implementar lógica real para obtener RTSP URL de los endpoints verificados
+        # Por ahora usar un patrón genérico basado en la información de la cámara
         
-        # Buscar endpoint RTSP principal
-        endpoints = camera.get('endpoints', [])
-        for endpoint in endpoints:
-            if endpoint.get('type') == 'rtsp_main':
-                return endpoint['url']
+        # Verificar que tenemos IP
+        if not camera.ip:
+            raise ValidationError(f"Cámara {camera.camera_id} sin dirección IP")
         
-        # Si no hay endpoint, construir uno genérico
-        ip = camera.get('ip_address')
-        if not ip:
-            raise ValidationError(f"Cámara {camera['camera_id']} sin dirección IP")
+        # @todo: Obtener el endpoint RTSP real desde los protocolos verificados
+        # Por ahora, usar patrones genéricos basados en marca
+        
+        # Construir URL con credenciales si están disponibles
+        username = camera.username or ''
+        password = camera.password or ''
+        
+        # Si hay credenciales, incluirlas en la URL
+        auth_part = f"{username}:{password}@" if username and password else ""
         
         # Patrón genérico basado en marca
-        brand = camera.get('brand', '').lower()
+        brand = (camera.brand or '').lower()
         if brand == 'dahua':
-            return f"rtsp://{ip}:554/cam/realmonitor?channel=1&subtype=0"
+            return f"rtsp://{auth_part}{camera.ip}:554/cam/realmonitor?channel=1&subtype=0"
         elif brand == 'hikvision':
-            return f"rtsp://{ip}:554/Streaming/Channels/101"
+            return f"rtsp://{auth_part}{camera.ip}:554/Streaming/Channels/101"
+        elif brand == 'tp-link' or brand == 'tplink':
+            return f"rtsp://{auth_part}{camera.ip}:554/stream1"
         else:
-            return f"rtsp://{ip}:554/stream1"
+            # Patrón genérico
+            return f"rtsp://{auth_part}{camera.ip}:554/stream1"
     
     async def _save_publication_to_db(
         self,
@@ -667,7 +688,7 @@ class MediaMTXPublishingPresenter(BasePresenter):
                 
                 publications.append({
                     'camera_id': camera_id,
-                    'camera_name': camera.get('display_name', 'Sin nombre') if camera else 'Desconocida',
+                    'camera_name': camera.display_name if camera else 'Desconocida',
                     'server_id': publication['server_id'],
                     'remote_id': publication['remote_id'],
                     'publish_url': publication['publish_url'],

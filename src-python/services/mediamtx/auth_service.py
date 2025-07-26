@@ -547,11 +547,24 @@ class MediaMTXAuthService(BaseService):
             # Desencriptar
             decrypted_token = self._encryption_service.decrypt(token_data['access_token'])
             
+            # Convertir expires_at de string a datetime si es necesario
+            expires_at = token_data.get('expires_at')
+            if expires_at and isinstance(expires_at, str):
+                try:
+                    # Intentar parsear el datetime
+                    if expires_at.endswith('Z'):
+                        expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    else:
+                        expires_at = datetime.fromisoformat(expires_at)
+                except:
+                    self.logger.warning(f"No se pudo parsear expires_at: {expires_at}")
+                    expires_at = None
+            
             # Crear objeto
             return AuthToken(
                 access_token=decrypted_token,
                 token_type=token_data.get('token_type', 'bearer'),
-                expires_at=token_data.get('expires_at'),
+                expires_at=expires_at,
                 username=token_data.get('username'),
                 role=token_data.get('role'),
                 user_id=token_data.get('user_id')

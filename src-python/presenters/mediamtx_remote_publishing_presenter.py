@@ -57,8 +57,11 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
         """Inicialización específica del presenter."""
         self.logger.info("Inicializando MediaMTXRemotePublishingPresenter")
         
-        # Obtener servicio de publicación remota
-        self._remote_publisher = await get_mediamtx_remote_publisher()
+        try:
+            # Obtener servicio de publicación remota
+            self._remote_publisher = await get_mediamtx_remote_publisher()
+        except Exception as e:
+            self.logger.error(f"Error inicializando remote publisher: {e}")
         
         # Cargar streams remotos activos
         await self._load_active_remote_streams()
@@ -76,26 +79,43 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
     async def _load_active_remote_streams(self) -> None:
         """Carga streams remotos activos desde la base de datos."""
         try:
+            self.logger.info("Cargando streams remotos activos desde BD...")
             # Obtener publicaciones remotas activas
             publications = await self._db_service.get_active_remote_publications()
             
+            self.logger.info(f"Publicaciones activas desde BD: {len(publications)}")
+            
             for pub in publications:
-                # Solo cargar las que tienen proceso FFmpeg activo
-                if pub.get('status', '').lower() == 'publishing':
-                    self._active_remote_streams[pub['camera_id']] = {
-                        'server_id': pub['server_id'],
-                        'remote_camera_id': pub['remote_camera_id'],
-                        'publish_url': pub['publish_url'],
-                        'session_id': pub['session_id'],
-                        'started_at': pub['start_time']
-                    }
+                # Cargar todas las publicaciones activas, no solo las 'publishing'
+                self.logger.debug(f"Procesando publicación: {pub}")
+                
+                # Obtener el nombre del servidor
+                server_name = 'Unknown Server'
+                if pub.get('server_id'):
+                    try:
+                        server = await self._db_service.get_server_by_id(pub['server_id'])
+                        if server:
+                            server_name = server.get('server_name', f'Server {pub["server_id"]}')
+                    except:
+                        pass
+                
+                self._active_remote_streams[pub['camera_id']] = {
+                    'server_id': pub['server_id'],
+                    'server_name': server_name,
+                    'remote_camera_id': pub.get('remote_camera_id', ''),
+                    'publish_url': pub.get('publish_url', ''),
+                    'webrtc_url': pub.get('webrtc_url', ''),
+                    'session_id': pub.get('session_id', ''),
+                    'started_at': pub.get('start_time'),
+                    'status': pub.get('status', 'publishing')
+                }
             
             self.logger.info(
                 f"Cargados {len(self._active_remote_streams)} streams remotos activos"
             )
             
         except Exception as e:
-            self.logger.error(f"Error cargando streams activos: {str(e)}")
+            self.logger.error(f"Error cargando streams activos: {str(e)}", exc_info=True)
     
     async def start_remote_stream(
         self,
@@ -127,9 +147,12 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
             
             # Verificar si ya está streaming
             if camera_id in self._active_remote_streams:
+                self.logger.warning(
+                    f"Cámara {camera_id} ya está publicando al servidor {server_id}"
+                )
                 return {
                     'success': False,
-                    'error': 'La cámara ya está transmitiendo a un servidor remoto',
+                    'error': 'La cámara ya está siendo publicada',
                     'error_code': 'ALREADY_STREAMING'
                 }
             
@@ -161,27 +184,34 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
                     'error_code': 'NO_PUBLISH_URL'
                 }
             
-            # Paso 2: Iniciar publicación FFmpeg real
+            # Paso 2: El streaming ya fue iniciado por publish_camera_to_remote
+            # Solo necesitamos verificar el estado
             self.logger.info(
-                f"Iniciando FFmpeg para publicar a {sanitize_url(publish_url)}"
+                f"Stream ya iniciado por publishing presenter para {sanitize_url(publish_url)}"
             )
             
-            # Usar el servicio remoto de publicación
-            stream_result = await self._remote_publisher.publish_camera(
-                camera_id=camera_id,
-                server_id=server_id,
-                custom_name=custom_name,
-                custom_description=custom_description
+            # Verificar si el stream está activo mediante la sesión
+            session_id = publish_result.get('session_id')
+            streaming = publish_result.get('streaming', False)
+            
+            self.logger.info(
+                f"Estado de publicación - session_id: {session_id}, "
+                f"streaming: {streaming}, publish_result: {publish_result}"
             )
             
-            if stream_result.success:
+            if streaming and session_id:
+                # Obtener nombre del servidor
+                server = await self._db_service.get_server_by_id(server_id)
+                server_name = server['server_name'] if server else f'Server {server_id}'
+                
                 # Actualizar estado interno
                 self._active_remote_streams[camera_id] = {
                     'server_id': server_id,
+                    'server_name': server_name,
                     'remote_camera_id': publish_result.get('remote_camera_id'),
                     'publish_url': publish_url,
                     'webrtc_url': webrtc_url,
-                    'session_id': stream_result.session_id if hasattr(stream_result, 'session_id') else None,
+                    'session_id': session_id,
                     'started_at': datetime.utcnow()
                 }
                 
@@ -201,13 +231,11 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
                     'message': 'Stream remoto iniciado correctamente'
                 }
             else:
-                # Si falla el FFmpeg, limpiar la cámara remota creada
-                # TODO: Decidir si eliminar cámara remota en caso de fallo
-                
+                # Si no se inició el streaming correctamente
                 return {
                     'success': False,
-                    'error': stream_result.error or 'Error iniciando proceso FFmpeg',
-                    'error_code': 'FFMPEG_START_FAILED'
+                    'error': publish_result.get('message', 'No se pudo iniciar el streaming'),
+                    'error_code': 'STREAMING_NOT_STARTED'
                 }
                 
         except Exception as e:
@@ -247,10 +275,10 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
                 f"Deteniendo stream remoto para cámara {camera_id}"
             )
             
-            # Detener proceso FFmpeg
-            stop_result = await self._remote_publisher.stop_publishing(camera_id)
+            # Detener proceso FFmpeg a través del publishing presenter
+            stop_result = await self._publishing_presenter.unpublish_camera(camera_id)
             
-            if stop_result.success:
+            if stop_result.get('success', False):
                 # Actualizar estado
                 del self._active_remote_streams[camera_id]
                 
@@ -271,7 +299,7 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
             else:
                 return {
                     'success': False,
-                    'error': stop_result.error or 'Error deteniendo proceso FFmpeg',
+                    'error': stop_result.get('error', 'Error deteniendo proceso FFmpeg'),
                     'error_code': 'STOP_FAILED'
                 }
                 
@@ -302,26 +330,44 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
         if camera_id in self._active_remote_streams:
             stream_info = self._active_remote_streams[camera_id]
             
-            # Obtener estado detallado del servicio
-            detailed_status = await self._remote_publisher.get_remote_publication_status(
+            # Obtener estado detallado del publishing presenter
+            detailed_status = await self._publishing_presenter.get_publication_status(
                 camera_id
             )
             
-            # TODO: Obtener métricas reales del proceso FFmpeg
-            # Por ahora retornar información básica
+            # Por ahora, no intentar obtener información adicional de la cámara
+            # para evitar problemas de importación
+            
+            # Obtener métricas del proceso FFmpeg si está disponible
+            metrics = {'fps': 0, 'bitrate_kbps': 0, 'frames_sent': 0, 'viewers': 0}
+            
+            # Si tenemos session_id, intentar obtener métricas del stream service
+            if 'session_id' in stream_info and stream_info['session_id']:
+                try:
+                    from services.publishing.stream_service import get_publishing_stream_service
+                    stream_service = get_publishing_stream_service()
+                    stream_metrics = await stream_service.get_stream_metrics(stream_info['session_id'])
+                    
+                    if stream_metrics and stream_metrics.get('metrics'):
+                        metrics = {
+                            'fps': stream_metrics['metrics'].get('fps', 0),
+                            'bitrate_kbps': stream_metrics['metrics'].get('bitrate_kbps', 0),
+                            'frames_sent': stream_metrics['metrics'].get('frames_sent', 0),
+                            'viewers': 0  # TODO: Implementar viewers cuando esté disponible
+                        }
+                except Exception as e:
+                    self.logger.debug(f"No se pudieron obtener métricas del stream: {str(e)}")
             
             return {
                 'is_streaming': True,
                 'stream_info': {
                     **stream_info,
-                    'status': detailed_status.get('status', 'publishing'),
+                    'camera_name': stream_info.get('camera_name', camera_id),
+                    'camera_ip': stream_info.get('camera_ip', ''),
+                    'status': detailed_status.get('publication', {}).get('status', 'publishing') if detailed_status.get('publication') else 'publishing',
                     'duration': self._calculate_duration(stream_info['started_at'])
                 },
-                'metrics': {
-                    'fps': 0,  # TODO: Obtener de FFmpeg
-                    'bitrate': 0,  # TODO: Obtener de FFmpeg
-                    'frames_sent': 0  # TODO: Obtener de FFmpeg
-                }
+                'metrics': metrics
             }
         
         return {
@@ -345,14 +391,54 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
         """
         streams = []
         
+        self.logger.info(
+            f"list_remote_streams - Active streams en memoria: {len(self._active_remote_streams)}"
+        )
+        
+        # No necesitamos el servicio de cámaras aquí
+        
         for camera_id, stream_info in self._active_remote_streams.items():
+            self.logger.debug(f"Procesando stream para cámara {camera_id}")
             if server_id is None or stream_info['server_id'] == server_id:
                 status = await self.get_remote_stream_status(camera_id)
-                streams.append({
-                    'camera_id': camera_id,
-                    **status['stream_info'],
-                    'metrics': status.get('metrics', {})
-                })
+                self.logger.debug(f"Status obtenido para {camera_id}: is_streaming={status['is_streaming']}")
+                if status['is_streaming'] and status['stream_info']:
+                    # El stream_info ya incluye camera_name y camera_ip desde get_remote_stream_status
+                    streams.append({
+                        'camera_id': camera_id,
+                        **status['stream_info'],
+                        'metrics': status.get('metrics', {})
+                    })
+        
+        self.logger.info(
+            f"list_remote_streams devolviendo {len(streams)} streams"
+        )
+        
+        # Debug: mostrar contenido de active_streams
+        self.logger.debug(
+            f"Active streams actual: {list(self._active_remote_streams.keys())}"
+        )
+        
+        # Si no hay streams en memoria, intentar cargar desde BD
+        if len(streams) == 0:
+            self.logger.info("No hay streams en memoria, cargando desde BD...")
+            await self._load_active_remote_streams()
+            
+            # Intentar de nuevo después de cargar
+            streams = []
+            for camera_id, stream_info in self._active_remote_streams.items():
+                if server_id is None or stream_info['server_id'] == server_id:
+                    status = await self.get_remote_stream_status(camera_id)
+                    if status['is_streaming'] and status['stream_info']:
+                        streams.append({
+                            'camera_id': camera_id,
+                            **status['stream_info'],
+                            'metrics': status.get('metrics', {})
+                        })
+            
+            self.logger.info(
+                f"Después de cargar desde BD: {len(streams)} streams"
+            )
         
         return streams
     
@@ -361,13 +447,25 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
         Calcula duración en segundos desde el inicio.
         
         Args:
-            start_time: Tiempo de inicio
+            start_time: Tiempo de inicio (datetime o string ISO)
             
         Returns:
             Duración en segundos
         """
         if not start_time:
             return 0
+        
+        # Convertir string a datetime si es necesario
+        if isinstance(start_time, str):
+            try:
+                # Parsear fecha ISO con o sin timezone
+                if 'T' in start_time:
+                    start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                else:
+                    start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
+            except Exception as e:
+                self.logger.warning(f"Error parseando fecha {start_time}: {e}")
+                return 0
             
         delta = datetime.utcnow() - start_time
         return int(delta.total_seconds())
@@ -377,16 +475,18 @@ class MediaMTXRemotePublishingPresenter(BasePresenter):
 _presenter: Optional[MediaMTXRemotePublishingPresenter] = None
 
 
-def get_mediamtx_remote_publishing_presenter() -> MediaMTXRemotePublishingPresenter:
+async def get_mediamtx_remote_publishing_presenter() -> MediaMTXRemotePublishingPresenter:
     """
     Obtiene la instancia singleton del presenter.
     
     Returns:
-        MediaMTXRemotePublishingPresenter singleton
+        MediaMTXRemotePublishingPresenter singleton inicializado
     """
     global _presenter
     
     if _presenter is None:
         _presenter = MediaMTXRemotePublishingPresenter()
+        # Inicializar el presenter
+        await _presenter.initialize()
         
     return _presenter

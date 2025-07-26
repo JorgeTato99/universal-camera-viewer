@@ -505,6 +505,12 @@ class RTSPPublisherService(BaseService):
             # Nota: RECONNECTING se maneja solo en frontend
             # Backend mantiene ERROR pero con metadata indicando reconexión
             process.status = PublishStatus.ERROR
+            
+            # Asegurar que metrics existe como diccionario
+            if process.metrics is None:
+                process.metrics = {}
+            
+            # Actualizar métricas de reconexión
             process.metrics['is_reconnecting'] = True
             process.metrics['reconnect_attempt'] = process.error_count
             process.metrics['max_reconnects'] = self._config.max_reconnects

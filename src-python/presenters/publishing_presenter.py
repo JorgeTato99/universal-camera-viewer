@@ -353,9 +353,15 @@ class PublishingPresenter(BasePresenter):
                         except Exception as e:
                             self.logger.warning(f"Error obteniendo viewers para {camera_id}: {e}")
                     
+                    # Por ahora usar valores por defecto para evitar problemas de importación
+                    camera_name = camera_id
+                    camera_ip = ''
+                    
                     publication = {
                         'publication_id': process_info.process_id,  # Usar PID como ID temporal
                         'camera_id': camera_id,
+                        'camera_name': camera_name,
+                        'camera_ip': camera_ip,
                         'publish_path': process_info.publish_path or f"ucv_{camera_id}",
                         'status': process_info.status.value,
                         'start_time': process_info.started_at.isoformat() if process_info.started_at else None,

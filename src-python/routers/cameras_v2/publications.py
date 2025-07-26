@@ -179,7 +179,7 @@ async def _build_publication_response(
         started_at=publication_data.get('started_at', datetime.utcnow()),
         stream_key=publication_data.get('stream_key', ''),
         metrics=publication_data.get('metrics', {}),
-        camera_name=camera.name,
+        camera_name=camera.display_name,
         camera_ip=camera.ip
     )
 
@@ -269,7 +269,7 @@ async def create_publication(
                 error_code = result.get('error_code', 'UNKNOWN_ERROR')
                 error_msg = result.get('error', 'Error desconocido')
                 
-                if error_code == 'ALREADY_STREAMING':
+                if error_code in ['ALREADY_STREAMING', 'CAMERA_ALREADY_EXISTS']:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=error_msg
@@ -285,6 +285,9 @@ async def create_publication(
                         detail=error_msg
                     )
             
+            # Agregar logs para debug
+            logger.debug(f"Resultado de publicación remota: {result}")
+            
             # Construir respuesta unificada
             response = await _build_publication_response(
                 camera_id=camera_id,
@@ -292,16 +295,15 @@ async def create_publication(
                 publication_data={
                     **result,
                     'server_id': publication_request.target_server_id,
-                    'stream_key': result.get('publish_token', '')
+                    'stream_key': result.get('publish_token', ''),
+                    'started_at': result.get('started_at') or datetime.utcnow()
                 }
             )
         
         logger.info(f"Publicación creada exitosamente: {response.publication_id}")
         
-        return create_response(
-            success=True,
-            data=response.dict()
-        )
+        # Devolver directamente el modelo de respuesta
+        return response
         
     except HTTPException:
         raise
